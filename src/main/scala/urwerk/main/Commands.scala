@@ -6,7 +6,7 @@ import urwerk.source.Source
 import urwerk.source.Source.Sink
 
 trait CommandSource:
-  
+  println("")
 
 
 // trait Command:

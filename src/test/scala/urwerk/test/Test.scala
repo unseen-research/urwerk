@@ -4,13 +4,16 @@ import org.junit.runner.RunWith
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatestplus.junit.JUnitRunner
+
 import urwerk.io.Path
 import urwerk.io.file.given
 
 import java.io.OutputStream
 import java.nio.file.{Files, Paths}
 import java.util.UUID
+
 import scala.io.Codec
+import scala.language.implicitConversions
 
 @RunWith(classOf[JUnitRunner])
 abstract class TestBase extends AnyFreeSpec with Matchers:

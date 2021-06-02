@@ -1,12 +1,14 @@
 package urwerk.maven
 
 import java.nio.file.{Files, NoSuchFileException}
+import java.nio.file.attribute.BasicFileAttributes
+
 import urwerk.io.{ByteString, Path, Uri}
 import urwerk.io.file.given
 import urwerk.io.file.*
 import urwerk.source.{Optional, Singleton, Source}
 
-import java.nio.file.attribute.BasicFileAttributes
+import scala.language.implicitConversions
 
 class FileSystemRepository(val path: Path) extends Repository:
 

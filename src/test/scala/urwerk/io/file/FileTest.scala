@@ -13,10 +13,12 @@ import java.nio.ByteBuffer
 import java.nio.channels.ReadableByteChannel
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.{Files, NoSuchFileException, Path => JNFPath}
+
 import scala.concurrent.ExecutionContext
 import scala.io.Codec
 import scala.jdk.CollectionConverters
 import scala.util.Random
+import scala.language.implicitConversions
 
 class FileTest extends TestBase:
 

@@ -9,9 +9,11 @@ import java.nio.channels.{FileChannel, ReadableByteChannel}
 import java.nio.charset.Charset
 import java.nio.file.attribute.{BasicFileAttributeView, BasicFileAttributes}
 import java.nio.file.{Files, Path => JNFPath, Paths, StandardOpenOption}
+
 import scala.annotation.tailrec
 import scala.io.Codec
 import scala.jdk.CollectionConverters.given
+import scala.language.implicitConversions
 
 val Cwd: Path = Paths.get("")
   .toAbsolutePath

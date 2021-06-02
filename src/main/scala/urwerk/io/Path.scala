@@ -2,6 +2,7 @@ package urwerk.io
 
 import java.util.NoSuchElementException
 import Path.*
+import scala.collection.immutable.ArraySeq
 
 case class Path private (val absolute: Boolean, val elements: Seq[String]):
   infix def /(element: String): Path =
@@ -59,4 +60,4 @@ object Path:
     elements.flatMap(resolveElement(_))
 
   private def resolveElement(elem: String): Seq[String] =
-    elem.split('/').filter(_.nonEmpty)
+    ArraySeq.unsafeWrapArray(elem.split('/')).filter(_.nonEmpty)

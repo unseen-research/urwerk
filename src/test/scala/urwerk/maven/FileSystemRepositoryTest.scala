@@ -6,7 +6,7 @@ import urwerk.io.file.given
 import urwerk.source.TestOps.sourceProbe
 import urwerk.test.{TestBase, uniqueDirectory, uniqueFile, uniquePath}
 
-import java.nio.file.Path => JNFPath
+import java.nio.file.{Path => JNFPath}
 import java.nio.file.Files
 
 import scala.util.Random

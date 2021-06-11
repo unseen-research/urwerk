@@ -2,8 +2,10 @@ package urwerk.main
 
 import urwerk.cli.*
 import urwerk.source.Source
+import urwerk.source.Optional
 
-val helpOption = option[Unit]("help", "h")
+val helpOption = option[Boolean]("help", "h")
+  .arity(1, 1)
   .map(_ => true)
 
 val help =
@@ -11,7 +13,21 @@ val help =
   Usage: urwerk [OPTIONS] COMMAND
   """.stripIndent
 
-private def isHelp(options: Map[String, Any]): Boolean =
-  options.get(helpOption.name)
-    .map(_.asInstanceOf[Boolean])
-    .getOrElse(false)
+object Help:
+  def apply(args: Seq[String]): Optional[Source[Either[String, String]]] = 
+    try
+      val (opts, tail) = args.extractOptions(option[Unit]("help", "h")) 
+      if tail.isEmpty then
+        Optional(Source(Right(help)))
+      else 
+        Optional.error(IllegalArgumentException())
+    catch
+      case _: NoSuchOptionException =>
+        Optional.empty
+      case e: Throwable =>
+        Optional.error(e)
+
+        
+
+    
+

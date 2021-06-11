@@ -38,6 +38,12 @@ class OptionalTest extends TestBase:
   "block none" in {
     Optional().block should be(None)
   }
+
+  "empty" in {
+    optionalProbe(
+        Optional.empty[Int])
+      .verifyComplete()
+  }
   
   "error" in {
     optionalProbe(

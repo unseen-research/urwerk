@@ -17,7 +17,10 @@ object Optional:
     elemOpt match
       case Some(elem) => apply(elem)
       case None => apply()
-  
+
+  def empty[A]: Optional[A] =
+    wrap(Flux.empty())
+      
   def error[A](error: Throwable): Optional[A] =
     wrap(Flux.error(error))
 

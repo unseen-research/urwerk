@@ -8,25 +8,11 @@ import scala.annotation.tailrec
 import OptionSpec.OverflowStrategy
 import OptionSpec.OverflowStrategy.*
 
-trait ArgSpec:
-  def name: String
-
-class PositionalParamSpec[+A](val name: String,
-                              val arity: (Int, Int),
-                              val default: Option[A],
-                              val overflowStrategy: OverflowStrategy,
-                              val mapOp: (String) => A)
-    extends ArgSpec:
-
-  def arity(min: Int, max: Int): PositionalParamSpec[A] =
-    PositionalParamSpec[A](name, (min, max), default, overflowStrategy, mapOp)
-
 class OptionSpec[+A](val names: Seq[String],
       val arity: (Int, Int),
       val default: Option[A],
       val overflowStrategy: OverflowStrategy,
-      val mapOp: (String) => A)
-    extends ArgSpec:
+      val mapOp: (String) => A):
 
   import OptionSpec.*
 

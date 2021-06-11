@@ -16,7 +16,7 @@ trait ExitStatus:
 
 type ExitOp = Int => Unit
 
-object Main extends Main(_ => Source(), 
+object Main extends Main(Commands(), 
   error => println(error), 
   exitStatus => sys.exit(exitStatus))
 

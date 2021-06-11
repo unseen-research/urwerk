@@ -1,12 +1,13 @@
 package urwerk.main
 
-import jdk.jshell.spi.ExecutionControl.NotImplementedException
 import urwerk.cli.*
 import urwerk.source.Source
 import urwerk.source.Source.Sink
 
-trait CommandSource:
-  println("")
+class Commands extends Function1[Seq[String], Source[Either[String, String]]]: 
+  def apply(args: Seq[String]): Source[Either[String, String]] = 
+    ???
+
 
 
 // trait Command:

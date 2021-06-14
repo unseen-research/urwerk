@@ -5,6 +5,12 @@ import OptionSpec.OverflowStrategy.*
 
 class CliTest extends TestBase:
 
+  "toOptions no value single arity" in {
+    val opts = Seq("--help").toOptions(
+      option[Unit]("help", "h").arity(1, 1))
+    opts should be (Map("help" -> ()))
+  }
+
   "zero arity option without tail" in {
     val (opts, tail) = Seq("--help").extractOptions(option[Unit]("help", "h"))
     tail shouldBe empty

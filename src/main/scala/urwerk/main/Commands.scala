@@ -1,42 +1,34 @@
 package urwerk.main
 
-import urwerk.cli.*
 import urwerk.source.Source
 import urwerk.source.Source.Sink
 
-class Commands extends Function1[Seq[String], Source[Either[String, String]]]: 
-  def apply(args: Seq[String]): Source[Either[String, String]] = 
+trait ParamSpec[V, C]:
+  def commit(using c: Command[?, ?])(op: (V, c.CC) => c.CC): ParamSpec[V, c.CC]
+
+
+trait Command[C, R]:
+  type RR = R
+  type CC = C
+  def apply[CC](config: CC): RR
+
+
+given z: Command[Long, Boolean] = new Command[Long, Boolean]:
+    def apply[Long](config: Long): Boolean = ???
+
+
+def param[V](using c: Command[?, ?])(names: String*): ParamSpec[V, c.CC] = ???
+
+object Command:
+  def apply[C, R](using c: Command[C, R])(specs: ParamSpec[?, C]*): Command[C, R] = 
     ???
+    
+val xx = param[String]("")
+    .commit  
 
+val yy = xx((s, l)=> l)
 
-
-// trait Command:
-//   def apply(args: Seq[String]): Source[Output]
-
-
-// class CommandFactory(commands: Seq[Command]) extends Function1[Seq[String], Source[Output]]:
-
-//   def apply(args: Seq[String]): Source[Output] = Source.push {sink =>
-//     try
-//       command(args, sink)
-//     catch
-//       case error: Throwable =>
-//         sink.error(error)
-//   }
-  
-//   def command(args: Seq[String], sink: Sink[Output]): Unit =
-//     val (options, leftArgs) = args.extractOptions(optionsSpecs*)
-//     val (cmd, cmdArgs) = nextValue(leftArgs)
-  
-//     if isHelp(options) then
-//       sink.next(StdOut(help))
-//       sink.complete()
-//     else if versionRequested(options) then
-//       sink.next(StdOut(version))
-//       sink.complete()
-//     else
-//       Source.error(NotImplementedException(""))
-
-// private val optionsSpecs = Seq(
-//   helpOption,
-//   versionOption)
+val x = Command(
+  param[String]("")
+    .commit((value, config) => config)
+)

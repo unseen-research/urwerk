@@ -16,9 +16,6 @@ trait ExitStatus:
 
 type ExitOp = Int => Unit
 
-object Main extends Main(Commands(), 
-  error => println(error), 
-  exitStatus => sys.exit(exitStatus))
 
 class Main(command: Command, onError: Throwable => Unit, exitOp: ExitOp):
   def main(args: Array[String]): Unit =

@@ -88,3 +88,20 @@ class ParametersTest extends TestBase:
       value should be (Config("--param-name"))  
     }
   }
+
+  import Parameters.ParameterList
+
+  "parameter list" - {
+
+    val params = Parameters(Map[String, Any]())
+    import params.*
+
+    "capture named parameters" in {
+      val args = Seq("--name1", "value1", "--name2", "value2", "--name3", "value3")
+
+      val config = ParameterList(Seq(param[String], param[String]))
+        .collectParams(args)
+
+        
+    }
+  }

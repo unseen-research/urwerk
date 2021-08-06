@@ -2,11 +2,11 @@ package urwerk.command
 
 object Parameter: 
 
-  trait Converter[A]:
+  trait ValueTypeOps[A]:
     def requireValue: Boolean
     def apply(value: String): A
 
-  given Converter[String] with {
+  given ValueTypeOps[String] with {
     val requireValue = true
     def apply(value: String): String = 
       if value.startsWith("-") then
@@ -15,30 +15,30 @@ object Parameter:
         value
   }
 
-  given Converter[Int] with {
+  given ValueTypeOps[Int] with {
     val requireValue = true
     def apply(value: String): Int = value.toInt
   }
 
-  given Converter[Unit] with {
+  given ValueTypeOps[Unit] with {
     val requireValue = false
     def apply(value: String): Unit = ()
   }
 
   case class RawArg(value: String)
 
-  given Converter[RawArg] with {
+  given ValueTypeOps[RawArg] with {
     val requireValue = true
     def apply(value: String): RawArg = RawArg(value)
   }
 
-import Parameter.Converter  
+import Parameter.ValueTypeOps  
 
 class Parameter[A, B](val names: Seq[String], 
     val arity: (Int, Int), 
     val default: Option[A], 
     val config: B,
-    val converter: Parameter.Converter[A],
+    val valueTypeOps: ValueTypeOps[A],
     val collectOp: (A, B) => B):
   
   def default(value: A): Parameter[A, B] = copy(default = Some(value))
@@ -49,21 +49,25 @@ class Parameter[A, B](val names: Seq[String],
       case (value: A, config) => op(value, config)
     copy(collectOp = pf)
 
-  private[command] def doCollect(value: String): B = 
-    val _val = converter(value)
-    collectOp(_val, config)
-
   private def copy(names: Seq[String] = names, 
       arity: (Int, Int) = arity, 
       default: Option[A] = default, 
       config: B = config,
-      converter: Converter[A] = converter,
+      valueTypeOps: ValueTypeOps[A] = valueTypeOps,
       collectOp: (A, B) => B = collectOp) = 
-    new Parameter(names, arity, default, config, converter, collectOp)
+    new Parameter(names, arity, default, config, valueTypeOps, collectOp)
   
 object Parameters:
   def apply[A](config: A): Parameters[A] = new Parameters[A](config)
 
+  extension[A, B] (param: Parameter[A, B])
+    private[command] def collectValue(value: String): B = 
+      val _val = param.valueTypeOps(value)
+      param.collectOp(_val, param.config)
+
+  class ParameterList[A](params: Seq[Parameter[?, A]]):
+    def collectParams(args: Seq[String]): (A, Seq[String]) = ???     
+
 class Parameters[A](config: A):
 
-  def param[B](using converter: Parameter.Converter[B]): Parameter[B, A] = new Parameter(Seq(), (0, 1), None, config, converter, {(_, config) => config})
+  def param[B](using valueTypeOps: ValueTypeOps[B]): Parameter[B, A] = new Parameter(Seq(), (0, 1), None, config, valueTypeOps, {(_, config) => config})

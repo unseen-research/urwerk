@@ -137,7 +137,7 @@ class ParametersTest extends TestBase:
         param[Int]
           .collect((value, config) => 
             config.updated("value-1", value)),
-        param[String]("name1")
+        param[String]
           .collect((value, config) => 
             config.updated("value-2", value))
       )

@@ -68,9 +68,9 @@ object Parameters:
     
     def collectParams(args: Seq[String]): (A, Seq[String]) =
       val paramsMap = namedParamMap(params, Map())
-      collectParams(args, config, paramsMap)
+      collectParams(args, positionalParamList, config, paramsMap)
 
-    private def collectParams(args: Seq[String], config: A, paramsMap: Map[String, Parameter[?, A]]): (A, Seq[String]) = 
+    private def collectParams(args: Seq[String], positionalParams: Seq[Parameter[?, A]], config: A, paramsMap: Map[String, Parameter[?, A]]): (A, Seq[String]) = 
       if args.isEmpty then
         (config, args)
       else
@@ -89,14 +89,22 @@ object Parameters:
               val _config = param.collectOp(_value, config)
               
               val remainingArgs = if valueRequired then args.drop(2) else args.drop(1)
-              collectParams(remainingArgs, _config, paramsMap)
+              collectParams(remainingArgs, positionalParams, _config, paramsMap)
             case None =>
               (config, args)
         else
-          
-          (config, args)
+          if positionalParams.isEmpty then
+            (config, args)
+          else
+            val param = positionalParams.head
+            val _value = param.valueTypeOps(arg)
+            val _config = param.collectOp(_value, config)
+
+            collectParams(args.drop(1), positionalParams.drop(1), _config, paramsMap)
 
     private def isName(arg: String): Boolean = arg.startsWith("--")
+
+    private def positionalParamList = params.filter(_.names.isEmpty)
 
     @tailrec
     private def namedParamMap(params: Seq[Parameter[?, A]], paramsMap: Map[String, Parameter[?, A]]): Map[String, Parameter[?, A]] = 

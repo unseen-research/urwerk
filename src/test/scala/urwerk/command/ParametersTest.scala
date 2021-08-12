@@ -25,8 +25,8 @@ class ParametersTest extends TestBase:
 
     "illegal value" in {
       intercept[IllegalArgumentException]{
-        param[Int]
-          .collectValue("abc")
+        val p = param[Int]
+        p.collectValue("")
       }
     }
   }
@@ -49,8 +49,8 @@ class ParametersTest extends TestBase:
 
     "illegal value" in {
       intercept[IllegalArgumentException]{
-        param[String]
-          .collectValue("-illegal arg value")
+        val p = param[String]
+        p.collectValue("-illegal arg value")
       }
     }
   }
@@ -96,12 +96,58 @@ class ParametersTest extends TestBase:
     val params = Parameters(Map[String, Any]())
     import params.*
 
-    "capture named parameters" in {
-      val args = Seq("--name1", "value1", "--name2", "value2", "--name3", "value3")
+    "capture name value parameters" in {
+      val params = Seq(
+        param[String]("name2")
+          .collect((value, config) => 
+            config.updated("name-2", "collected-" + value)),
+        param[Int]("name1")
+          .collect((value, config) => 
+            config.updated("name-1", "collected-" + value))
+      )
 
-      val config = ParameterList(Seq(param[String], param[String]))
-        .collectParams(args)
+      val (config, remainingArgs) = ParameterList(Map[String, Any](),params)
+        .collectParams(
+          Seq("--name1", "11", "--name2", "value2", "--name3", "value3"))
 
-        
+      remainingArgs should be (Seq("--name3", "value3"))
+      config should be (Map("name-1" -> "collected-11", "name-2" -> "collected-value2"))
     }
+
+    "capture name parameters" in {
+      val params = Seq(
+        param[Unit]("name2")
+          .collect((value, config) => 
+            config.updated("name-2", s"$value-2")),
+        param[Unit]("name1")
+          .collect((value, config) => 
+            config.updated("name-1", s"$value-1"))
+      )
+
+      val (config, remainingArgs) = ParameterList(Map[String, Any](),params)
+        .collectParams(
+          Seq("--name1", "--name2", "value2", "--name3", "value3"))
+
+      remainingArgs should be (Seq("value2", "--name3", "value3"))
+      config should be (Map("name-1" -> "()-1", "name-2" -> "()-2"))
+    }
+
+    "capture value parameters" in {
+      val params = Seq(
+        param[Int]
+          .collect((value, config) => 
+            config.updated("value-1", value)),
+        param[String]("name1")
+          .collect((value, config) => 
+            config.updated("value-2", value))
+      )
+
+      val (config, remainingArgs) = ParameterList(Map[String, Any](),params)
+        .collectParams(
+          Seq("11", "value2", "value3"))
+
+      remainingArgs should be (Seq("value3"))
+      config should be (Map("value-1" -> 11, "value-2" -> "value2"))
+    }
+
   }

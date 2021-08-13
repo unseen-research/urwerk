@@ -1,24 +1,23 @@
 package urwerk.command
 
 import urwerk.test.TestBase
-import Parameter.RawArg
 import Parameters.*
 
 class ParametersTest extends TestBase:
   case class Config[A](value: A)
 
   "int parameter" - {
-    val params = Parameters(Config(0))
+    val params = Parameters[Config[Int]]
     import params.*
 
     "requires value" in {
-      param[Int].valueTypeOps.requireValue should be (true)
+      param[Int].valueSpec.requireValue should be (true)
     }
 
     "collect value" in {
       val value = param[Int]
         .collect{case (value, config) => config.copy(value = value)}
-        .collectValue("-77")
+        .collectValue(Config(0), "-77")
 
       value should be (Config(-77))  
     }  
@@ -26,23 +25,23 @@ class ParametersTest extends TestBase:
     "illegal value" in {
       intercept[IllegalArgumentException]{
         val p = param[Int]
-        p.collectValue("")
+        p.collectValue(Config(0), "")
       }
     }
   }
 
   "string parameter" - {
-    val params = Parameters(Config(""))
+    val params = Parameters[Config[String]]()
     import params.*
 
     "requires value" in {
-      param[String].valueTypeOps.requireValue should be (true)
+      param[String].valueSpec.requireValue should be (true)
     }
 
     "collect value" in {
       val value = param[String]
         .collect{case (value, config) => config.copy(value = value)}
-        .collectValue("string value")
+        .collectValue(Config(""), "string value")
 
       value should be (Config("string value"))  
     }  
@@ -50,42 +49,25 @@ class ParametersTest extends TestBase:
     "illegal value" in {
       intercept[IllegalArgumentException]{
         val p = param[String]
-        p.collectValue("-illegal arg value")
+        p.collectValue(Config(""), "-illegal arg value")
       }
     }
   }
 
   "unit parameter" - {
-    val params = Parameters(Config(""))
+    val params = Parameters[Config[String]]
     import params.*
 
     "not require value" in {
-      param[Unit].valueTypeOps.requireValue should be (false)
+      param[Unit].valueSpec.requireValue should be (false)
     }
 
     "collect value" in {
       val value = param[Unit]
         .collect{case (value, config) => config.copy(value = s"Value=$value")}
-        .collectValue("77")
+        .collectValue(Config(""), "")
 
       value should be (Config("Value=()"))  
-    }
-  }
-
-  "raw arg parameter" - {
-    val params = Parameters(Config(""))
-    import params.*
-
-    "not require value" in {
-      param[RawArg].valueTypeOps.requireValue should be (true)
-    }
-
-    "collect value" in {
-      val value = param[RawArg]
-        .collect{case (RawArg(value), config) => config.copy(value = value)}
-        .collectValue("--param-name")
-
-      value should be (Config("--param-name"))  
     }
   }
 
@@ -93,7 +75,7 @@ class ParametersTest extends TestBase:
 
   "parameter list" - {
 
-    val params = Parameters(Map[String, Any]())
+    val params = Parameters[Map[String, Any]]
     import params.*
 
     "capture name value parameters" in {
@@ -106,7 +88,7 @@ class ParametersTest extends TestBase:
             config.updated("name-1", "collected-" + value))
       )
 
-      val (config, remainingArgs) = ParameterList(Map[String, Any](),params)
+      val (config, remainingArgs) = ParameterList(Map[String, Any](), params)
         .collectParams(
           Seq("--name1", "11", "--name2", "value2", "--name3", "value3"))
 
@@ -150,4 +132,8 @@ class ParametersTest extends TestBase:
       config should be (Map("value-1" -> 11, "value-2" -> "value2"))
     }
 
+    "capture raw args" in {
+
+
+    }
   }

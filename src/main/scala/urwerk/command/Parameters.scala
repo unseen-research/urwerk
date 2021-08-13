@@ -4,43 +4,39 @@ import scala.annotation.tailrec
 
 object Parameter: 
 
-  trait ValueTypeOps[A]:
+  trait ValueSpec[A]:
     def requireValue: Boolean
-    def apply(value: String): A
+    def accept(value: String): Boolean
+    def convert(value: String): A
 
-  given ValueTypeOps[String] with {
+  given ValueSpec[String] with {
     val requireValue = true
-    def apply(value: String): String = 
-      if value.startsWith("-") then
-        throw new IllegalArgumentException()
-      else
-        value
+    def accept(value: String): Boolean = 
+      val retVal: Boolean = !value.startsWith("-")
+      println(s"ACCEPT $value $retVal")
+      retVal
+
+    def convert(value: String): String = value
   }
 
-  given ValueTypeOps[Int] with {
+  given ValueSpec[Int] with {
     val requireValue = true
-    def apply(value: String): Int = value.toInt
+    def accept(value: String): Boolean = !value.startsWith("--")
+    def convert(value: String): Int = value.toInt
   }
 
-  given ValueTypeOps[Unit] with {
+  given ValueSpec[Unit] with {
     val requireValue = false
-    def apply(value: String): Unit = ()
+    def accept(value: String): Boolean = value.isEmpty
+    def convert(value: String): Unit = ()
   }
 
-  case class RawArg(value: String)
-
-  given ValueTypeOps[RawArg] with {
-    val requireValue = true
-    def apply(value: String): RawArg = RawArg(value)
-  }
-
-import Parameter.ValueTypeOps  
+import Parameter.ValueSpec  
 
 class Parameter[A, B](val names: Seq[String], 
     val arity: (Int, Int), 
     val default: Option[A], 
-    val config: B,
-    val valueTypeOps: ValueTypeOps[A],
+    val valueSpec: ValueSpec[A],
     val collectOp: (A, B) => B):
   
   def default(value: A): Parameter[A, B] = copy(default = Some(value))
@@ -51,18 +47,17 @@ class Parameter[A, B](val names: Seq[String],
   private def copy(names: Seq[String] = names, 
       arity: (Int, Int) = arity, 
       default: Option[A] = default, 
-      config: B = config,
-      valueTypeOps: ValueTypeOps[A] = valueTypeOps,
+      valueSpec: ValueSpec[A] = valueSpec,
       collectOp: (A, B) => B = collectOp) = 
-    new Parameter(names, arity, default, config, valueTypeOps, collectOp)
+    new Parameter(names, arity, default, valueSpec, collectOp)
   
 object Parameters:
-  def apply[A](config: A): Parameters[A] = new Parameters[A](config)
-
-  extension[A, B] (param: Parameter[A, B])
-    private[command] def collectValue(value: String): B = 
-      val _val = param.valueTypeOps(value)
-      param.collectOp(_val, param.config)
+  extension[B] (param: Parameter[?, B])
+    private[command] def collectValue(config: B, value: String): B = 
+      if !param.valueSpec.accept(value) then
+        throw IllegalArgumentException()
+      val _val = param.valueSpec.convert(value)
+      param.collectOp(_val, config)
 
   class ParameterList[A](config: A, params: Seq[Parameter[?, A]]):
     
@@ -79,16 +74,21 @@ object Parameters:
           val name = arg.stripPrefix("--")
           paramsMap.get(name) match
             case Some(param) =>
-              val valueRequired = param.valueTypeOps.requireValue
-              val value = if valueRequired then
+              val valueSpec = param.valueSpec
+              val value = if valueSpec.requireValue then
                 args(1)
               else 
                 ""
-                
-              val _value = param.valueTypeOps(value)
-              val _config = param.collectOp(_value, config)
               
-              val remainingArgs = if valueRequired then args.drop(2) else args.drop(1)
+              val _config = param.collectValue(config, value)  
+              // if !valueSpec.accept(value) then
+
+              //   throw IllegalArgumentException()
+
+              // val _value = param.valueSpec.convert(value)
+              // val _config = param.collectOp(_value, config)
+              
+              val remainingArgs = if valueSpec.requireValue then args.drop(2) else args.drop(1)
               collectParams(remainingArgs, positionalParams, _config, paramsMap)
             case None =>
               (config, args)
@@ -96,9 +96,16 @@ object Parameters:
           if positionalParams.isEmpty then
             (config, args)
           else
+            val value = arg
             val param = positionalParams.head
-            val _value = param.valueTypeOps(arg)
-            val _config = param.collectOp(_value, config)
+            val valueSpec = param.valueSpec
+
+            val _config = param.collectValue(config, value) 
+            // if !valueSpec.accept(value) then
+            //     throw IllegalArgumentException()
+
+            // val _value = param.valueSpec.convert(arg)
+            // val _config = param.collectOp(_value, config)
 
             collectParams(args.drop(1), positionalParams.drop(1), _config, paramsMap)
 
@@ -123,10 +130,10 @@ object Parameters:
         }
         namedParamMap(params.tail, map)
 
-class Parameters[A](config: A):
+class Parameters[A]():
 
-  def param[B](using valueTypeOps: ValueTypeOps[B]): Parameter[B, A] = 
-    new Parameter(Seq(), (0, 1), None, config, valueTypeOps, {(_, config) => config})
+  def param[B](using valueSpec: ValueSpec[B]): Parameter[B, A] = 
+    new Parameter(Seq(), (0, 1), None, valueSpec, {(_, config) => config})
 
-  def param[B](using valueTypeOps: ValueTypeOps[B])(name: String, names: String*): Parameter[B, A] = 
-    new Parameter(name +: names, (0, 1), None, config, valueTypeOps, {(_, config) => config})
+  def param[B](using valueSpec: ValueSpec[B])(name: String, names: String*): Parameter[B, A] = 
+    new Parameter(name +: names, (0, 1), None, valueSpec, {(_, config) => config})

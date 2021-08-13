@@ -11,11 +11,7 @@ object Parameter:
 
   given ValueSpec[String] with {
     val requireValue = true
-    def accept(value: String): Boolean = 
-      val retVal: Boolean = !value.startsWith("-")
-      println(s"ACCEPT $value $retVal")
-      retVal
-
+    def accept(value: String): Boolean = !value.startsWith("-")
     def convert(value: String): String = value
   }
 
@@ -44,6 +40,10 @@ class Parameter[A, B](val names: Seq[String],
   def collect(op: (A, B) => B): Parameter[A, B] = 
     copy(collectOp = op)
 
+  // def accept(op: String => Boolean): Parameter[A, B] = 
+  //   valueSpec.a
+
+    
   private def copy(names: Seq[String] = names, 
       arity: (Int, Int) = arity, 
       default: Option[A] = default, 

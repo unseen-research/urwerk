@@ -59,9 +59,9 @@ object Parameters:
       val _val = param.valueSpec.convert(value)
       param.collectOp(_val, config)
 
-  class ParameterList[A](config: A, params: Seq[Parameter[?, A]]):
+  class ParameterList[A](params: Seq[Parameter[?, A]]):
     
-    def collectParams(args: Seq[String]): (A, Seq[String]) =
+    def collectParams(config: A, args: Seq[String]): (A, Seq[String]) =
       val paramsMap = namedParamMap(params, Map())
       collectParams(args, positionalParamList, config, paramsMap)
 
@@ -81,13 +81,6 @@ object Parameters:
                 ""
               
               val _config = param.collectValue(config, value)  
-              // if !valueSpec.accept(value) then
-
-              //   throw IllegalArgumentException()
-
-              // val _value = param.valueSpec.convert(value)
-              // val _config = param.collectOp(_value, config)
-              
               val remainingArgs = if valueSpec.requireValue then args.drop(2) else args.drop(1)
               collectParams(remainingArgs, positionalParams, _config, paramsMap)
             case None =>
@@ -99,14 +92,7 @@ object Parameters:
             val value = arg
             val param = positionalParams.head
             val valueSpec = param.valueSpec
-
             val _config = param.collectValue(config, value) 
-            // if !valueSpec.accept(value) then
-            //     throw IllegalArgumentException()
-
-            // val _value = param.valueSpec.convert(arg)
-            // val _config = param.collectOp(_value, config)
-
             collectParams(args.drop(1), positionalParams.drop(1), _config, paramsMap)
 
     private def isName(arg: String): Boolean = arg.startsWith("--")

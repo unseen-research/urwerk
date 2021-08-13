@@ -88,8 +88,8 @@ class ParametersTest extends TestBase:
             config.updated("name-1", "collected-" + value))
       )
 
-      val (config, remainingArgs) = ParameterList(Map[String, Any](), params)
-        .collectParams(
+      val (config, remainingArgs) = ParameterList(params)
+        .collectParams(Map[String, Any](),
           Seq("--name1", "11", "--name2", "value2", "--name3", "value3"))
 
       remainingArgs should be (Seq("--name3", "value3"))
@@ -106,8 +106,8 @@ class ParametersTest extends TestBase:
             config.updated("name-1", s"$value-1"))
       )
 
-      val (config, remainingArgs) = ParameterList(Map[String, Any](),params)
-        .collectParams(
+      val (config, remainingArgs) = ParameterList(params)
+        .collectParams(Map[String, Any](),
           Seq("--name1", "--name2", "value2", "--name3", "value3"))
 
       remainingArgs should be (Seq("value2", "--name3", "value3"))
@@ -124,8 +124,8 @@ class ParametersTest extends TestBase:
             config.updated("value-2", value))
       )
 
-      val (config, remainingArgs) = ParameterList(Map[String, Any](),params)
-        .collectParams(
+      val (config, remainingArgs) = ParameterList(params)
+        .collectParams(Map[String, Any](),
           Seq("11", "value2", "value3"))
 
       remainingArgs should be (Seq("value3"))

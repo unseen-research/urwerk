@@ -11,7 +11,7 @@ class ParametersTest extends TestBase:
     import params.*
 
     "requires value" in {
-      param[Int].valueSpec.requireValue should be (true)
+      param[Int].valueRequired should be (true)
     }
 
     "collect value" in {
@@ -35,7 +35,7 @@ class ParametersTest extends TestBase:
     import params.*
 
     "requires value" in {
-      param[String].valueSpec.requireValue should be (true)
+      param[String].valueRequired should be (true)
     }
 
     "collect value" in {
@@ -59,7 +59,7 @@ class ParametersTest extends TestBase:
     import params.*
 
     "not require value" in {
-      param[Unit].valueSpec.requireValue should be (false)
+      param[Unit].valueRequired should be (false)
     }
 
     "collect value" in {
@@ -89,7 +89,7 @@ class ParametersTest extends TestBase:
       )
 
       val (config, remainingArgs) = ParameterList(params)
-        .collectParams(Map[String, Any](),
+        .collectParams(Map(),
           Seq("--name1", "11", "--name2", "value2", "--name3", "value3"))
 
       remainingArgs should be (Seq("--name3", "value3"))
@@ -107,7 +107,7 @@ class ParametersTest extends TestBase:
       )
 
       val (config, remainingArgs) = ParameterList(params)
-        .collectParams(Map[String, Any](),
+        .collectParams(Map(),
           Seq("--name1", "--name2", "value2", "--name3", "value3"))
 
       remainingArgs should be (Seq("value2", "--name3", "value3"))
@@ -125,7 +125,7 @@ class ParametersTest extends TestBase:
       )
 
       val (config, remainingArgs) = ParameterList(params)
-        .collectParams(Map[String, Any](),
+        .collectParams(Map(),
           Seq("11", "value2", "value3"))
 
       remainingArgs should be (Seq("value3"))
@@ -133,7 +133,21 @@ class ParametersTest extends TestBase:
     }
 
     "capture raw args" in {
+      val params_ = Parameters[Seq[String]]
+      import params_.*
 
+      val params = Seq(
+        param[String]
+          .accept(_ => true)
+          .collect((value, config) => 
+            config :+ value)
+      )
 
+      val (config, remainingArgs) = ParameterList(params)
+        .collectParams(Seq(),
+          Seq("-11", "-flags", "--value3", "value4"))      
+
+      config should be (Seq("-11", "-flags", "--value3", "value4")) 
+      remainingArgs should be (Seq())   
     }
   }

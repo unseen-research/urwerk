@@ -32,31 +32,42 @@ import Parameter.ValueSpec
 class Parameter[A, B](val names: Seq[String], 
     val arity: (Int, Int), 
     val default: Option[A], 
-    val valueSpec: ValueSpec[A],
+    val valueRequired: Boolean,
+    val acceptOp: String => Boolean,
+    val convertOp: String => A,
     val collectOp: (A, B) => B):
   
+  def this(names: Seq[String], 
+      arity: (Int, Int), 
+      default: Option[A], 
+      valueSpec: ValueSpec[A],
+      collectOp: (A, B) => B) =
+
+    this(names, arity, default, valueSpec.requireValue, valueSpec.accept, valueSpec.convert, collectOp)    
+
   def default(value: A): Parameter[A, B] = copy(default = Some(value))
 
   def collect(op: (A, B) => B): Parameter[A, B] = 
     copy(collectOp = op)
 
-  // def accept(op: String => Boolean): Parameter[A, B] = 
-  //   valueSpec.a
-
+  def accept(op: String => Boolean): Parameter[A, B] = 
+    copy(acceptOp = op)
     
   private def copy(names: Seq[String] = names, 
       arity: (Int, Int) = arity, 
       default: Option[A] = default, 
-      valueSpec: ValueSpec[A] = valueSpec,
+      valueRequired: Boolean = valueRequired,
+      acceptOp: String => Boolean = acceptOp,
+      convertOp: String => A = convertOp,
       collectOp: (A, B) => B = collectOp) = 
-    new Parameter(names, arity, default, valueSpec, collectOp)
+    new Parameter(names, arity, default, valueRequired, acceptOp, convertOp, collectOp)
   
 object Parameters:
   extension[B] (param: Parameter[?, B])
     private[command] def collectValue(config: B, value: String): B = 
-      if !param.valueSpec.accept(value) then
+      if !param.acceptOp(value) then
         throw IllegalArgumentException()
-      val _val = param.valueSpec.convert(value)
+      val _val = param.convertOp(value)
       param.collectOp(_val, config)
 
   class ParameterList[A](params: Seq[Parameter[?, A]]):
@@ -74,14 +85,14 @@ object Parameters:
           val name = arg.stripPrefix("--")
           paramsMap.get(name) match
             case Some(param) =>
-              val valueSpec = param.valueSpec
-              val value = if valueSpec.requireValue then
+              val valueRequired = param.valueRequired
+              val value = if valueRequired then
                 args(1)
               else 
                 ""
               
               val _config = param.collectValue(config, value)  
-              val remainingArgs = if valueSpec.requireValue then args.drop(2) else args.drop(1)
+              val remainingArgs = if valueRequired then args.drop(2) else args.drop(1)
               collectParams(remainingArgs, positionalParams, _config, paramsMap)
             case None =>
               (config, args)
@@ -91,7 +102,6 @@ object Parameters:
           else
             val value = arg
             val param = positionalParams.head
-            val valueSpec = param.valueSpec
             val _config = param.collectValue(config, value) 
             collectParams(args.drop(1), positionalParams.drop(1), _config, paramsMap)
 

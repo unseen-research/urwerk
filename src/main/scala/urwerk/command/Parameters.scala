@@ -111,12 +111,15 @@ object Parameters:
           else
             val value = arg
             val param = positionalParams.head
-            val _config = param.collectValue(config, value) 
             val (minArity, maxArity) = param.arity
 
-            if positionalArity +1 >= maxArity then 
+            if !param.acceptOp(value) then
+              (config, args)
+            else if positionalArity +1 >= maxArity then 
+              val _config = param.collectValue(config, value) 
               collectParams(args.drop(1), positionalParams.drop(1), _config, paramsMap, positionalArity + 1, paramArity)
             else
+              val _config = param.collectValue(config, value) 
               collectParams(args.drop(1), positionalParams, _config, paramsMap, positionalArity + 1, paramArity)
 
     private def isDefinedName(paramsMap: Map[String, Parameter[?, A]], arg: String): Boolean = 

@@ -74,7 +74,6 @@ class ParametersTest extends TestBase:
   import Parameters.ParameterList
 
   "parameter list" - {
-
     val params = Parameters[Map[String, Any]]
     import params.*
 
@@ -114,25 +113,27 @@ class ParametersTest extends TestBase:
       config should be (Map("name-1" -> "()-1", "name-2" -> "()-2"))
     }
 
-    "capture value parameters" in {
+    "collect value parameters" in {
       val params = Seq(
         param[Int]
           .collect((value, config) => 
             config.updated("value-1", value)),
         param[String]
           .collect((value, config) => 
-            config.updated("value-2", value))
+            config.updated("value-2", value)),
+        param[String]
+          .collect((value, config) => 
+            config.updated("value-3", value))
       )
 
       val (config, remainingArgs) = ParameterList(params)
-        .collectParams(Map(),
-          Seq("11", "value2", "value3"))
+        .collectParams(Map(), Seq("11", "value2", "--name", "value3"))
 
-      remainingArgs should be (Seq("value3"))
+      remainingArgs should be (Seq("--name", "value3"))
       config should be (Map("value-1" -> 11, "value-2" -> "value2"))
     }
 
-    "capture raw args" in {
+    "collect raw args" in {
       val params_ = Parameters[Seq[String]]
       import params_.*
 
@@ -145,10 +146,9 @@ class ParametersTest extends TestBase:
       )
 
       val (config, remainingArgs) = ParameterList(params)
-        .collectParams(Seq(),
-          Seq("-11", "-flags", "--value3", "value4"))      
+        .collectParams(Seq(), Seq("11", "value2", "--name", "value3"))
 
-      config should be (Seq("-11", "-flags", "--value3", "value4")) 
-      remainingArgs should be (Seq())   
+      remainingArgs should be (Seq())     
+      config should be (Seq("11", "value2", "--name", "value3")) 
     }
   }

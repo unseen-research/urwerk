@@ -139,6 +139,7 @@ class ParametersTest extends TestBase:
       val params = Seq(
         param[String]
           .accept(_ => true)
+          .arity(0, Int.MaxValue)
           .collect((value, config) => 
             config :+ value)
       )

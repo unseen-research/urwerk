@@ -53,6 +53,9 @@ class Parameter[A, B](val names: Seq[String],
   def accept(op: String => Boolean): Parameter[A, B] = 
     copy(acceptOp = op)
     
+  def arity(minArity: Int, maxArity: Int): Parameter[A, B] = 
+    copy(arity = (minArity, maxArity))
+
   private def copy(names: Seq[String] = names, 
       arity: (Int, Int) = arity, 
       default: Option[A] = default, 
@@ -74,14 +77,19 @@ object Parameters:
     
     def collectParams(config: A, args: Seq[String]): (A, Seq[String]) =
       val paramsMap = namedParamMap(params, Map())
-      collectParams(args, positionalParamList, config, paramsMap)
+      collectParams(args, positionalParamList, config, paramsMap, 0, Map())
 
-    private def collectParams(args: Seq[String], positionalParams: Seq[Parameter[?, A]], config: A, paramsMap: Map[String, Parameter[?, A]]): (A, Seq[String]) = 
+    private def collectParams(args: Seq[String], 
+        positionalParams: Seq[Parameter[?, A]], 
+        config: A, 
+        paramsMap: Map[String, Parameter[?, A]],
+        positionalArity: Int,
+        paramArity: Map[String, Int]): (A, Seq[String]) = 
       if args.isEmpty then
         (config, args)
       else
         val arg = args.head
-        if isName(arg) then
+        if isDefinedName(paramsMap, arg) then
           val name = arg.stripPrefix("--")
           paramsMap.get(name) match
             case Some(param) =>
@@ -93,7 +101,8 @@ object Parameters:
               
               val _config = param.collectValue(config, value)  
               val remainingArgs = if valueRequired then args.drop(2) else args.drop(1)
-              collectParams(remainingArgs, positionalParams, _config, paramsMap)
+              val _paramArity = paramArity.updatedWith(name)(_.map(_ + 1).orElse(Some(0)))
+              collectParams(remainingArgs, positionalParams, _config, paramsMap, positionalArity, _paramArity)
             case None =>
               (config, args)
         else
@@ -103,9 +112,19 @@ object Parameters:
             val value = arg
             val param = positionalParams.head
             val _config = param.collectValue(config, value) 
-            collectParams(args.drop(1), positionalParams.drop(1), _config, paramsMap)
+            val (minArity, maxArity) = param.arity
 
-    private def isName(arg: String): Boolean = arg.startsWith("--")
+            if positionalArity +1 >= maxArity then 
+              collectParams(args.drop(1), positionalParams.drop(1), _config, paramsMap, positionalArity + 1, paramArity)
+            else
+              collectParams(args.drop(1), positionalParams, _config, paramsMap, positionalArity + 1, paramArity)
+
+    private def isDefinedName(paramsMap: Map[String, Parameter[?, A]], arg: String): Boolean = 
+      if arg.startsWith("--") then
+        val name = arg.stripPrefix("--")
+        paramsMap.isDefinedAt(name)
+      else
+        false
 
     private def positionalParamList = params.filter(_.names.isEmpty)
 

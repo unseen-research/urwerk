@@ -4,6 +4,7 @@ import scala.annotation.tailrec
 
 object Parameter: 
 
+  //  
   trait ValueSpec[A]:
     def requireValue: Boolean
     def accept(value: String): Boolean
@@ -56,6 +57,8 @@ class Parameter[A, B](val names: Seq[String],
   def arity(minArity: Int, maxArity: Int): Parameter[A, B] = 
     copy(arity = (minArity, maxArity))
 
+  def name: String = names.headOption.getOrElse("")
+
   private def copy(names: Seq[String] = names, 
       arity: (Int, Int) = arity, 
       default: Option[A] = default, 
@@ -73,18 +76,35 @@ object Parameters:
       val _val = param.convertOp(value)
       param.collectOp(_val, config)
 
+  object ParameterList:
+    enum ParamKey:
+      case Name(name: String)
+      case Pos(pos: Int)
+
   class ParameterList[A](params: Seq[Parameter[?, A]]):
-    
+    import ParameterList.*
+
     def collectParams(config: A, args: Seq[String]): (A, Seq[String]) =
       val paramsMap = namedParamMap(params, Map())
-      collectParams(args, positionalParamList, config, paramsMap, 0, Map())
+
+      val paramArities = {
+        val posMap = positionalParamList
+          .zipWithIndex.map((p, i)=> (ParamKey.Pos(i), (p, 0)))
+          .toMap
+        val nameMap = paramsMap
+          .map((n, p) => (ParamKey.Name(n), (p, 0)))
+        posMap ++ nameMap
+      }
+
+      collectParams(args, positionalParamList, config, paramsMap, paramArities)
 
     private def collectParams(args: Seq[String], 
         positionalParams: Seq[Parameter[?, A]], 
         config: A, 
         paramsMap: Map[String, Parameter[?, A]],
-        positionalArity: Int,
-        paramArity: Map[String, Int]): (A, Seq[String]) = 
+        //positionalArity: Int,
+        //paramArity: Map[String, Int]): (A, Seq[String]
+        arities: Map[ParamKey, (Parameter[?, A], Int)]): (A, Seq[String]) = 
       if args.isEmpty then
         (config, args)
       else
@@ -101,8 +121,12 @@ object Parameters:
               
               val _config = param.collectValue(config, value)  
               val remainingArgs = if valueRequired then args.drop(2) else args.drop(1)
-              val _paramArity = paramArity.updatedWith(name)(_.map(_ + 1).orElse(Some(0)))
-              collectParams(remainingArgs, positionalParams, _config, paramsMap, positionalArity, _paramArity)
+              val primaryName = param.name
+              val _arities = arities
+                .updatedWith(ParamKey.Name(primaryName)){case Some((param, arity)) => 
+                  Some((param, arity + 1))}
+
+              collectParams(remainingArgs, positionalParams, _config, paramsMap, _arities)
             case None =>
               (config, args)
         else
@@ -110,17 +134,26 @@ object Parameters:
             (config, args)
           else
             val value = arg
+            val pos = this.positionalParamList.size - positionalParams.size
             val param = positionalParams.head
             val (minArity, maxArity) = param.arity
+            
+            val (_, arity) = arities(ParamKey.Pos(pos))
 
             if !param.acceptOp(value) then
               (config, args)
-            else if positionalArity +1 >= maxArity then 
+            else if arity + 1 >= maxArity then 
               val _config = param.collectValue(config, value) 
-              collectParams(args.drop(1), positionalParams.drop(1), _config, paramsMap, positionalArity + 1, paramArity)
+              val _arities = arities
+                .updatedWith(ParamKey.Pos(pos)){case Some((param, arity)) => 
+                  Some((param, arity + 1))}
+              collectParams(args.drop(1), positionalParams.drop(1), _config, paramsMap, _arities)
             else
               val _config = param.collectValue(config, value) 
-              collectParams(args.drop(1), positionalParams, _config, paramsMap, positionalArity + 1, paramArity)
+              val _arities = arities
+                .updatedWith(ParamKey.Pos(pos)){case Some((param, arity)) => 
+                  Some((param, arity + 1))}              
+              collectParams(args.drop(1), positionalParams, _config, paramsMap, _arities)
 
     private def isDefinedName(paramsMap: Map[String, Parameter[?, A]], arg: String): Boolean = 
       if arg.startsWith("--") then

@@ -3,34 +3,37 @@ package urwerk.command
 import scala.annotation.tailrec
 
 object Parameter: 
-
-  //  
   trait ValueSpec[A]:
     def requireValue: Boolean
     def accept(value: String): Boolean
     def convert(value: String): A
+    def defaultLabel: String
 
   given ValueSpec[String] with {
     val requireValue = true
     def accept(value: String): Boolean = !value.startsWith("-")
     def convert(value: String): String = value
+    def defaultLabel: String = "STRING"
   }
 
   given ValueSpec[Int] with {
     val requireValue = true
     def accept(value: String): Boolean = !value.startsWith("--")
     def convert(value: String): Int = value.toInt
+    def defaultLabel: String = "INT"
   }
 
   given ValueSpec[Unit] with {
     val requireValue = false
     def accept(value: String): Boolean = value.isEmpty
     def convert(value: String): Unit = ()
+    def defaultLabel: String = "UNIT"
   }
 
 import Parameter.ValueSpec  
 
-class Parameter[A, B](val names: Seq[String], 
+class Parameter[A, B](val names: Seq[String],
+    val label: String,
     val arity: (Int, Int), 
     val default: Option[A], 
     val valueRequired: Boolean,
@@ -38,13 +41,13 @@ class Parameter[A, B](val names: Seq[String],
     val convertOp: String => A,
     val collectOp: (A, B) => B):
   
-  def this(names: Seq[String], 
+  def this(names: Seq[String],
+      label: String,
       arity: (Int, Int), 
       default: Option[A], 
       valueSpec: ValueSpec[A],
       collectOp: (A, B) => B) =
-
-    this(names, arity, default, valueSpec.requireValue, valueSpec.accept, valueSpec.convert, collectOp)    
+    this(names, label, arity, default, valueSpec.requireValue, valueSpec.accept, valueSpec.convert, collectOp)
 
   def default(value: A): Parameter[A, B] = copy(default = Some(value))
 
@@ -57,18 +60,25 @@ class Parameter[A, B](val names: Seq[String],
   def arity(minArity: Int, maxArity: Int): Parameter[A, B] = 
     copy(arity = (minArity, maxArity))
 
+  def label(label: String): Parameter[A, B] =
+    copy(label = label)
+    
   def name: String = names.headOption.getOrElse("")
 
-  private def copy(names: Seq[String] = names, 
+  private def copy(names: Seq[String] = names,
+      label: String = label,
       arity: (Int, Int) = arity, 
       default: Option[A] = default, 
       valueRequired: Boolean = valueRequired,
       acceptOp: String => Boolean = acceptOp,
       convertOp: String => A = convertOp,
       collectOp: (A, B) => B = collectOp) = 
-    new Parameter(names, arity, default, valueRequired, acceptOp, convertOp, collectOp)
+    new Parameter(names, label, arity, default, valueRequired, acceptOp, convertOp, collectOp)
   
 object Parameters:
+
+  class MissingParameterException(val labelOrName: String, val requiredArity: Int, val actualArity: Int) extends RuntimeException
+
   extension[B] (param: Parameter[?, B])
     private[command] def collectValue(config: B, value: String): B = 
       if !param.acceptOp(value) then
@@ -98,14 +108,22 @@ object Parameters:
 
       collectParams(args, positionalParamList, config, paramsMap, paramArities)
 
+    private def validateArities(arities: Map[ParamKey, (Parameter[?, A], Int)]) =
+      arities.values.foreach{case (param, actualArity) =>
+        val requiredArity = param.arity._1
+        val labelOrName = if param.name.nonEmpty then param.name else param.label
+        if actualArity < requiredArity then
+          throw MissingParameterException(labelOrName, requiredArity=requiredArity, actualArity=actualArity)
+      }
+
+    @tailrec
     private def collectParams(args: Seq[String], 
         positionalParams: Seq[Parameter[?, A]], 
         config: A, 
         paramsMap: Map[String, Parameter[?, A]],
-        //positionalArity: Int,
-        //paramArity: Map[String, Int]): (A, Seq[String]
-        arities: Map[ParamKey, (Parameter[?, A], Int)]): (A, Seq[String]) = 
+        arities: Map[ParamKey, (Parameter[?, A], Int)]): (A, Seq[String]) =
       if args.isEmpty then
+        validateArities(arities)
         (config, args)
       else
         val arg = args.head
@@ -128,9 +146,11 @@ object Parameters:
 
               collectParams(remainingArgs, positionalParams, _config, paramsMap, _arities)
             case None =>
+              validateArities(arities)
               (config, args)
         else
           if positionalParams.isEmpty then
+            validateArities(arities)
             (config, args)
           else
             val value = arg
@@ -141,8 +161,9 @@ object Parameters:
             val (_, arity) = arities(ParamKey.Pos(pos))
 
             if !param.acceptOp(value) then
+              validateArities(arities)
               (config, args)
-            else if arity + 1 >= maxArity then 
+            else if arity + 1 >= maxArity then
               val _config = param.collectValue(config, value) 
               val _arities = arities
                 .updatedWith(ParamKey.Pos(pos)){case Some((param, arity)) => 
@@ -184,7 +205,7 @@ object Parameters:
 class Parameters[A]():
 
   def param[B](using valueSpec: ValueSpec[B]): Parameter[B, A] = 
-    new Parameter(Seq(), (0, 1), None, valueSpec, {(_, config) => config})
+    new Parameter(Seq(), valueSpec.defaultLabel, (0, 1), None, valueSpec, {(_, config) => config})
 
   def param[B](using valueSpec: ValueSpec[B])(name: String, names: String*): Parameter[B, A] = 
-    new Parameter(name +: names, (0, 1), None, valueSpec, {(_, config) => config})
+    new Parameter(name +: names, valueSpec.defaultLabel, (0, 1), None, valueSpec, {(_, config) => config})

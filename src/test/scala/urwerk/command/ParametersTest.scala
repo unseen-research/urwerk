@@ -248,12 +248,15 @@ class ParametersTest extends TestBase:
     "flags without value" in {    
       val params = Seq(
         param[Unit]("name-a", "a", "A")
+          .arity(0, 77)
           .collect((value, config) => 
             config :+ "a-" + value),
         param[Unit]("name-b", "b", "B")
+          .arity(0, 77)
           .collect((value, config) => 
             config :+ "b-" + value),
         param[String]("name-c", "c", "C")
+          .arity(0, 77)
           .collect((value, config) => 
             config :+ "c-" + value)
       )

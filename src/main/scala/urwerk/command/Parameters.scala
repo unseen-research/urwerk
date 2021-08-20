@@ -80,10 +80,11 @@ class Parameter[A, B](val names: Seq[String],
     new Parameter(names, label, arity, default, valueRequired, acceptOp, convertOp, collectOp)
   
 object Parameters:
+  class ArityExceededException(val name: String, val maxArity: Int) extends RuntimeException
 
   class MissingParameterException(val labelOrName: String, val requiredArity: Int, val actualArity: Int) extends RuntimeException
 
-  class ArityExceededException(val name: String, val maxArity: Int) extends RuntimeException
+  class NoSuchValueException extends RuntimeException
 
   extension[B] (param: Parameter[?, B])
     private[command] def collectValue(config: B, value: String): B = 
@@ -163,20 +164,20 @@ object Parameters:
                     Some((param, arity + 1))}              
                 collectParams(args.drop(1), positionalParams, _config, paramsMap, _arities)
 
-          case name if name.size == 1 =>
-            ???
           case name =>
-            val name = arg.stripPrefix("--")
             paramsMap.get(name) match
               case Some(param) =>
                 val valueRequired = param.valueRequired
+
+                if valueRequired && name.size == 1 && arg.size > 2 then // -nabc
+                  throw NoSuchValueException()
+
                 val value = if valueRequired then
                   args(1)
-                else 
-                  ""
+                else ""
                 
                 val _config = param.collectValue(config, value)  
-                val remainingArgs = if valueRequired then args.drop(2) else args.drop(1)
+                
                 val primaryName = param.name
                 val _arities = arities
                   .updatedWith(ParamKey.Name(primaryName)){case Some((param, arity)) =>
@@ -186,6 +187,10 @@ object Parameters:
                     Some((param, newArity))
                   }
 
+                val remainingArgs = if valueRequired then args.drop(2) 
+                else if name.size == 1 then
+                  ("-" + arg.drop(2)) +: args.drop(1)
+                else args.drop(1)
                 collectParams(remainingArgs, positionalParams, _config, paramsMap, _arities)
               case None =>
                 validateArities(arities)
@@ -199,20 +204,6 @@ object Parameters:
       else ""
       if paramsMap.isDefinedAt(name) then name else ""
       
-    private def isDefinedName(paramsMap: Map[String, Parameter[?, A]], arg: String): Boolean = 
-      if arg.startsWith("--") then
-        val name = arg.stripPrefix("--")
-        paramsMap.isDefinedAt(name)
-      else
-        false
-
-    private def isDefinedChar(paramsMap: Map[String, Parameter[?, A]], arg: String): Boolean = 
-      if arg.indexWhere(_ != '-') == 1 && arg.size > 1 then
-        val name = arg(1).toString
-        paramsMap.isDefinedAt(name)
-      else
-        false
-
     private def positionalParamList = params.filter(_.names.isEmpty)
 
     @tailrec

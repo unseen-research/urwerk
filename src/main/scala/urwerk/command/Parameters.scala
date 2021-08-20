@@ -134,62 +134,81 @@ object Parameters:
         (config, args)
       else
         val arg = args.head
-        if isDefinedName(paramsMap, arg) then
-          val name = arg.stripPrefix("--")
-          paramsMap.get(name) match
-            case Some(param) =>
-              val valueRequired = param.valueRequired
-              val value = if valueRequired then
-                args(1)
-              else 
-                ""
-              
-              val _config = param.collectValue(config, value)  
-              val remainingArgs = if valueRequired then args.drop(2) else args.drop(1)
-              val primaryName = param.name
-              val _arities = arities
-                .updatedWith(ParamKey.Name(primaryName)){case Some((param, arity)) =>
-                  val newArity = arity + 1
-                  if newArity > param.maxArity then
-                    throw ArityExceededException(name, param.maxArity)
-                  Some((param, newArity))
-                }
-
-              collectParams(remainingArgs, positionalParams, _config, paramsMap, _arities)
-            case None =>
+        definedName(paramsMap, arg) match
+          case "" =>
+            if positionalParams.isEmpty then
               validateArities(arities)
               (config, args)
-        else
-          if positionalParams.isEmpty then
-            validateArities(arities)
-            (config, args)
-          else
-            val value = arg
-            val pos = this.positionalParamList.size - positionalParams.size
-            val param = positionalParams.head
-            val (minArity, maxArity) = param.arity
-            
-            val (_, arity) = arities(ParamKey.Pos(pos))
-
-            if !param.acceptOp(value) then
-              validateArities(arities)
-              (config, args)
-            else if arity + 1 >= maxArity then
-              val _config = param.collectValue(config, value) 
-              val _arities = arities
-                .updatedWith(ParamKey.Pos(pos)){case Some((param, arity)) => 
-                  Some((param, arity + 1))}
-              collectParams(args.drop(1), positionalParams.drop(1), _config, paramsMap, _arities)
             else
-              val _config = param.collectValue(config, value) 
-              val _arities = arities
-                .updatedWith(ParamKey.Pos(pos)){case Some((param, arity)) => 
-                  Some((param, arity + 1))}              
-              collectParams(args.drop(1), positionalParams, _config, paramsMap, _arities)
+              val value = arg
+              val pos = this.positionalParamList.size - positionalParams.size
+              val param = positionalParams.head
+              val (minArity, maxArity) = param.arity
+              
+              val (_, arity) = arities(ParamKey.Pos(pos))
 
+              if !param.acceptOp(value) then
+                validateArities(arities)
+                (config, args)
+              else if arity + 1 >= maxArity then
+                val _config = param.collectValue(config, value) 
+                val _arities = arities
+                  .updatedWith(ParamKey.Pos(pos)){case Some((param, arity)) => 
+                    Some((param, arity + 1))}
+                collectParams(args.drop(1), positionalParams.drop(1), _config, paramsMap, _arities)
+              else
+                val _config = param.collectValue(config, value) 
+                val _arities = arities
+                  .updatedWith(ParamKey.Pos(pos)){case Some((param, arity)) => 
+                    Some((param, arity + 1))}              
+                collectParams(args.drop(1), positionalParams, _config, paramsMap, _arities)
+
+          case name if name.size == 1 =>
+            ???
+          case name =>
+            val name = arg.stripPrefix("--")
+            paramsMap.get(name) match
+              case Some(param) =>
+                val valueRequired = param.valueRequired
+                val value = if valueRequired then
+                  args(1)
+                else 
+                  ""
+                
+                val _config = param.collectValue(config, value)  
+                val remainingArgs = if valueRequired then args.drop(2) else args.drop(1)
+                val primaryName = param.name
+                val _arities = arities
+                  .updatedWith(ParamKey.Name(primaryName)){case Some((param, arity)) =>
+                    val newArity = arity + 1
+                    if newArity > param.maxArity then
+                      throw ArityExceededException(name, param.maxArity)
+                    Some((param, newArity))
+                  }
+
+                collectParams(remainingArgs, positionalParams, _config, paramsMap, _arities)
+              case None =>
+                validateArities(arities)
+                (config, args)            
+
+    private def definedName(paramsMap: Map[String, Parameter[?, A]], arg: String): String = 
+      val name = if arg.startsWith("--") then
+        arg.stripPrefix("--")
+      else if arg.startsWith("-") && arg.size > 1 then
+        arg(1).toString
+      else ""
+      if paramsMap.isDefinedAt(name) then name else ""
+      
     private def isDefinedName(paramsMap: Map[String, Parameter[?, A]], arg: String): Boolean = 
       if arg.startsWith("--") then
         val name = arg.stripPrefix("--")
+        paramsMap.isDefinedAt(name)
+      else
+        false
+
+    private def isDefinedChar(paramsMap: Map[String, Parameter[?, A]], arg: String): Boolean = 
+      if arg.indexWhere(_ != '-') == 1 && arg.size > 1 then
+        val name = arg(1).toString
         paramsMap.isDefinedAt(name)
       else
         false

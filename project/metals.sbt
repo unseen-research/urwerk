@@ -1,5 +1,4 @@
 // DO NOT EDIT! This file is auto-generated.
-// This file enables semantic information to be produced by sbt.
-// It also adds support for debugging using the Debug Adapter Protocol
+// This file enables sbt-bloop to create bloop config files.
 
-addSbtPlugin("org.scalameta" % "sbt-metals" % "0.10.5")
+addSbtPlugin("ch.epfl.scala" % "sbt-bloop" % "1.4.8-19-4d9f966b")

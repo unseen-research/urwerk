@@ -244,6 +244,26 @@ class ParametersTest extends TestBase:
       ex.name should be ("any-name")
       ex.maxArity should be (2)
     }
+
+    "flags without value" in {    
+      val params = Seq(
+        param[Unit]("name-a", "a", "A")
+          .collect((value, config) => 
+            config :+ "a-" + value),
+        param[Unit]("name-b", "b", "B")
+          .collect((value, config) => 
+            config :+ "b-" + value),
+        param[String]("name-c", "c", "C")
+          .collect((value, config) => 
+            config :+ "c-" + value)
+      )
+
+      val (config, remainingArgs) = ParameterList(params)
+        .collectParams(Seq(), Seq("-aAbBc", "valueC", "tail"))
+
+      remainingArgs should be (Seq("tail"))     
+      config should be (Seq("a-()", "a-()", "b-()", "b-()", "c-valueC"))     
+    }
   }
 
 end ParametersTest    

@@ -60,6 +60,10 @@ class Parameter[A, B](val names: Seq[String],
   def arity(minArity: Int, maxArity: Int): Parameter[A, B] = 
     copy(arity = (minArity, maxArity))
 
+  def minArity: Int = arity._1
+
+  def maxArity: Int = arity._2
+  
   def label(label: String): Parameter[A, B] =
     copy(label = label)
     
@@ -79,6 +83,8 @@ object Parameters:
 
   class MissingParameterException(val labelOrName: String, val requiredArity: Int, val actualArity: Int) extends RuntimeException
 
+  class ArityExceededException(val name: String, val maxArity: Int) extends RuntimeException
+
   extension[B] (param: Parameter[?, B])
     private[command] def collectValue(config: B, value: String): B = 
       if !param.acceptOp(value) then
@@ -93,6 +99,7 @@ object Parameters:
 
   class ParameterList[A](params: Seq[Parameter[?, A]]):
     import ParameterList.*
+    import Parameters.*
 
     def collectParams(config: A, args: Seq[String]): (A, Seq[String]) =
       val paramsMap = namedParamMap(params, Map())
@@ -110,7 +117,7 @@ object Parameters:
 
     private def validateArities(arities: Map[ParamKey, (Parameter[?, A], Int)]) =
       arities.values.foreach{case (param, actualArity) =>
-        val requiredArity = param.arity._1
+        val requiredArity = param.minArity
         val labelOrName = if param.name.nonEmpty then param.name else param.label
         if actualArity < requiredArity then
           throw MissingParameterException(labelOrName, requiredArity=requiredArity, actualArity=actualArity)
@@ -141,8 +148,12 @@ object Parameters:
               val remainingArgs = if valueRequired then args.drop(2) else args.drop(1)
               val primaryName = param.name
               val _arities = arities
-                .updatedWith(ParamKey.Name(primaryName)){case Some((param, arity)) => 
-                  Some((param, arity + 1))}
+                .updatedWith(ParamKey.Name(primaryName)){case Some((param, arity)) =>
+                  val newArity = arity + 1
+                  if newArity > param.maxArity then
+                    throw ArityExceededException(name, param.maxArity)
+                  Some((param, newArity))
+                }
 
               collectParams(remainingArgs, positionalParams, _config, paramsMap, _arities)
             case None =>

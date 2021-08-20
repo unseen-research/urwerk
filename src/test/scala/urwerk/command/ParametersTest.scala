@@ -172,7 +172,7 @@ class ParametersTest extends TestBase:
       config should be (Seq("a-value1", "a-value2", "b-value3", "c-value4", "c-value5"))     
     }
 
-    "positional min arity" in {
+    "positional min arity missed" in {
       val params = Seq(
         param[String]("name1")
           .collect((value, config) => config),
@@ -214,7 +214,7 @@ class ParametersTest extends TestBase:
       config should be (Seq("c-value1", "a-value2", "b-value3", "a-value4"))     
     }
 
-    "named min arity" in {
+    "named min arity missed" in {
       val params = Seq(
         param[String]("name1")
           .collect((value, config) => config)
@@ -228,6 +228,21 @@ class ParametersTest extends TestBase:
       ex.labelOrName should be ("name1")
       ex.requiredArity should be (3)
       ex.actualArity should be (2)
+    }
+
+    "named max arity exceeded" in {
+      val params = Seq(
+        param[String]("any-name")
+          .collect((value, config) => config)
+          .arity(0, 2),
+      )
+
+      val ex = intercept[ArityExceededException] {
+        ParameterList(params)
+          .collectParams(Seq(), Seq("--any-name", "value1", "--any-name", "value2", "--any-name", "value3"))
+      }
+      ex.name should be ("any-name")
+      ex.maxArity should be (2)
     }
   }
 

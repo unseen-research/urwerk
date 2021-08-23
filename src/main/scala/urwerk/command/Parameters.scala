@@ -82,7 +82,7 @@ class Parameter[A, B](val names: Seq[String],
 object Parameters:
   class ArityExceededException(val name: String, val maxArity: Int) extends RuntimeException
 
-  class MissingParameterException(val labelOrName: String, val requiredArity: Int, val actualArity: Int) extends RuntimeException
+  class MissingParameterException(val labelOrName: String, val requiredArity: Int, val repetition: Int) extends RuntimeException
 
   class NoSuchValueException extends RuntimeException
 
@@ -105,23 +105,39 @@ object Parameters:
     def collectParams(config: A, args: Seq[String]): (A, Seq[String]) =
       val paramsMap = namedParamMap(params, Map())
 
-      val paramArities = {
+      val paramRepetions = {
         val posMap = positionalParamList
           .zipWithIndex.map((p, i)=> (ParamKey.Pos(i), (p, 0)))
           .toMap
-        val nameMap = paramsMap
-          .map((n, p) => (ParamKey.Name(n), (p, 0)))
+        val nameMap = params
+          .filter(_.names.nonEmpty)
+          .map(p => (ParamKey.Name(p.name), (p, 0)))
         posMap ++ nameMap
       }
 
-      collectParams(args, positionalParamList, config, paramsMap, paramArities)
+      collectParams(args, positionalParamList, config, paramsMap, paramRepetions)
 
-    private def validateArities(arities: Map[ParamKey, (Parameter[?, A], Int)]) =
-      arities.values.foreach{case (param, actualArity) =>
+    private def postProcess(config: A, remainingArgs: Seq[String], repetitions: Map[ParamKey, (Parameter[?, A], Int)]): (A, Seq[String]) = 
+      val (_config, _repetitions) = applyDefaults(config, repetitions)
+      validateArity(_repetitions)
+      (_config, remainingArgs)
+
+    private def applyDefaults(config: A, repetitions: Map[ParamKey, (Parameter[?, A], Int)]): (A, Map[ParamKey, (Parameter[?, A], Int)]) = 
+      repetitions.foldLeft((config, repetitions)){case ((config, repetitions), (paramKey, (param, repetition))) =>
+        if repetition == 0 && param.default.isDefined then
+          val default = param.default.get
+          val _config = param.collectOp(default, config) 
+          (_config, repetitions.updated(paramKey, (param, 1)))
+        else 
+          (config, repetitions)
+      }
+
+    private def validateArity(repetitions: Map[ParamKey, (Parameter[?, A], Int)]) =
+      repetitions.values.foreach{case (param, repetition) =>
         val requiredArity = param.minArity
         val labelOrName = if param.name.nonEmpty then param.name else param.label
-        if actualArity < requiredArity then
-          throw MissingParameterException(labelOrName, requiredArity=requiredArity, actualArity=actualArity)
+        if repetition < requiredArity then
+          throw MissingParameterException(labelOrName, requiredArity = requiredArity, repetition = repetition)
       }
 
     @tailrec
@@ -129,40 +145,37 @@ object Parameters:
         positionalParams: Seq[Parameter[?, A]], 
         config: A, 
         paramsMap: Map[String, Parameter[?, A]],
-        arities: Map[ParamKey, (Parameter[?, A], Int)]): (A, Seq[String]) =
+        repetitions: Map[ParamKey, (Parameter[?, A], Int)]): (A, Seq[String]) =
       if args.isEmpty then
-        validateArities(arities)
-        (config, args)
+        postProcess(config, args, repetitions)
       else
         val arg = args.head
         definedName(paramsMap, arg) match
           case "" =>
             if positionalParams.isEmpty then
-              validateArities(arities)
-              (config, args)
+              postProcess(config, args, repetitions)
             else
               val value = arg
               val pos = this.positionalParamList.size - positionalParams.size
               val param = positionalParams.head
               val (minArity, maxArity) = param.arity
               
-              val (_, arity) = arities(ParamKey.Pos(pos))
+              val (_, arity) = repetitions(ParamKey.Pos(pos))
 
               if !param.acceptOp(value) then
-                validateArities(arities)
-                (config, args)
+                postProcess(config, args, repetitions)
               else if arity + 1 >= maxArity then
                 val _config = param.collectValue(config, value) 
-                val _arities = arities
+                val _repetitions = repetitions
                   .updatedWith(ParamKey.Pos(pos)){case Some((param, arity)) => 
                     Some((param, arity + 1))}
-                collectParams(args.drop(1), positionalParams.drop(1), _config, paramsMap, _arities)
+                collectParams(args.drop(1), positionalParams.drop(1), _config, paramsMap, _repetitions)
               else
                 val _config = param.collectValue(config, value) 
-                val _arities = arities
+                val _repetitions = repetitions
                   .updatedWith(ParamKey.Pos(pos)){case Some((param, arity)) => 
                     Some((param, arity + 1))}              
-                collectParams(args.drop(1), positionalParams, _config, paramsMap, _arities)
+                collectParams(args.drop(1), positionalParams, _config, paramsMap, _repetitions)
 
           case name =>
             paramsMap.get(name) match
@@ -179,7 +192,7 @@ object Parameters:
                 val _config = param.collectValue(config, value)  
                 
                 val primaryName = param.name
-                val _arities = arities
+                val _repetitions = repetitions
                   .updatedWith(ParamKey.Name(primaryName)){case Some((param, arity)) =>
                     val newArity = arity + 1
                     if newArity > param.maxArity then
@@ -191,10 +204,9 @@ object Parameters:
                 else if name.size == 1 then
                   ("-" + arg.drop(2)) +: args.drop(1)
                 else args.drop(1)
-                collectParams(remainingArgs, positionalParams, _config, paramsMap, _arities)
+                collectParams(remainingArgs, positionalParams, _config, paramsMap, _repetitions)
               case None =>
-                validateArities(arities)
-                (config, args)            
+                postProcess(config, args, repetitions)          
 
     private def definedName(paramsMap: Map[String, Parameter[?, A]], arg: String): String = 
       val name = if arg.startsWith("--") then

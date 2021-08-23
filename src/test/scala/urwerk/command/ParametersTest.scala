@@ -188,7 +188,7 @@ class ParametersTest extends TestBase:
       }
       ex.labelOrName should be ("STRING_PARAM")
       ex.requiredArity should be (3)
-      ex.actualArity should be (2)
+      ex.repetition should be (2)
     }
 
     "named max arity" in {
@@ -227,7 +227,7 @@ class ParametersTest extends TestBase:
       }
       ex.labelOrName should be ("name1")
       ex.requiredArity should be (3)
-      ex.actualArity should be (2)
+      ex.repetition should be (2)
     }
 
     "named max arity exceeded" in {
@@ -266,6 +266,28 @@ class ParametersTest extends TestBase:
 
       remainingArgs should be (Seq("tail"))     
       config should be (Seq("a-()", "a-()", "b-()", "b-()", "c-valueC"))     
+    }
+
+    "default values" in {
+      val params = Seq(
+        param[Unit]("name-a", "a", "A")
+          .default(())
+          .collect((value, config) => 
+            config :+ "a-" + value),
+        param[Int]
+          .default(42)
+          .collect((value, config) => 
+            config :+ "b-" + value),
+        param[String]("name-c", "c", "C")
+          .default("default-value")
+          .collect((value, config) => 
+            config :+ "c-" + value)
+      )
+
+      val (config, remainingArgs) = ParameterList(params)
+        .collectParams(Seq(), Seq())
+
+      config.toSet should be (Set("a-()", "b-42", "c-default-value"))  
     }
   }
 

@@ -4,18 +4,22 @@ import urwerk.test.TestBase
 
 class CommandTest extends TestBase:
 
+  val params = Parameters[Seq[String]]
+  import params.*
+
   "test" in {
-    case class Config()
+    val cmd = Command()
+      .params(
+        param[String]("name1"),
+        param[Int]("name2"))
+      .params(
+        param[String]
+      )
+      .params(
+        param[String]
+          .arity(0, 77)
+          .accept(_ => true)
+      )
 
-    val params = Parameters[Config]
-    import params.*
-
-    // val runCmd = Command[Config].params(
-    //     param[String],
-    //     param[String]
-    //   )
-    //   .params(
-    //     param["run"]
-    //   )
-    //   .usage("run command")
+    cmd.
   }

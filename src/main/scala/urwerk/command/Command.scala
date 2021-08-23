@@ -1,13 +1,16 @@
 package urwerk.command
 
 object Command: 
-  def apply[A]: CommandParamDef[A] = new CommandParamDef{}
+  def apply[A](): CommandParameterList[A] = new CommandParameterList{
+
+  }
 
 trait Command[A]:
   def usage(text: String): Command[A] = ???
 
-trait CommandParamDef[A] extends Command[A]:
-  
-  def params(param: Parameter[? <: AnyRef , A], params: Parameter[? <: AnyRef , A]*): CommandParamDef[A] = ???
+  def apply(args: Seq[String]): A = ???
+
+trait CommandParameterList[A] extends Command[A]:
+  def params(param: Parameter[?, A], params: Parameter[?, A]*): CommandParameterList[A] = ???
 
 

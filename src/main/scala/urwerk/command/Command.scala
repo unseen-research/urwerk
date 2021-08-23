@@ -1,7 +1,7 @@
 package urwerk.command
 
 object Command: 
-  def apply[A](): CommandParameterList[A] = new CommandParameterList{
+  def apply[A](name: String): CommandParameterList[A] = new CommandParameterList{
 
   }
 

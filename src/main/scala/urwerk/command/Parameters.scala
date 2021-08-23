@@ -1,6 +1,7 @@
 package urwerk.command
 
 import scala.annotation.tailrec
+import scala.compiletime.constValue
 
 object Parameter: 
   trait ValueSpec[A]:
@@ -9,26 +10,29 @@ object Parameter:
     def convert(value: String): A
     def defaultLabel: String
 
-  given ValueSpec[String] with {
+  // class StringValueSpec(singletonType: String) extends ValueSpec[String]: 
+  //     val requireValue = true
+  //     def accept(value: String): Boolean = value == singletonType
+  //     def convert(value: String): String = singletonType
+  //     def defaultLabel: String = "STRING"
+
+  given ValueSpec[String] with 
     val requireValue = true
     def accept(value: String): Boolean = !value.startsWith("-")
     def convert(value: String): String = value
     def defaultLabel: String = "STRING"
-  }
 
-  given ValueSpec[Int] with {
+  given ValueSpec[Int] with
     val requireValue = true
     def accept(value: String): Boolean = !value.startsWith("--")
     def convert(value: String): Int = value.toInt
     def defaultLabel: String = "INT"
-  }
 
-  given ValueSpec[Unit] with {
+  given ValueSpec[Unit] with
     val requireValue = false
     def accept(value: String): Boolean = value.isEmpty
     def convert(value: String): Unit = ()
     def defaultLabel: String = "UNIT"
-  }
 
 import Parameter.ValueSpec  
 
@@ -236,6 +240,10 @@ object Parameters:
         namedParamMap(params.tail, map)
 
 class Parameters[A]():
+  //import Parameter.StringValueSpec
+
+  // inline def param[B <: String]: Parameter[B, A] = 
+  //   new Parameter(Seq(), constValue[B], (0, 1), None, StringValueSpec(constValue[B]).asInstanceOf[ValueSpec[B]] , {(_, config) => config})
 
   def param[B](using valueSpec: ValueSpec[B]): Parameter[B, A] = 
     new Parameter(Seq(), valueSpec.defaultLabel, (0, 1), None, valueSpec, {(_, config) => config})

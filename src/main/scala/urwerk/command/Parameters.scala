@@ -120,13 +120,6 @@ object Parameters:
 
   class CollectValueException(cause: Throwable) extends ParameterException(cause)
 
-  // extension[A] (param: Parameter[?, A])
-  //   private[command] def collectValue(config: A, value: String): A = 
-  //     if !param.acceptOp(value) then
-  //       throw IllegalArgumentException()
-  //     val _val = param.convertOp(value)
-  //     param.collectOp(_val, config)
-
   object ParameterList:
     enum ParamKey:
       case Name(name: String)
@@ -275,21 +268,3 @@ class Parameters[A]():
 
   inline def param[B](using valueSpec: ValueSpec[B])(name: String, names: String*): Parameter[B, A] = 
     new Parameter(name +: names, valueSpec.defaultLabel, (0, 1), None, valueSpec, {(_, config) => config})
-
-  //def param(value: String): Parameter[String, A] = ???
-
-  // object Test:
-
-
-  //   given xx[T <: String](using ord: T): ValueSpec[T] with
-  //     val requireValue = true
-  //     def accept(value: String): Boolean = !value.startsWith("-")
-  //     def convert(value: String): "singleton" = "singleton"
-  //     def defaultLabel: String = "STRING"
-
-
-  //   val p = param[String]
-
-  //   val pi = param[Int]
-
-  //   val ps = param["singleton"]

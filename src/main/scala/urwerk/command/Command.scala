@@ -1,6 +1,7 @@
 package urwerk.command
 
 import urwerk.command.Parameters.ParameterList
+import scala.annotation.tailrec
 
 object Command: 
   def apply[A](name: String): CommandParameterList[A] = new CommandParameterList[A](Seq()) with Command[A](Seq(), "")
@@ -9,14 +10,16 @@ trait Command[A](parameterLists: Seq[ParameterList[A]], description: String):
   def description(text: String): Command[A] = copy(description = description)
 
   def apply(config: A, args: Seq[String]): Option[A] = 
-    case class Config[A](config: A, args: Seq[String])
+    collectParams(parameterLists, config, args)
 
-    val _config = parameterLists.foldLeft(Config(config, args)){case (Config(config, args), paramList) =>
+  @tailrec
+  private def collectParams(paramLists: Seq[ParameterList[A]], config: A, args: Seq[String]): Option[A] =
+    if paramLists.isEmpty then
+      Some(config)
+    else
+      val paramList = paramLists.head
       val (_config, remainingArgs) =  paramList.collectParams(config, args)
-      Config(_config, remainingArgs)
-    }
-
-    Some(_config.config)
+      collectParams(paramLists.drop(1), _config, remainingArgs)
 
   private[command] def copy(
       parameterLists: Seq[ParameterList[A]] = parameterLists,

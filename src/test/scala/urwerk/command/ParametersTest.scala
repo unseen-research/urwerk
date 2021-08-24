@@ -267,24 +267,19 @@ class ParametersTest extends TestBase:
 
     "default values" in {
       val params = Seq(
-        param[Unit]("name-a", "a", "A")
-          .default(())
-          .collect((value, config) => 
-            config :+ "a-" + value),
-        param[Int]
+        param[String]("name-a", "a", "A")((value, config) => 
+            config :+ "a-" + value)
+          .default("value-a")
+          .arity(0, 1),
+        param[Int]((value, config) => 
+            config :+ "b-" + value)
           .default(42)
-          .collect((value, config) => 
-            config :+ "b-" + value),
-        param[String]("name-c", "c", "C")
-          .default("default-value")
-          .collect((value, config) => 
-            config :+ "c-" + value)
-      )
+          .arity(1, 1))
 
       val (config, remainingArgs) = ParameterList(params)
         .collectParams(Seq(), Seq())
 
-      config.toSet should be (Set("a-()", "b-42", "c-default-value"))  
+      config.toSet should be (Set("a-value-a", "b-42"))  
     }
 
     "fail when exception is thrown while collect value" in {

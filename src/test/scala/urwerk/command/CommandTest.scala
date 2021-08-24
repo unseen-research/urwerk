@@ -7,35 +7,25 @@ class CommandTest extends TestBase:
   val params = Parameters[Seq[String]]
   import params.*
 
-  "st" in {
-    import scala.compiletime.{constValue}
-
-    inline def toIntC[N <: Int] : Int =
-      constValue[N]
-
-    class Abc[A]
-    class ToInt[N<: Int]:
-      inline def int(): Int = constValue[N]
-
-    val ctwo = toIntC[2]
-
-    println(s"xxx $ctwo")
-
-  }
-
-  "test" in {
+  "apply command" in {
     val cmd = Command("command")
       .params(
-        param[String]("name1"),
-        param[Int]("name2"))
-      // .params(
-      //   param["String"]
-      // )
+        param[String]("name1"){(value, config) =>
+          config :+ s"name1-$value"
+        },
+        param[Int]("name2"){(value, config) =>
+          config :+ s"name2-$value"
+        })
       .params(
-        param[String]
+        param[String].accept(_ == "command"){(value, config) =>
+          config :+ s"cmd-$value"
+        })
+      .params(
+        param[String]{(value, config) =>
+            config :+ s"param-$value"}
           .arity(0, 77)
-          .accept(_ => true)
-      )
+          .accept(_ => true))
 
-    cmd(Seq("--name2", "55", "--name1", "value1", "string value"))
+    val config = cmd(Seq(), Seq("--name2", "55", "--name1", "value1", "command", "--name", "value"))
+    config should be (Seq("name2-55", "name1-value1", "cmd-command", "param---name", "param-value"))
   }

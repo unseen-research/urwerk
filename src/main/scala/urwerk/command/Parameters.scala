@@ -10,12 +10,6 @@ object Parameter:
     def convert(value: String): A
     def defaultLabel: String
 
-  // class StringValueSpec(singletonType: String) extends ValueSpec[String]: 
-  //     val requireValue = true
-  //     def accept(value: String): Boolean = value == singletonType
-  //     def convert(value: String): String = singletonType
-  //     def defaultLabel: String = "STRING"
-
   given ValueSpec[String] with 
     val requireValue = true
     def accept(value: String): Boolean = !value.startsWith("-")
@@ -58,6 +52,9 @@ class Parameter[A, B](val names: Seq[String],
   def collect(op: (A, B) => B): Parameter[A, B] = 
     copy(collectOp = op)
 
+  def apply(op: (A, B) => B): Parameter[A, B] = 
+    collect(op)
+
   def accept(op: String => Boolean): Parameter[A, B] = 
     copy(acceptOp = op)
     
@@ -72,6 +69,12 @@ class Parameter[A, B](val names: Seq[String],
     copy(label = label)
     
   def name: String = names.headOption.getOrElse("")
+
+  def name(name: String): Parameter[A, B] =
+    copy(names = name +: names.drop(1))
+
+  def names(name: String, names: String*): Parameter[A, B] =
+    copy(names = name +: names)
 
   private def copy(names: Seq[String] = names,
       label: String = label,
@@ -240,13 +243,27 @@ object Parameters:
         namedParamMap(params.tail, map)
 
 class Parameters[A]():
-  //import Parameter.StringValueSpec
 
-  // inline def param[B <: String]: Parameter[B, A] = 
-  //   new Parameter(Seq(), constValue[B], (0, 1), None, StringValueSpec(constValue[B]).asInstanceOf[ValueSpec[B]] , {(_, config) => config})
-
-  def param[B](using valueSpec: ValueSpec[B]): Parameter[B, A] = 
+  inline def param[B](using valueSpec: ValueSpec[B]): Parameter[B, A] = 
     new Parameter(Seq(), valueSpec.defaultLabel, (0, 1), None, valueSpec, {(_, config) => config})
 
-  def param[B](using valueSpec: ValueSpec[B])(name: String, names: String*): Parameter[B, A] = 
+  inline def param[B](using valueSpec: ValueSpec[B])(name: String, names: String*): Parameter[B, A] = 
     new Parameter(name +: names, valueSpec.defaultLabel, (0, 1), None, valueSpec, {(_, config) => config})
+
+  //def param(value: String): Parameter[String, A] = ???
+
+  // object Test:
+
+
+  //   given xx[T <: String](using ord: T): ValueSpec[T] with
+  //     val requireValue = true
+  //     def accept(value: String): Boolean = !value.startsWith("-")
+  //     def convert(value: String): "singleton" = "singleton"
+  //     def defaultLabel: String = "STRING"
+
+
+  //   val p = param[String]
+
+  //   val pi = param[Int]
+
+  //   val ps = param["singleton"]

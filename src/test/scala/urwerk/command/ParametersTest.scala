@@ -247,18 +247,15 @@ class ParametersTest extends TestBase:
 
     "flags without value" in {    
       val params = Seq(
-        param[Unit]("name-a", "a", "A")
-          .arity(0, 77)
-          .collect((value, config) => 
-            config :+ "a-" + value),
-        param[Unit]("name-b", "b", "B")
-          .arity(0, 77)
-          .collect((value, config) => 
-            config :+ "b-" + value),
-        param[String]("name-c", "c", "C")
-          .arity(0, 77)
-          .collect((value, config) => 
+        param[Unit]("name-a", "a", "A")((value, config) => 
+            config :+ "a-" + value)
+          .arity(0, 77),
+        param[Unit]("name-b", "b", "B")((value, config) => 
+            config :+ "b-" + value)
+          .arity(0, 77),
+        param[String]("name-c", "c", "C")((value, config) => 
             config :+ "c-" + value)
+          .arity(0, 77)  
       )
 
       val (config, remainingArgs) = ParameterList(params)
@@ -288,6 +285,21 @@ class ParametersTest extends TestBase:
         .collectParams(Seq(), Seq())
 
       config.toSet should be (Set("a-()", "b-42", "c-default-value"))  
+    }
+
+    "fail when exception is thrown while collect value" in {
+      val params = Seq(
+        param[String]("name1")((value, config) => throw IllegalStateException("test message"))
+      )
+
+      val ex = intercept[CollectValueException] {
+        ParameterList(params)
+          .collectParams(Seq(), Seq("--name1", "value1"))
+      }
+
+      val cause = ex.getCause()
+      cause.getMessage should be ("test message")
+      cause shouldBe a[IllegalStateException]
     }
   }
 

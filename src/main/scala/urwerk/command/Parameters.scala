@@ -2,6 +2,9 @@ package urwerk.command
 
 import scala.annotation.tailrec
 import scala.compiletime.constValue
+import scala.util.Try
+import scala.util.Failure
+import urwerk.command.Parameters.CollectValueException
 
 object Parameter: 
   trait ValueSpec[A]:
@@ -86,19 +89,43 @@ class Parameter[A, B](val names: Seq[String],
       collectOp: (A, B) => B = collectOp) = 
     new Parameter(names, label, arity, default, valueRequired, acceptOp, convertOp, collectOp)
   
+  private[command] def collectValue(config: B, value: String): B = 
+    if !acceptOp(value) then
+      throw IllegalArgumentException()
+    val _val = convertOp(value)
+    applyCollectOp(_val, config)
+
+  private[command] def collectDefault(config: B): B = 
+    default.map(value => applyCollectOp(value, config))
+      .getOrElse(config)
+
+  private def applyCollectOp(value: A, config: B): B = 
+    Try(
+        collectOp(value, config))
+      .recoverWith{case ex: Throwable => Failure(CollectValueException(ex))}
+      .get
+
 object Parameters:
-  class ArityExceededException(val name: String, val maxArity: Int) extends RuntimeException
 
-  class MissingParameterException(val labelOrName: String, val requiredArity: Int, val repetition: Int) extends RuntimeException
+  class ParameterException(message: String, cause: Throwable) extends RuntimeException(message, cause):
+    def this() = this("", null)
+    def this(message: String) = this(message, null)
+    def this(cause: Throwable) = this("message", cause)
 
-  class NoSuchValueException extends RuntimeException
+  class ArityExceededException(val name: String, val maxArity: Int) extends ParameterException
 
-  extension[B] (param: Parameter[?, B])
-    private[command] def collectValue(config: B, value: String): B = 
-      if !param.acceptOp(value) then
-        throw IllegalArgumentException()
-      val _val = param.convertOp(value)
-      param.collectOp(_val, config)
+  class MissingParameterException(val labelOrName: String, val requiredArity: Int, val repetition: Int) extends ParameterException
+
+  class NoSuchValueException extends ParameterException
+
+  class CollectValueException(cause: Throwable) extends ParameterException(cause)
+
+  // extension[A] (param: Parameter[?, A])
+  //   private[command] def collectValue(config: A, value: String): A = 
+  //     if !param.acceptOp(value) then
+  //       throw IllegalArgumentException()
+  //     val _val = param.convertOp(value)
+  //     param.collectOp(_val, config)
 
   object ParameterList:
     enum ParamKey:
@@ -132,9 +159,8 @@ object Parameters:
     private def applyDefaults(config: A, repetitions: Map[ParamKey, (Parameter[?, A], Int)]): (A, Map[ParamKey, (Parameter[?, A], Int)]) = 
       repetitions.foldLeft((config, repetitions)){case ((config, repetitions), (paramKey, (param, repetition))) =>
         if repetition == 0 && param.default.isDefined then
-          val default = param.default.get
-          val _config = param.collectOp(default, config) 
-          (_config, repetitions.updated(paramKey, (param, 1)))
+          (param.collectDefault(config), 
+            repetitions.updated(paramKey, (param, 1)))
         else 
           (config, repetitions)
       }

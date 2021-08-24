@@ -26,6 +26,7 @@ class CommandTest extends TestBase:
           .arity(0, 77)
           .accept(_ => true))
 
-    val config = cmd(Seq(), Seq("--name2", "55", "--name1", "value1", "command", "--name", "value"))
+    val Some(config) = cmd(Seq(), Seq("--name2", "55", "--name1", "value1", "command", "--name", "value"))
     config should be (Seq("name2-55", "name1-value1", "cmd-command", "param---name", "param-value"))
   }
+

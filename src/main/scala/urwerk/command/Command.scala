@@ -8,7 +8,7 @@ object Command:
 trait Command[A](parameterLists: Seq[ParameterList[A]], description: String):
   def description(text: String): Command[A] = copy(description = description)
 
-  def apply(config: A, args: Seq[String]): A = 
+  def apply(config: A, args: Seq[String]): Option[A] = 
     case class Config[A](config: A, args: Seq[String])
 
     val _config = parameterLists.foldLeft(Config(config, args)){case (Config(config, args), paramList) =>
@@ -16,7 +16,7 @@ trait Command[A](parameterLists: Seq[ParameterList[A]], description: String):
       Config(_config, remainingArgs)
     }
 
-    _config.config
+    Some(_config.config)
 
   private[command] def copy(
       parameterLists: Seq[ParameterList[A]] = parameterLists,

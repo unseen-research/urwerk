@@ -125,14 +125,16 @@ object Parameters:
       case Name(name: String)
       case Pos(pos: Int)
 
+    case class Pos(index: Int, subIndex: Int)
+
   class ParameterList[A](params: Seq[Parameter[?, A]]):
     import ParameterList.*
     import Parameters.*
 
     def collectParams(config: A, args: Seq[String]): (A, Int, Int) = 
-      collectParams(config, args, 0, 0)
+      collectParams(config, args, Pos(0, 0))
 
-    def collectParams(config: A, args: Seq[String], argIndex: Int, flagIndex: Int): (A, Int, Int) =
+    def collectParams(config: A, args: Seq[String], pos: Pos): (A, Int, Int) =
       val paramsMap = namedParamMap(params, Map())
 
       val paramRepetions = {
@@ -145,7 +147,7 @@ object Parameters:
         posMap ++ nameMap
       }
 
-      collectParams(args, argIndex, flagIndex, positionalParamList, config, paramsMap, paramRepetions)
+      collectParams(args, pos, positionalParamList, config, paramsMap, paramRepetions)
 
     private def postProcess(config: A, repetitions: Map[ParamKey, (Parameter[?, A], Int)]): A = 
       val (_config, _repetitions) = applyDefaults(config, repetitions)
@@ -171,12 +173,12 @@ object Parameters:
 
     @tailrec
     private def collectParams(args: Seq[String], 
-        argIndex: Int,
-        flagIndex: Int,
+        pos: Pos,
         positionalParams: Seq[Parameter[?, A]], 
         config: A, 
         paramsMap: Map[String, Parameter[?, A]],
         repetitions: Map[ParamKey, (Parameter[?, A], Int)]): (A, Int, Int) =
+      val Pos(argIndex, flagIndex) = pos
       if argIndex >= args.size then
         val _config = postProcess(config, repetitions)
         (_config, argIndex, flagIndex)
@@ -184,16 +186,15 @@ object Parameters:
         val arg = args(argIndex)
         definedName(paramsMap, arg, flagIndex) match
           case ("", _) if positionalParams.isEmpty =>
-              //postProcess(config, args, repetitions)
             val _config = postProcess(config, repetitions)
             (_config, argIndex, flagIndex)
           case ("", _) =>
             val value = arg
-            val pos = positionalParamList.size - positionalParams.size
+            val positionalIndex = positionalParamList.size - positionalParams.size
             val param = positionalParams.head
             val (minArity, maxArity) = param.arity
             
-            val (_, arity) = repetitions(ParamKey.Pos(pos))
+            val (_, arity) = repetitions(ParamKey.Pos(positionalIndex))
 
             if !param.acceptOp(value) then
               //postProcess(config, args, repetitions)
@@ -202,15 +203,17 @@ object Parameters:
             else if arity + 1 >= maxArity then
               val _config = param.collectValue(config, value) 
               val _repetitions = repetitions
-                .updatedWith(ParamKey.Pos(pos)){case Some((param, arity)) => 
+                .updatedWith(ParamKey.Pos(positionalIndex)){case Some((param, arity)) => 
                   Some((param, arity + 1))}
-              collectParams(args, argIndex + 1, 0, positionalParams.drop(1), _config, paramsMap, _repetitions)
+              val pos = Pos(argIndex + 1, 0)
+              collectParams(args, pos, positionalParams.drop(1), _config, paramsMap, _repetitions)
             else
               val _config = param.collectValue(config, value) 
               val _repetitions = repetitions
-                .updatedWith(ParamKey.Pos(pos)){case Some((param, arity)) => 
-                  Some((param, arity + 1))}              
-              collectParams(args, argIndex+1, 0, positionalParams, _config, paramsMap, _repetitions)
+                .updatedWith(ParamKey.Pos(positionalIndex)){case Some((param, arity)) => 
+                  Some((param, arity + 1))}   
+              val pos = Pos(argIndex + 1, 0)           
+              collectParams(args, pos, positionalParams, _config, paramsMap, _repetitions)
 
           case (name, nextFlagIndex) =>
             paramsMap.get(name) match
@@ -240,9 +243,9 @@ object Parameters:
                 val nextArgIndex = if nextFlagIndex > 0 then argIndex
                 else if value.nonEmpty then argIndex + 2
                 else argIndex + 1
-                collectParams(args, nextArgIndex, nextFlagIndex, positionalParams, _config, paramsMap, _repetitions)
-              case None =>
-                //postProcess(config, args, repetitions)          
+                val pos = Pos(nextArgIndex, nextFlagIndex)
+                collectParams(args, pos, positionalParams, _config, paramsMap, _repetitions)
+              case None =>          
                 val _config = postProcess(config, repetitions)
                 (_config, argIndex, flagIndex)  
 

@@ -5,6 +5,7 @@ import scala.compiletime.constValue
 import scala.util.Try
 import scala.util.Failure
 import urwerk.command.Parameters.CollectValueException
+import urwerk.command.Parameters.ParameterList.Pos
 
 object Parameter: 
   trait ValueSpec[A]:
@@ -116,7 +117,7 @@ object Parameters:
 
   class MissingParameterException(val labelOrName: String, val requiredArity: Int, val repetition: Int) extends ParameterException
 
-  class MissingValueException extends ParameterException
+  class MissingValueException(val pos: Pos) extends ParameterException
 
   class CollectValueException(cause: Throwable) extends ParameterException(cause)
 
@@ -197,7 +198,6 @@ object Parameters:
             val (_, arity) = repetitions(ParamKey.Pos(positionalIndex))
 
             if !param.acceptOp(value) then
-              //postProcess(config, args, repetitions)
               val _config = postProcess(config, repetitions)
               (_config, argIndex, flagIndex)
             else if arity + 1 >= maxArity then
@@ -219,13 +219,12 @@ object Parameters:
             paramsMap.get(name) match
               case Some(param) =>
                 val valueRequired = param.valueRequired
-
-                if valueRequired && name.size == 1 && flagIndex +2 < arg.size then 
-                  //"-aAbBc", "valueC", "tail"
-                  println(s"FLAGSSS $name $flagIndex $valueRequired")
-                  throw MissingValueException()
-
-                val value = if valueRequired then
+                val value = if valueRequired then 
+                  if name.size == 1 
+                      && flagIndex + 2 < arg.size then
+                    throw MissingValueException(Pos(argIndex, flagIndex))
+                  if argIndex +1 >= args.size then 
+                    throw MissingValueException(Pos(argIndex, flagIndex))
                   args(argIndex + 1)
                 else ""
                 
@@ -256,8 +255,6 @@ object Parameters:
         val nextFlagIndex = if flagIndex + 2 >= arg.size then 0 else flagIndex + 1
         (arg(flagIndex+1).toString, nextFlagIndex)
       else ("", 0)
-
-      println(s"NEXTFLAG  $arg $flagIndex $nextFlagIndex $name")
       if paramsMap.isDefinedAt(name) then (name, nextFlagIndex) else ("", 0)
       
     private def positionalParamList = params.filter(_.names.isEmpty)

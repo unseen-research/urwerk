@@ -2,6 +2,7 @@ package urwerk.command
 
 import urwerk.test.TestBase
 import Parameters.*
+import urwerk.command.Parameters.ParameterList.Pos
 
 class ParametersTest extends TestBase:
   case class Config[A](value: A)
@@ -77,7 +78,7 @@ class ParametersTest extends TestBase:
     val params = Parameters[Seq[String]]
     import params.*
 
-    "collect name value parameters" in {
+    "name value parameters" in {
       val params = Seq(
         param[String]("name2")
           .collect((value, config) => 
@@ -96,7 +97,7 @@ class ParametersTest extends TestBase:
       config should be (Seq("name1-11", "name2-value2"))
     }
 
-    "collect name parameters" in {
+    "name parameters" in {
       val params = Seq(
         param[Unit]("name2")
           .collect((value, config) => 
@@ -115,7 +116,19 @@ class ParametersTest extends TestBase:
       config should be (Seq("name1-()", "name2-()"))
     }
 
-    "collect value parameters" in {
+    "name parameter with required but missing value" in {
+      val params = Seq(
+        param[Unit]("name1"),
+        param[String]("name2")
+      )
+
+      val ex = intercept[MissingValueException]{ParameterList(params)
+        .collectParams(Seq(),
+          Seq("--name1", "--name2"))}
+      ex.pos should be(Pos(1, 0))
+    }
+
+    "value parameters" in {
       val params = Seq(
         param[Int]
           .collect((value, config) => 
@@ -136,7 +149,7 @@ class ParametersTest extends TestBase:
       config should be (Seq("pos1-11", "pos2-value2"))
     }
 
-    "collect raw value parameters" in {
+    "raw value parameters" in {
       val params = Seq(
         param[String]
           .accept(_ => true)
@@ -253,13 +266,13 @@ class ParametersTest extends TestBase:
 
     "flags without value" in {    
       val params = Seq(
-        param[Unit]("name-a", "a", "A")((value, config) => 
+        param[Unit]("a", "A")((value, config) => 
             config :+ "a-" + value)
           .arity(0, 77),
-        param[Unit]("name-b", "b", "B")((value, config) => 
+        param[Unit]("b", "B")((value, config) => 
             config :+ "b-" + value)
           .arity(0, 77),
-        param[String]("name-c", "c", "C")((value, config) => 
+        param[String]("c", "C")((value, config) => 
             config :+ "c-" + value)
           .arity(0, 77)  
       )
@@ -270,6 +283,24 @@ class ParametersTest extends TestBase:
       argIndex should be (2)
       flagIndex should be (0) 
       config should be (Seq("a-()", "a-()", "b-()", "b-()", "c-valueC"))     
+    }
+
+    "flags with required but missing value" in {
+      val params = Seq(
+        param[Unit]("a")((value, config) => 
+            config :+ "a-" + value),
+        param[Unit]("b", "B")((value, config) => 
+            config :+ "b-" + value),
+        param[String]("c", "C")((value, config) => 
+            config :+ "c-" + value)  
+      )
+
+      val ex = intercept[MissingValueException]{
+        ParameterList(params)
+          .collectParams(Seq(), Seq("-abc"))
+      }
+      ex.pos should be (Pos(0, 2))
+          
     }
 
     "default values" in {

@@ -12,14 +12,15 @@ trait Command[A](parameterLists: Seq[ParameterList[A]], description: String):
   def apply(config: A, args: Seq[String]): Option[A] = 
     collectParams(parameterLists, config, args)
 
-  @tailrec
+  //@tailrec
   private def collectParams(paramLists: Seq[ParameterList[A]], config: A, args: Seq[String]): Option[A] =
     if paramLists.isEmpty then
       Some(config)
     else
       val paramList = paramLists.head
-      val (_config, remainingArgs) =  paramList.collectParams(config, args)
-      collectParams(paramLists.drop(1), _config, remainingArgs)
+      //val (_config, remainingArgs) =  paramList.collectParams(config, args, 0, 0)
+      //collectParams(paramLists.drop(1), _config, remainingArgs)
+      None
 
   private[command] def copy(
       parameterLists: Seq[ParameterList[A]] = parameterLists,

@@ -87,11 +87,12 @@ class ParametersTest extends TestBase:
             config :+ "name1-" + value)
       )
 
-      val (config, remainingArgs) = ParameterList(params)
+      val (config, argIndex, flagIndex) = ParameterList(params)
         .collectParams(Seq(),
           Seq("--name1", "11", "--name2", "value2", "--name3", "value3"))
 
-      remainingArgs should be (Seq("--name3", "value3"))
+      argIndex should be (4)
+      flagIndex should be (0)
       config should be (Seq("name1-11", "name2-value2"))
     }
 
@@ -105,11 +106,12 @@ class ParametersTest extends TestBase:
             config :+ "name1-" + value)
       )
 
-      val (config, remainingArgs) = ParameterList(params)
+      val (config, argIndex, flagIndex) = ParameterList(params)
         .collectParams(Seq(),
           Seq("--name1", "--name2", "value2", "--name3", "value3"))
 
-      remainingArgs should be (Seq("value2", "--name3", "value3"))
+      argIndex should be (2)
+      flagIndex should be (0)
       config should be (Seq("name1-()", "name2-()"))
     }
 
@@ -126,10 +128,11 @@ class ParametersTest extends TestBase:
             config :+ "pos3-" + value)
       )
 
-      val (config, remainingArgs) = ParameterList(params)
+      val (config, argIndex, flagIndex) = ParameterList(params)
         .collectParams(Seq(), Seq("11", "value2", "--name", "value3"))
 
-      remainingArgs should be (Seq("--name", "value3"))
+      argIndex should be (2)
+      flagIndex should be (0)
       config should be (Seq("pos1-11", "pos2-value2"))
     }
 
@@ -142,10 +145,11 @@ class ParametersTest extends TestBase:
             config :+ value)
       )
 
-      val (config, remainingArgs) = ParameterList(params)
+      val (config, argIndex, flagIndex) = ParameterList(params)
         .collectParams(Seq(), Seq("11", "value2", "--name", "value3"))
 
-      remainingArgs should be (Seq())     
+      argIndex should be (4)
+      flagIndex should be (0)   
       config should be (Seq("11", "value2", "--name", "value3")) 
     }
   
@@ -165,10 +169,11 @@ class ParametersTest extends TestBase:
             config :+ "c-" + value)
       )
 
-      val (config, remainingArgs) = ParameterList(params)
+      val (config, argIndex, flagIndex) = ParameterList(params)
         .collectParams(Seq(), Seq("value1", "value2", "value3", "value4", "value5", "value6"))
 
-      remainingArgs should be (Seq("value6"))     
+      argIndex should be (5)
+      flagIndex should be (0)    
       config should be (Seq("a-value1", "a-value2", "b-value3", "c-value4", "c-value5"))     
     }
 
@@ -207,10 +212,11 @@ class ParametersTest extends TestBase:
             config :+ "c-" + value)
       )
 
-      val (config, remainingArgs) = ParameterList(params)
+      val (config, argIndex, flagIndex) = ParameterList(params)
         .collectParams(Seq(), Seq("--name-c", "value1", "--name-a", "value2", "--name-b", "value3", "--name-a", "value4", "value5"))
 
-      remainingArgs should be (Seq("value5"))     
+      argIndex should be (8)
+      flagIndex should be (0) 
       config should be (Seq("c-value1", "a-value2", "b-value3", "a-value4"))     
     }
 
@@ -258,28 +264,34 @@ class ParametersTest extends TestBase:
           .arity(0, 77)  
       )
 
-      val (config, remainingArgs) = ParameterList(params)
+      val (config, argIndex, flagIndex) = ParameterList(params)
         .collectParams(Seq(), Seq("-aAbBc", "valueC", "tail"))
 
-      remainingArgs should be (Seq("tail"))     
+      argIndex should be (2)
+      flagIndex should be (0) 
       config should be (Seq("a-()", "a-()", "b-()", "b-()", "c-valueC"))     
     }
 
     "default values" in {
       val params = Seq(
-        param[String]("name-a", "a", "A")((value, config) => 
-            config :+ "a-" + value)
-          .default("value-a")
-          .arity(0, 1),
-        param[Int]((value, config) => 
-            config :+ "b-" + value)
+        param[Unit]("name-a", "a", "A")
+          .default(())
+          .collect((value, config) => 
+            config :+ "a-" + value),
+        param[Int]
           .default(42)
-          .arity(1, 1))
+          .collect((value, config) => 
+            config :+ "b-" + value),
+        param[String]("name-c", "c", "C")
+          .default("default-value")
+          .collect((value, config) => 
+            config :+ "c-" + value)
+      )
 
-      val (config, remainingArgs) = ParameterList(params)
+      val (config, argIndex, flagIndex) = ParameterList(params)
         .collectParams(Seq(), Seq())
 
-      config.toSet should be (Set("a-value-a", "b-42"))  
+      config.toSet should be (Set("a-()", "b-42", "c-default-value"))  
     }
 
     "fail when exception is thrown while collect value" in {

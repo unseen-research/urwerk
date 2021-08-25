@@ -129,7 +129,10 @@ object Parameters:
     import ParameterList.*
     import Parameters.*
 
-    def collectParams(config: A, args: Seq[String]): (A, Seq[String]) =
+    def collectParams(config: A, args: Seq[String]): (A, Int, Int) = 
+      collectParams(config, args, 0, 0)
+
+    def collectParams(config: A, args: Seq[String], argIndex: Int, flagIndex: Int): (A, Int, Int) =
       val paramsMap = namedParamMap(params, Map())
 
       val paramRepetions = {
@@ -142,12 +145,12 @@ object Parameters:
         posMap ++ nameMap
       }
 
-      collectParams(args, positionalParamList, config, paramsMap, paramRepetions)
+      collectParams(args, argIndex, flagIndex, positionalParamList, config, paramsMap, paramRepetions)
 
-    private def postProcess(config: A, remainingArgs: Seq[String], repetitions: Map[ParamKey, (Parameter[?, A], Int)]): (A, Seq[String]) = 
+    private def postProcess(config: A, repetitions: Map[ParamKey, (Parameter[?, A], Int)]): A = 
       val (_config, _repetitions) = applyDefaults(config, repetitions)
       validateArity(_repetitions)
-      (_config, remainingArgs)
+      _config
 
     private def applyDefaults(config: A, repetitions: Map[ParamKey, (Parameter[?, A], Int)]): (A, Map[ParamKey, (Parameter[?, A], Int)]) = 
       repetitions.foldLeft((config, repetitions)){case ((config, repetitions), (paramKey, (param, repetition))) =>
@@ -168,51 +171,59 @@ object Parameters:
 
     @tailrec
     private def collectParams(args: Seq[String], 
+        argIndex: Int,
+        flagIndex: Int,
         positionalParams: Seq[Parameter[?, A]], 
         config: A, 
         paramsMap: Map[String, Parameter[?, A]],
-        repetitions: Map[ParamKey, (Parameter[?, A], Int)]): (A, Seq[String]) =
-      if args.isEmpty then
-        postProcess(config, args, repetitions)
+        repetitions: Map[ParamKey, (Parameter[?, A], Int)]): (A, Int, Int) =
+      if argIndex >= args.size then
+        val _config = postProcess(config, repetitions)
+        (_config, argIndex, flagIndex)
       else
-        val arg = args.head
-        definedName(paramsMap, arg) match
-          case "" =>
-            if positionalParams.isEmpty then
-              postProcess(config, args, repetitions)
+        val arg = args(argIndex)
+        definedName(paramsMap, arg, flagIndex) match
+          case ("", _) if positionalParams.isEmpty =>
+              //postProcess(config, args, repetitions)
+            val _config = postProcess(config, repetitions)
+            (_config, argIndex, flagIndex)
+          case ("", _) =>
+            val value = arg
+            val pos = positionalParamList.size - positionalParams.size
+            val param = positionalParams.head
+            val (minArity, maxArity) = param.arity
+            
+            val (_, arity) = repetitions(ParamKey.Pos(pos))
+
+            if !param.acceptOp(value) then
+              //postProcess(config, args, repetitions)
+              val _config = postProcess(config, repetitions)
+              (_config, argIndex, flagIndex)
+            else if arity + 1 >= maxArity then
+              val _config = param.collectValue(config, value) 
+              val _repetitions = repetitions
+                .updatedWith(ParamKey.Pos(pos)){case Some((param, arity)) => 
+                  Some((param, arity + 1))}
+              collectParams(args, argIndex + 1, 0, positionalParams.drop(1), _config, paramsMap, _repetitions)
             else
-              val value = arg
-              val pos = this.positionalParamList.size - positionalParams.size
-              val param = positionalParams.head
-              val (minArity, maxArity) = param.arity
-              
-              val (_, arity) = repetitions(ParamKey.Pos(pos))
+              val _config = param.collectValue(config, value) 
+              val _repetitions = repetitions
+                .updatedWith(ParamKey.Pos(pos)){case Some((param, arity)) => 
+                  Some((param, arity + 1))}              
+              collectParams(args, argIndex+1, 0, positionalParams, _config, paramsMap, _repetitions)
 
-              if !param.acceptOp(value) then
-                postProcess(config, args, repetitions)
-              else if arity + 1 >= maxArity then
-                val _config = param.collectValue(config, value) 
-                val _repetitions = repetitions
-                  .updatedWith(ParamKey.Pos(pos)){case Some((param, arity)) => 
-                    Some((param, arity + 1))}
-                collectParams(args.drop(1), positionalParams.drop(1), _config, paramsMap, _repetitions)
-              else
-                val _config = param.collectValue(config, value) 
-                val _repetitions = repetitions
-                  .updatedWith(ParamKey.Pos(pos)){case Some((param, arity)) => 
-                    Some((param, arity + 1))}              
-                collectParams(args.drop(1), positionalParams, _config, paramsMap, _repetitions)
-
-          case name =>
+          case (name, nextFlagIndex) =>
             paramsMap.get(name) match
               case Some(param) =>
                 val valueRequired = param.valueRequired
 
-                if valueRequired && name.size == 1 && arg.size > 2 then // -nabc
+                if valueRequired && name.size == 1 && flagIndex +2 < arg.size then 
+                  //"-aAbBc", "valueC", "tail"
+                  println(s"FLAGSSS $name $flagIndex $valueRequired")
                   throw NoSuchValueException()
 
                 val value = if valueRequired then
-                  args(1)
+                  args(argIndex + 1)
                 else ""
                 
                 val _config = param.collectValue(config, value)  
@@ -226,21 +237,25 @@ object Parameters:
                     Some((param, newArity))
                   }
 
-                val remainingArgs = if valueRequired then args.drop(2) 
-                else if name.size == 1 then
-                  ("-" + arg.drop(2)) +: args.drop(1)
-                else args.drop(1)
-                collectParams(remainingArgs, positionalParams, _config, paramsMap, _repetitions)
+                val nextArgIndex = if nextFlagIndex > 0 then argIndex
+                else if value.nonEmpty then argIndex + 2
+                else argIndex + 1
+                collectParams(args, nextArgIndex, nextFlagIndex, positionalParams, _config, paramsMap, _repetitions)
               case None =>
-                postProcess(config, args, repetitions)          
+                //postProcess(config, args, repetitions)          
+                val _config = postProcess(config, repetitions)
+                (_config, argIndex, flagIndex)  
 
-    private def definedName(paramsMap: Map[String, Parameter[?, A]], arg: String): String = 
-      val name = if arg.startsWith("--") then
-        arg.stripPrefix("--")
+    private def definedName(paramsMap: Map[String, Parameter[?, A]], arg: String, flagIndex: Int): (String, Int) = 
+      val (name, nextFlagIndex) = if arg.startsWith("--") then
+        (arg.stripPrefix("--"), 0)
       else if arg.startsWith("-") && arg.size > 1 then
-        arg(1).toString
-      else ""
-      if paramsMap.isDefinedAt(name) then name else ""
+        val nextFlagIndex = if flagIndex + 2 >= arg.size then 0 else flagIndex + 1
+        (arg(flagIndex+1).toString, nextFlagIndex)
+      else ("", 0)
+
+      println(s"NEXTFLAG  $arg $flagIndex $nextFlagIndex $name")
+      if paramsMap.isDefinedAt(name) then (name, nextFlagIndex) else ("", 0)
       
     private def positionalParamList = params.filter(_.names.isEmpty)
 

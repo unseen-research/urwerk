@@ -10,17 +10,16 @@ trait Command[A](parameterLists: Seq[ParameterList[A]], description: String):
   def description(text: String): Command[A] = copy(description = description)
 
   def apply(config: A, args: Seq[String]): Option[A] = 
-    collectParams(parameterLists, config, args)
+    collectParams(parameterLists, config, args, 0, 0)
 
-  //@tailrec
-  private def collectParams(paramLists: Seq[ParameterList[A]], config: A, args: Seq[String]): Option[A] =
+  @tailrec
+  private def collectParams(paramLists: Seq[ParameterList[A]], config: A, args: Seq[String], argIndex: Int, flagIndex: Int): Option[A] =
     if paramLists.isEmpty then
       Some(config)
     else
       val paramList = paramLists.head
-      //val (_config, remainingArgs) =  paramList.collectParams(config, args, 0, 0)
-      //collectParams(paramLists.drop(1), _config, remainingArgs)
-      None
+      val (_config, nextArgIndex, nextFlagIndex) =  paramList.collectParams(config, args, argIndex, flagIndex)
+      collectParams(paramLists.drop(1), _config, args, nextArgIndex, nextFlagIndex)
 
   private[command] def copy(
       parameterLists: Seq[ParameterList[A]] = parameterLists,

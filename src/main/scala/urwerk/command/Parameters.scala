@@ -116,7 +116,7 @@ object Parameters:
 
   class MissingParameterException(val labelOrName: String, val requiredArity: Int, val repetition: Int) extends ParameterException
 
-  class NoSuchValueException extends ParameterException
+  class MissingValueException extends ParameterException
 
   class CollectValueException(cause: Throwable) extends ParameterException(cause)
 
@@ -223,7 +223,7 @@ object Parameters:
                 if valueRequired && name.size == 1 && flagIndex +2 < arg.size then 
                   //"-aAbBc", "valueC", "tail"
                   println(s"FLAGSSS $name $flagIndex $valueRequired")
-                  throw NoSuchValueException()
+                  throw MissingValueException()
 
                 val value = if valueRequired then
                   args(argIndex + 1)

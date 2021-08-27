@@ -4,6 +4,8 @@ import urwerk.test.TestBase
 import urwerk.command.Parameters.ParameterException
 import urwerk.command.Parameters.MissingParameterException
 import urwerk.command.Parameters.Position
+import scala.util.Success
+import scala.util.Failure
 
 class CommandTest extends TestBase:
 
@@ -29,7 +31,7 @@ class CommandTest extends TestBase:
           .arity(0, 77)
           .accept(_ => true))
 
-    val config = cmd(Seq(), Seq("--name2", "55", "--name1", "value1", "command", "--name", "value"))
+    val Success(config) = cmd(Seq(), Seq("--name2", "55", "--name1", "value1", "command", "--name", "value"))
     config should be (Seq("name2-55", "name1-value1", "cmd-command", "param---name", "param-value"))
   }
 
@@ -40,14 +42,10 @@ class CommandTest extends TestBase:
             config :+ s"help-$value")
           .arity(1, 10))
 
-    val ex = intercept[MissingParameterException]{
-      cmd(Seq(), Seq("--version"))
-    } 
-    
+    val Failure(ex: MissingParameterException) = cmd(Seq(), Seq("--version"))
+   
     ex.labelOrName should be ("help")
     ex.requiredArity should be (1)
     ex.repetition should be (0)
     ex.position should be (Some(Position(0, 0)))
   }
-
-

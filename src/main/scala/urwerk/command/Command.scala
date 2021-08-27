@@ -3,6 +3,9 @@ package urwerk.command
 import urwerk.command.Parameters.ParameterList
 import urwerk.command.Parameters.Position
 import scala.annotation.tailrec
+import scala.util.Try
+import scala.util.Success
+import scala.util.Failure
 
 object Command: 
   def apply[A](name: String): CommandParameterList[A] = new CommandParameterList[A](Seq()) with Command[A](Seq(), "")
@@ -10,17 +13,23 @@ object Command:
 trait Command[A](parameterLists: Seq[ParameterList[A]], description: String):
   def description(text: String): Command[A] = copy(description = description)
 
-  def apply(config: A, args: Seq[String]): A = 
+  def apply(config: A, args: Seq[String]): Try[A] = 
     collectParams(parameterLists, config, args, Position(0, 0))
 
   @tailrec
-  private def collectParams(paramLists: Seq[ParameterList[A]], config: A, args: Seq[String], pos: Position): A =
+  private def collectParams(paramLists: Seq[ParameterList[A]], config: A, args: Seq[String], pos: Position): Try[A] =
     if paramLists.isEmpty then
-      config
+      Success(config)
     else
       val paramList = paramLists.head
-      val (_config, _pos) =  paramList.collectParams(config, args, pos)
-      collectParams(paramLists.drop(1), _config, args, _pos)
+      val res = Try(
+          paramList.collectParams(config, args, pos))
+
+      res match 
+        case Success(_config, _pos) =>
+          collectParams(paramLists.drop(1), _config, args, _pos)
+        case f: Failure[?] =>  
+          f.asInstanceOf[Failure[A]]
 
   private[command] def copy(
       parameterLists: Seq[ParameterList[A]] = parameterLists,

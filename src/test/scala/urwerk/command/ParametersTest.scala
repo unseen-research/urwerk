@@ -2,7 +2,6 @@ package urwerk.command
 
 import urwerk.test.TestBase
 import Parameters.*
-import urwerk.command.Parameters.ParameterList.Pos
 
 class ParametersTest extends TestBase:
   case class Config[A](value: A)
@@ -125,7 +124,7 @@ class ParametersTest extends TestBase:
       val ex = intercept[MissingValueException]{ParameterList(params)
         .collectParams(Seq(),
           Seq("--name1", "--name2"))}
-      ex.pos should be(Pos(1, 0))
+      ex.position should be(Position(1, 0))
     }
 
     "value parameters" in {
@@ -299,8 +298,7 @@ class ParametersTest extends TestBase:
         ParameterList(params)
           .collectParams(Seq(), Seq("-abc"))
       }
-      ex.pos should be (Pos(0, 2))
-          
+      ex.position should be(Position(0, 2))
     }
 
     "default values" in {

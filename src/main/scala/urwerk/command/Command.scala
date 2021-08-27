@@ -1,7 +1,7 @@
 package urwerk.command
 
 import urwerk.command.Parameters.ParameterList
-import urwerk.command.Parameters.ParameterList.Pos
+import urwerk.command.Parameters.Position
 import scala.annotation.tailrec
 
 object Command: 
@@ -19,7 +19,7 @@ trait Command[A](parameterLists: Seq[ParameterList[A]], description: String):
       Some(config)
     else
       val paramList = paramLists.head
-      val (_config, nextArgIndex, nextFlagIndex) =  paramList.collectParams(config, args, Pos(argIndex, flagIndex))
+      val (_config, nextArgIndex, nextFlagIndex) =  paramList.collectParams(config, args, Position(argIndex, flagIndex))
       collectParams(paramLists.drop(1), _config, args, nextArgIndex, nextFlagIndex)
 
   private[command] def copy(

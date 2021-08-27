@@ -5,7 +5,7 @@ import scala.compiletime.constValue
 import scala.util.Try
 import scala.util.Failure
 import urwerk.command.Parameters.CollectValueException
-import urwerk.command.Parameters.ParameterList.Pos
+import urwerk.command.Parameters.Position
 
 object Parameter: 
   trait ValueSpec[A]:
@@ -117,25 +117,25 @@ object Parameters:
 
   class MissingParameterException(val labelOrName: String, val requiredArity: Int, val repetition: Int) extends ParameterException
 
-  class MissingValueException(val pos: Pos) extends ParameterException
+  class MissingValueException(val position: Position) extends ParameterException
 
   class CollectValueException(cause: Throwable) extends ParameterException(cause)
 
+  case class Position(val index: Int, val subindex: Int)
+ 
   object ParameterList:
     enum ParamKey:
       case Name(name: String)
       case Pos(pos: Int)
-
-    case class Pos(index: Int, subIndex: Int)
 
   class ParameterList[A](params: Seq[Parameter[?, A]]):
     import ParameterList.*
     import Parameters.*
 
     def collectParams(config: A, args: Seq[String]): (A, Int, Int) = 
-      collectParams(config, args, Pos(0, 0))
+      collectParams(config, args, Position(0, 0))
 
-    def collectParams(config: A, args: Seq[String], pos: Pos): (A, Int, Int) =
+    def collectParams(config: A, args: Seq[String], pos: Position): (A, Int, Int) =
       val paramsMap = namedParamMap(params, Map())
 
       val paramRepetions = {
@@ -174,12 +174,12 @@ object Parameters:
 
     @tailrec
     private def collectParams(args: Seq[String], 
-        pos: Pos,
+        pos: Position,
         positionalParams: Seq[Parameter[?, A]], 
         config: A, 
         paramsMap: Map[String, Parameter[?, A]],
         repetitions: Map[ParamKey, (Parameter[?, A], Int)]): (A, Int, Int) =
-      val Pos(argIndex, flagIndex) = pos
+      val Position(argIndex, flagIndex) = pos
       if argIndex >= args.size then
         val _config = postProcess(config, repetitions)
         (_config, argIndex, flagIndex)
@@ -205,14 +205,14 @@ object Parameters:
               val _repetitions = repetitions
                 .updatedWith(ParamKey.Pos(positionalIndex)){case Some((param, arity)) => 
                   Some((param, arity + 1))}
-              val pos = Pos(argIndex + 1, 0)
+              val pos = Position(argIndex + 1, 0)
               collectParams(args, pos, positionalParams.drop(1), _config, paramsMap, _repetitions)
             else
               val _config = param.collectValue(config, value) 
               val _repetitions = repetitions
                 .updatedWith(ParamKey.Pos(positionalIndex)){case Some((param, arity)) => 
                   Some((param, arity + 1))}   
-              val pos = Pos(argIndex + 1, 0)           
+              val pos = Position(argIndex + 1, 0)           
               collectParams(args, pos, positionalParams, _config, paramsMap, _repetitions)
 
           case (name, nextFlagIndex) =>
@@ -222,9 +222,9 @@ object Parameters:
                 val value = if valueRequired then 
                   if name.size == 1 
                       && flagIndex + 2 < arg.size then
-                    throw MissingValueException(Pos(argIndex, flagIndex))
+                    throw MissingValueException(Position(argIndex, flagIndex))
                   if argIndex +1 >= args.size then 
-                    throw MissingValueException(Pos(argIndex, flagIndex))
+                    throw MissingValueException(Position(argIndex, flagIndex))
                   args(argIndex + 1)
                 else ""
                 
@@ -242,7 +242,7 @@ object Parameters:
                 val nextArgIndex = if nextFlagIndex > 0 then argIndex
                 else if value.nonEmpty then argIndex + 2
                 else argIndex + 1
-                val pos = Pos(nextArgIndex, nextFlagIndex)
+                val pos = Position(nextArgIndex, nextFlagIndex)
                 collectParams(args, pos, positionalParams, _config, paramsMap, _repetitions)
               case None =>          
                 val _config = postProcess(config, repetitions)

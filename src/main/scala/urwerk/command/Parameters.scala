@@ -222,9 +222,9 @@ object Parameters:
                 val value = if valueRequired then 
                   if name.size == 1 
                       && flagIndex + 2 < arg.size then
-                    throw MissingValueException(Position(argIndex, flagIndex))
+                    throw new MissingValueException(pos)
                   if argIndex +1 >= args.size then 
-                    throw MissingValueException(Position(argIndex, flagIndex))
+                    throw MissingValueException(pos)
                   args(argIndex + 1)
                 else ""
                 
@@ -242,8 +242,8 @@ object Parameters:
                 val nextArgIndex = if nextFlagIndex > 0 then argIndex
                 else if value.nonEmpty then argIndex + 2
                 else argIndex + 1
-                val pos = Position(nextArgIndex, nextFlagIndex)
-                collectParams(args, pos, positionalParams, _config, paramsMap, _repetitions)
+                val _pos = Position(nextArgIndex, nextFlagIndex)
+                collectParams(args, _pos, positionalParams, _config, paramsMap, _repetitions)
               case None =>          
                 val _config = postProcess(config, repetitions, pos)
                 (_config, Position(argIndex, flagIndex))  

@@ -202,6 +202,7 @@ class ParametersTest extends TestBase:
       ex.labelOrName should be ("STRING_PARAM")
       ex.requiredArity should be (3)
       ex.repetition should be (2)
+      ex.position should be (Some(Position(4, 0)))
     }
 
     "named max arity" in {

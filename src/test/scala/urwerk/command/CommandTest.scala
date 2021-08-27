@@ -2,6 +2,8 @@ package urwerk.command
 
 import urwerk.test.TestBase
 import urwerk.command.Parameters.ParameterException
+import urwerk.command.Parameters.MissingParameterException
+import urwerk.command.Parameters.Position
 
 class CommandTest extends TestBase:
 
@@ -38,11 +40,14 @@ class CommandTest extends TestBase:
             config :+ s"help-$value")
           .arity(1, 10))
 
-    val ex = intercept[ParameterException]{
+    val ex = intercept[MissingParameterException]{
       cmd(Seq(), Seq("--version"))
     } 
     
-    println(ex)
+    ex.labelOrName should be ("help")
+    ex.requiredArity should be (1)
+    ex.repetition should be (0)
+    ex.position should be (Some(Position(0, 0)))
   }
 
 

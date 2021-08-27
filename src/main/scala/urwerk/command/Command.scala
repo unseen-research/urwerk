@@ -10,13 +10,13 @@ object Command:
 trait Command[A](parameterLists: Seq[ParameterList[A]], description: String):
   def description(text: String): Command[A] = copy(description = description)
 
-  def apply(config: A, args: Seq[String]): Option[A] = 
+  def apply(config: A, args: Seq[String]): A = 
     collectParams(parameterLists, config, args, Position(0, 0))
 
   @tailrec
-  private def collectParams(paramLists: Seq[ParameterList[A]], config: A, args: Seq[String], pos: Position): Option[A] =
+  private def collectParams(paramLists: Seq[ParameterList[A]], config: A, args: Seq[String], pos: Position): A =
     if paramLists.isEmpty then
-      Some(config)
+      config
     else
       val paramList = paramLists.head
       val (_config, _pos) =  paramList.collectParams(config, args, pos)

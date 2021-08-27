@@ -119,10 +119,11 @@ class ParametersTest extends TestBase:
         param[String]("name2")
       )
 
-      val ex = intercept[MissingValueException]{ParameterList(params)
-        .collectParams(Seq(),
+      val ex = intercept[MissingValueException]{
+        ParameterList(params).collectParams(Seq(),
           Seq("--name1", "--name2"))}
-      ex.position should be(Position(1, 0))
+      
+      ex.position should be(Some(Position(1, 0)))
     }
 
     "value parameters" in {
@@ -291,7 +292,7 @@ class ParametersTest extends TestBase:
         ParameterList(params)
           .collectParams(Seq(), Seq("-abc"))
       }
-      ex.position should be(Position(0, 2))
+      ex.position should be(Some(Position(0, 2)))
     }
 
     "default values" in {

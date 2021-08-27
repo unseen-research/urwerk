@@ -42,3 +42,6 @@ trait CommandParameterList[A](parameterLists: Seq[ParameterList[A]]) extends Com
 
   private[command] def copy2(parameterLists: Seq[ParameterList[A]] = parameterLists) = 
     new CommandParameterList[A](parameterLists) with Command[A](parameterLists, "")
+
+class Commands[A](commands: Command[A]*):
+  def resolve(args: Seq[String]): A = ???

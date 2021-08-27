@@ -87,12 +87,11 @@ class ParametersTest extends TestBase:
             config :+ "name1-" + value)
       )
 
-      val (config, argIndex, flagIndex) = ParameterList(params)
+      val (config, pos) = ParameterList(params)
         .collectParams(Seq(),
           Seq("--name1", "11", "--name2", "value2", "--name3", "value3"))
 
-      argIndex should be (4)
-      flagIndex should be (0)
+      pos should be (Position(4, 0))     
       config should be (Seq("name1-11", "name2-value2"))
     }
 
@@ -106,12 +105,11 @@ class ParametersTest extends TestBase:
             config :+ "name1-" + value)
       )
 
-      val (config, argIndex, flagIndex) = ParameterList(params)
+      val (config, pos) = ParameterList(params)
         .collectParams(Seq(),
           Seq("--name1", "--name2", "value2", "--name3", "value3"))
 
-      argIndex should be (2)
-      flagIndex should be (0)
+      pos should be (Position(2, 0))
       config should be (Seq("name1-()", "name2-()"))
     }
 
@@ -140,11 +138,10 @@ class ParametersTest extends TestBase:
             config :+ "pos3-" + value)
       )
 
-      val (config, argIndex, flagIndex) = ParameterList(params)
+      val (config, pos) = ParameterList(params)
         .collectParams(Seq(), Seq("11", "value2", "--name", "value3"))
 
-      argIndex should be (2)
-      flagIndex should be (0)
+      pos should be (Position(2, 0))
       config should be (Seq("pos1-11", "pos2-value2"))
     }
 
@@ -157,11 +154,10 @@ class ParametersTest extends TestBase:
             config :+ value)
       )
 
-      val (config, argIndex, flagIndex) = ParameterList(params)
+      val (config, pos) = ParameterList(params)
         .collectParams(Seq(), Seq("11", "value2", "--name", "value3"))
 
-      argIndex should be (4)
-      flagIndex should be (0)   
+      pos should be (Position(4, 0))
       config should be (Seq("11", "value2", "--name", "value3")) 
     }
   
@@ -181,11 +177,10 @@ class ParametersTest extends TestBase:
             config :+ "c-" + value)
       )
 
-      val (config, argIndex, flagIndex) = ParameterList(params)
+      val (config, pos) = ParameterList(params)
         .collectParams(Seq(), Seq("value1", "value2", "value3", "value4", "value5", "value6"))
 
-      argIndex should be (5)
-      flagIndex should be (0)    
+      pos should be (Position(5, 0))  
       config should be (Seq("a-value1", "a-value2", "b-value3", "c-value4", "c-value5"))     
     }
 
@@ -224,11 +219,10 @@ class ParametersTest extends TestBase:
             config :+ "c-" + value)
       )
 
-      val (config, argIndex, flagIndex) = ParameterList(params)
+      val (config, pos) = ParameterList(params)
         .collectParams(Seq(), Seq("--name-c", "value1", "--name-a", "value2", "--name-b", "value3", "--name-a", "value4", "value5"))
 
-      argIndex should be (8)
-      flagIndex should be (0) 
+      pos should be (Position(8, 0))  
       config should be (Seq("c-value1", "a-value2", "b-value3", "a-value4"))     
     }
 
@@ -263,7 +257,7 @@ class ParametersTest extends TestBase:
       ex.maxArity should be (2)
     }
 
-    "flags without value" in {    
+    "flags wout value" in {    
       val params = Seq(
         param[Unit]("a", "A")((value, config) => 
             config :+ "a-" + value)
@@ -276,11 +270,10 @@ class ParametersTest extends TestBase:
           .arity(0, 77)  
       )
 
-      val (config, argIndex, flagIndex) = ParameterList(params)
+      val (config, pos) = ParameterList(params)
         .collectParams(Seq(), Seq("-aAbBc", "valueC", "tail"))
 
-      argIndex should be (2)
-      flagIndex should be (0) 
+      pos should be (Position(2, 0))
       config should be (Seq("a-()", "a-()", "b-()", "b-()", "c-valueC"))     
     }
 
@@ -317,9 +310,10 @@ class ParametersTest extends TestBase:
             config :+ "c-" + value)
       )
 
-      val (config, argIndex, flagIndex) = ParameterList(params)
+      val (config, pos) = ParameterList(params)
         .collectParams(Seq(), Seq())
 
+      pos should be (Position(0, 0))  
       config.toSet should be (Set("a-()", "b-42", "c-default-value"))  
     }
 

@@ -132,10 +132,10 @@ object Parameters:
     import ParameterList.*
     import Parameters.*
 
-    def collectParams(config: A, args: Seq[String]): (A, Int, Int) = 
+    def collectParams(config: A, args: Seq[String]): (A, Position) = 
       collectParams(config, args, Position(0, 0))
 
-    def collectParams(config: A, args: Seq[String], pos: Position): (A, Int, Int) =
+    def collectParams(config: A, args: Seq[String], pos: Position): (A, Position) =
       val paramsMap = namedParamMap(params, Map())
 
       val paramRepetions = {
@@ -178,17 +178,17 @@ object Parameters:
         positionalParams: Seq[Parameter[?, A]], 
         config: A, 
         paramsMap: Map[String, Parameter[?, A]],
-        repetitions: Map[ParamKey, (Parameter[?, A], Int)]): (A, Int, Int) =
+        repetitions: Map[ParamKey, (Parameter[?, A], Int)]): (A, Position) =
       val Position(argIndex, flagIndex) = pos
       if argIndex >= args.size then
         val _config = postProcess(config, repetitions)
-        (_config, argIndex, flagIndex)
+        (_config, Position(argIndex, flagIndex))
       else
         val arg = args(argIndex)
         definedName(paramsMap, arg, flagIndex) match
           case ("", _) if positionalParams.isEmpty =>
             val _config = postProcess(config, repetitions)
-            (_config, argIndex, flagIndex)
+            (_config, Position(argIndex, flagIndex))
           case ("", _) =>
             val value = arg
             val positionalIndex = positionalParamList.size - positionalParams.size
@@ -199,7 +199,7 @@ object Parameters:
 
             if !param.acceptOp(value) then
               val _config = postProcess(config, repetitions)
-              (_config, argIndex, flagIndex)
+              (_config, Position(argIndex, flagIndex))
             else if arity + 1 >= maxArity then
               val _config = param.collectValue(config, value) 
               val _repetitions = repetitions
@@ -246,7 +246,7 @@ object Parameters:
                 collectParams(args, pos, positionalParams, _config, paramsMap, _repetitions)
               case None =>          
                 val _config = postProcess(config, repetitions)
-                (_config, argIndex, flagIndex)  
+                (_config, Position(argIndex, flagIndex))  
 
     private def definedName(paramsMap: Map[String, Parameter[?, A]], arg: String, flagIndex: Int): (String, Int) = 
       val (name, nextFlagIndex) = if arg.startsWith("--") then

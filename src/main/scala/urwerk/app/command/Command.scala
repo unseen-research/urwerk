@@ -1,7 +1,7 @@
-package urwerk.command
+package urwerk.app.command
 
-import urwerk.command.Parameters.ParameterList
-import urwerk.command.Parameters.Position
+import urwerk.app.command.Parameters.ParameterList
+import urwerk.app.command.Parameters.Position
 import scala.annotation.tailrec
 import scala.util.Try
 import scala.util.Success

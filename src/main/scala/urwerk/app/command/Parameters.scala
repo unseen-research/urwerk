@@ -1,11 +1,11 @@
-package urwerk.command
+package urwerk.app.command
 
 import scala.annotation.tailrec
 import scala.compiletime.constValue
 import scala.util.Try
 import scala.util.Failure
-import urwerk.command.Parameters.CollectValueException
-import urwerk.command.Parameters.Position
+import urwerk.app.command.Parameters.CollectValueException
+import urwerk.app.command.Parameters.Position
 
 object Parameter: 
   trait ValueSpec[A]:

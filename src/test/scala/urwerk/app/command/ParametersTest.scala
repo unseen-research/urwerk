@@ -1,4 +1,4 @@
-package urwerk.command
+package urwerk.app.command
 
 import urwerk.test.TestBase
 import Parameters.*

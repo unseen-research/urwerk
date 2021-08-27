@@ -1,11 +1,12 @@
-package urwerk.command
+package urwerk.app.command
 
-import urwerk.test.TestBase
-import urwerk.command.Parameters.ParameterException
-import urwerk.command.Parameters.MissingParameterException
-import urwerk.command.Parameters.Position
 import scala.util.Success
 import scala.util.Failure
+
+import urwerk.test.TestBase
+import urwerk.app.command.Parameters.ParameterException
+import urwerk.app.command.Parameters.MissingParameterException
+import urwerk.app.command.Parameters.Position
 
 class CommandTest extends TestBase:
 

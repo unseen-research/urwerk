@@ -8,12 +8,12 @@ import scala.util.Success
 import scala.util.Failure
 
 object Command: 
-  def apply[A](name: String): CommandParameterList[A] = new CommandParameterList[A](Seq()) with Command[A](Seq(), "")
+  def apply[A](name: String): CommandParameterList[A] = new CommandParameterList[A](Seq()) with Command[A](name, Seq(), "")
    
-trait Command[A](parameterLists: Seq[ParameterList[A]], description: String):
+trait Command[A](val name: String, config: A, parameterLists: Seq[ParameterList[A]], description: String):
   def description(text: String): Command[A] = copy(description = description)
 
-  def apply(config: A, args: Seq[String]): Try[A] = 
+  def apply(args: Seq[String]): Try[A] = 
     collectParams(parameterLists, config, args, Position(0, 0))
 
   @tailrec
@@ -32,16 +32,43 @@ trait Command[A](parameterLists: Seq[ParameterList[A]], description: String):
           f.asInstanceOf[Failure[A]]
 
   private[command] def copy(
+      name: String = name,
+      config: A = config,
       parameterLists: Seq[ParameterList[A]] = parameterLists,
       description: String = description) = 
-    new Command[A](parameterLists, description){}
+    new Command[A](name, config, parameterLists, description){}
 
-trait CommandParameterList[A](parameterLists: Seq[ParameterList[A]]) extends Command[A]:
+trait CommandParameterList[A](config: A, parameterLists: Seq[ParameterList[A]]) extends Command[A]:
   def params(param: Parameter[?, A], params: Parameter[?, A]*): CommandParameterList[A] = 
-    copy2(parameterLists = parameterLists :+ ParameterList(param +: params))
+    new CommandParameterList[A](parameterLists :+ ParameterList(param +: params)) with Command[A](name, config, parameterLists, "")
 
-  private[command] def copy2(parameterLists: Seq[ParameterList[A]] = parameterLists) = 
-    new CommandParameterList[A](parameterLists) with Command[A](parameterLists, "")
+trait CommandFeed[A]: 
+  def feed(commands: Seq[Command[A]]): Command[A]
 
-class Commands[A](commands: Command[A]*):
-  def resolve(args: Seq[String]): A = ???
+object Commands:
+  def apply[A](commands: Command[A]*): Commands[A] = 
+    Commands(commands, (a, b) => a) 
+    
+class Commands[A](commands: Seq[Command[A]], op: (A, Seq[(Command[A], Throwable)]) => A):
+  def onError(op: (A, Seq[(Command[A], Throwable)]) => A): Commands[A] = 
+    Commands[A](commands, op)
+
+  def resolve(config: A, args: Seq[String]): A = 
+    resolve(config, args, commands, Seq()) match 
+      case Left(errors) =>
+        onError(config, errors)
+
+      case Right(config) => config
+
+  @tailrec
+  private def resolve(config: A, args: Seq[String], commands: Seq[Command[A]], errors: Seq[(Command[A], Throwable)]): Either[Seq[(Command[A], Throwable)], A] = 
+    if commands.isEmpty then
+      Left(errors)
+    else 
+      val command = commands.head
+      command(config, args) match 
+        case Success(config) =>
+          Right(config)
+        case Failure(error) =>
+          resolve(config, args, commands.drop(1), errors :+ (command, error))
+  

@@ -54,7 +54,39 @@ class CommandTest extends TestBase:
   }
 
   "commands" - {
-    "resolve" in {
-      
+    trait Callable:
+      def apply(): String
+    
+    case class Config(value: String) extends Callable:
+      def apply() = value
+          
+    val params = Parameters[Config]
+    import params.*
+
+    val cmds = Commands(
+      Command("version")
+        .params(
+          param[Unit]("version", "v")
+            .arity(1, 1)),
+      Command("run")
+        .params(
+          param[String]{(value, config) =>
+              config.copy(value + " invoked")}
+            .accept(_ == "run")
+            .arity(1, 1)
+          ))
+
+    "resolve command" in {
+      val result = cmds.resolve(Config(""), Seq("run")).apply()
+      result should be ("run invoked")
+    }
+
+    "resolve failure" in {
+      cmds.onError{(config, errors) => 
+        config.copy(errors.toString)
+      }
+    
+      val result = cmds.resolve(Config(""), Seq("undefined")).apply()
+      result should be ("run invoked")
     }
   }

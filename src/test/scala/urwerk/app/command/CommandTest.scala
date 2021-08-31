@@ -15,7 +15,7 @@ class CommandTest extends TestBase:
 
   "command" - {
     "match" in {
-      val cmd = Command("command")
+      val cmd = Command("command", Seq[String]())
         .params(
           param[String]("name1"){(value, config) =>
             config :+ s"name1-$value"
@@ -33,18 +33,18 @@ class CommandTest extends TestBase:
             .arity(0, 77)
             .accept(_ => true))
 
-      val Success(config) = cmd(Seq(), Seq("--name2", "55", "--name1", "value1", "command", "--name", "value"))
+      val Success(config) = cmd(Seq("--name2", "55", "--name1", "value1", "command", "--name", "value"))
       config should be (Seq("name2-55", "name1-value1", "cmd-command", "param---name", "param-value"))
     }
 
     "not match" in{
-      val cmd = Command("help")
+      val cmd = Command("help", Seq[String]())
         .params(
           param[Unit]("help", "h")((value, config) =>
               config :+ s"help-$value")
             .arity(1, 10))
 
-      val Failure(ex: MissingParameterException) = cmd(Seq(), Seq("--version"))
+      val Failure(ex: MissingParameterException) = cmd(Seq("--version"))
       
       ex.labelOrName should be ("help")
       ex.requiredArity should be (1)
@@ -64,11 +64,11 @@ class CommandTest extends TestBase:
     import params.*
 
     val cmds = Commands(
-      Command("version")
+      Command("version", Config(""))
         .params(
           param[Unit]("version", "v")
             .arity(1, 1)),
-      Command("run")
+      Command("run", Config(""))
         .params(
           param[String]{(value, config) =>
               config.copy(value + " invoked")}
@@ -77,16 +77,15 @@ class CommandTest extends TestBase:
           ))
 
     "resolve command" in {
-      val result = cmds.resolve(Config(""), Seq("run")).apply()
+      val result = cmds.resolve(Seq("run")).apply()
       result should be ("run invoked")
     }
 
     "resolve failure" in {
-      cmds.onError{(config, errors) => 
-        config.copy(errors.toString)
+      cmds.onError{(errors) => 
+        Config(errors.toString)
       }
-    
-      val result = cmds.resolve(Config(""), Seq("undefined")).apply()
+      val result = cmds.resolve(Seq("undefined")).apply()
       result should be ("run invoked")
     }
   }

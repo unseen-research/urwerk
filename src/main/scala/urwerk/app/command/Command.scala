@@ -49,7 +49,6 @@ object Command:
         description: String = description) = 
       InnerCommand[A](name, config, parameterLists, description)
 
-
 trait Command[A]:  
   def name: String
   def description(text: String): Command[A]
@@ -57,9 +56,6 @@ trait Command[A]:
 
 trait CommandParameterList[A] extends Command[A]:
   def params(param: Parameter[?, A], params: Parameter[?, A]*): CommandParameterList[A]
-
-trait CommandFeed[A]: 
-  def feed(commands: Seq[Command[A]]): Command[A]
 
 object Commands:
   def apply[A](command: Command[A]*): Commands[A] = 

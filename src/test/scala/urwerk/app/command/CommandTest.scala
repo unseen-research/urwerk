@@ -82,10 +82,12 @@ class CommandTest extends TestBase:
     }
 
     "resolve failure" in {
-      cmds.onError{(errors) => 
-        Config(errors.toString)
-      }
-      val result = cmds.resolve(Seq("undefined")).apply()
-      result should be ("run invoked")
+      val result = cmds.onError{errors => 
+          Config(
+            errors.map((cmd, error) => cmd.name + ":" + error.getClass().getSimpleName()).mkString("", "&", ""))
+        }
+        .resolve(Seq("undefined")).apply()
+      
+      result should be ("version:MissingParameterException&run:MissingParameterException")
     }
   }

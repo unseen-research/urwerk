@@ -8,17 +8,20 @@ import scala.util.Success
 import scala.util.Failure
 
 object Command: 
-  import Command as CommandIf
-
-  def apply[A](name: String, config: A): CommandParameterList[A] = new CommandParameterList[A](new Command[A](name, config, Seq(), ""){}, config, Seq())
+  def apply[A](name: String, config: A): CommandParameterList[A] = InnerCommandParameterList[A](InnerCommand[A](name, config, Seq(), ""))
    
-  class CommandParameterList[A](val innerCmd: Command[A], config: A, parameterLists: Seq[ParameterList[A]]) extends CommandIf[A]:
-    def params(param: Parameter[?, A], params: Parameter[?, A]*): CommandParameterList[A] = ???
-      new CommandParameterList[A](innerCmd, config, parameterLists :+ ParameterList(param +: params))
+  private class InnerCommandParameterList[A](val innerCmd: InnerCommand[A]) extends CommandParameterList[A]:
+    def params(param: Parameter[?, A], params: Parameter[?, A]*): CommandParameterList[A] = 
+      InnerCommandParameterList[A](
+        innerCmd.copy(parameterLists = innerCmd.parameterLists :+ ParameterList(param +: params))
+      )
 
     export innerCmd.*
 
-  trait Command[A](val name: String, config: A, parameterLists: Seq[ParameterList[A]], description: String) extends CommandIf[A]:
+  private[command] class InnerCommand[A](val name: String,
+      config: A, 
+      private[command] val parameterLists: Seq[ParameterList[A]], 
+      description: String) extends Command[A]:
     def description(text: String): Command[A] = copy(description = description)
 
     def apply(args: Seq[String]): Try[A] = 
@@ -44,10 +47,11 @@ object Command:
         config: A = config,
         parameterLists: Seq[ParameterList[A]] = parameterLists,
         description: String = description) = 
-      new Command[A](name, config, parameterLists, description){}
+      InnerCommand[A](name, config, parameterLists, description)
 
 
 trait Command[A]:  
+  def name: String
   def description(text: String): Command[A]
   def apply(args: Seq[String]): Try[A]
 

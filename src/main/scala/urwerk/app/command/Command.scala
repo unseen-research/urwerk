@@ -27,14 +27,15 @@ object Command:
       description: String) extends Command[A]:
     def description(text: String): Command[A] = copy(description = description)
 
-    def apply(op: A => Optional[(Source[String], Source[String])]): Command[A] = ???
+    def apply(op: A => Optional[(Source[String], Source[String])]): Command[A] = 
+      copy(applyOp = op)
+      
     def resolve(args: Seq[String]): Optional[(Source[String], Source[String])] = 
       collectParams(parameterLists, config, args, Position(0, 0)) match
         case Success(config) =>
           applyOp(config)
         case Failure(error: Throwable) => 
           Optional.error(error)
-      ???
 
     @tailrec
     private def collectParams(paramLists: Seq[ParameterList[A]], config: A, args: Seq[String], pos: Position): Try[A] =

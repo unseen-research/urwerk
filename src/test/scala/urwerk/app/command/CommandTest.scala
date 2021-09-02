@@ -35,15 +35,17 @@ class CommandTest extends TestBase:
             .arity(0, 77)
             .accept(_ => true))
         .apply{config =>
-          Optional((Source(config*), Source()))
-        }
+          Optional((Source(config*), Source()))}
+
+      val result = cmd.resolve(Seq("--name2", "55", "--name1", "value1", "command", "--name", "value"))
+        .flatMap((stdOut, errOut) =>  Source(stdOut, errOut))
+        .concat.toSeq.block
 
 
-      // val src = cmd.resolve(Seq("--name2", "55", "--name1", "value1", "command", "--name", "value"))
       // //val Success(config) = cmd(Seq("--name2", "55", "--name1", "value1", "command", "--name", "value"))
-      // //config should be (Seq("name2-55", "name1-value1", "cmd-command", "param---name", "param-value"))
+      result should be (Seq("name2-55", "name1-value1", "cmd-command", "param---name", "param-value"))
     }
-
+  }
   //   "not match" in{
   //     val cmd = Command("help", Seq[String]())
   //       .params(

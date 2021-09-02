@@ -3,7 +3,7 @@ package urwerk.source
 import _root_.reactor.test.StepVerifier
 import _root_.reactor.test.StepVerifier.FirstStep
 import org.reactivestreams.Publisher
-import urwerk.source.reactor.SourceConverters.*
+import urwerk.source.reactor.FluxConverters.*
 
 object TestOps: 
   

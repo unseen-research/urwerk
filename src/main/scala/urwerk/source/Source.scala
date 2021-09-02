@@ -3,7 +3,7 @@ package urwerk.source
 import _root_.reactor.adapter.JdkFlowAdapter
 import _root_.reactor.core.publisher.{Flux, FluxSink, Mono, SynchronousSink}
 import org.reactivestreams.FlowAdapters
-import urwerk.source.reactor.SourceConverters.*
+import urwerk.source.reactor.FluxConverters.*
 
 import java.util.concurrent.Flow
 import java.util.function.{BiConsumer, BiFunction}
@@ -100,24 +100,6 @@ object Source:
       def requested: Long = 
         sink.requestedFromDownstream()
 
-  trait Sink[A]: 
-    def complete(): Unit
-  
-    def error(error: Throwable): Unit
-
-    def isCancelled: Boolean
-    
-    def next(item: A): Sink[A]
-  
-    def onCancel(op: => Unit): Sink[A]
-
-    def onDispose(op: => Unit): Sink[A]
-
-    def onRequest(op: Long => Unit): Sink[A]
-
-    def requested: Long
-  
-  end Sink  
 
 end Source
 

@@ -2,7 +2,7 @@ package urwerk.source
 
 import _root_.reactor.core.publisher.Flux
 import urwerk.source.Source.wrap
-import reactor.SourceConverters.*
+import reactor.FluxConverters.*
 import scala.jdk.OptionConverters.*
 import urwerk.source.internal.FluxOptional
 

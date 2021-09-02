@@ -1,7 +1,7 @@
 package urwerk.io.file
 
 import urwerk.io.{ByteString, Path}
-import urwerk.source.Source.Sink
+import urwerk.source.Sink
 import urwerk.source.{Singleton, Source}
 
 import java.nio.ByteBuffer

@@ -3,7 +3,7 @@ package urwerk.source.internal
 import reactor.core.publisher.Flux
 import urwerk.source.Source
 import urwerk.source.Optional
-import urwerk.source.reactor.SourceConverters.*
+import urwerk.source.reactor.FluxConverters.*
 import urwerk.source.Singleton
 
 class FluxSingleton[+A](flux: Flux[_<: A]) extends FluxSource[A](flux):

@@ -1,7 +1,7 @@
 package urwerk.source
 
 import _root_.reactor.core.publisher.{Flux, Mono}
-import reactor.SourceConverters.*
+import reactor.FluxConverters.*
 
 import java.util.concurrent.CompletableFuture
 import urwerk.source.internal.FluxSingleton

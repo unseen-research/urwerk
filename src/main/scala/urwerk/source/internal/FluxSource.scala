@@ -15,10 +15,6 @@ import org.reactivestreams.FlowAdapters
 import java.util.concurrent.Flow
 import reactor.adapter.JdkFlowAdapter
 
-object FluxSource: 
-  inline private[internal] def wrap[A](flux: Flux[A]): Source[A] = 
-    FluxSource[A](flux)
-
 class FluxSource[+A](val flux: Flux[_<: A]) extends Source[A]:
   def concat[B](implicit evidence: Source[A] <:< Source[Source[B]]): Source[B] =
     Source.wrap(

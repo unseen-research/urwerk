@@ -4,6 +4,7 @@ import _root_.reactor.core.publisher.{Flux, Mono}
 import reactor.SourceConverters.*
 
 import java.util.concurrent.CompletableFuture
+import urwerk.source.internal.FluxSingleton
 
 object Singleton:
 
@@ -23,8 +24,9 @@ object Singleton:
         .flux())
         
   private[source] def wrap[A](flux: Flux[A]): Singleton[A] =
-    new Singleton[A] with SingletonOps[A] {
-      private[source] val underlying: Flux[_ <: A] = flux
+    new Singleton[A]{
+      val fluxSingleton = new FluxSingleton(flux)
+      export fluxSingleton.*
     }
   
 end Singleton
@@ -42,24 +44,3 @@ trait Singleton[+A] extends Source[A]:
   def map[B](op: A => B): Singleton[B]
 
 end Singleton
-
-transparent trait SingletonOps[+A] extends SourceOps[A]:
-
-  def block: A =
-    underlying.blockFirst()
-  
-  override def filter(pred: A => Boolean): Optional[A] =
-    Optional.wrap(underlying.filter(pred(_)))
-
-  override def filterNot(pred: A => Boolean): Optional[A] =
-    filter(!pred(_))
-
-  def flatMap[B](op: A => Singleton[B]): Singleton[B] =
-    Singleton.wrap(
-      underlying.flatMap(elem =>
-        op(elem).asFlux))
-        
-  override def map[B](op: A => B): Singleton[B] =
-    Singleton.wrap(underlying.map(op(_)))
-  
-end SingletonOps

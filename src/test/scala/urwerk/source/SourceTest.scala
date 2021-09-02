@@ -11,6 +11,8 @@ import java.util.concurrent.Flow
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success}
 
+import Signal.{Next, Complete, Error}
+
 class SourceTest extends TestBase:
 
   "apply" in {
@@ -270,6 +272,18 @@ class SourceTest extends TestBase:
     val elems = Source(1, 2, 3)
       .map(_.toString).toSeq.block
     elems should be (Seq("1", "2", "3"))
+  }
+
+  "materialize" in {
+    val elems = Source(1, 2, 3).materialize
+      .toSeq.block
+    elems should be (Seq(Next(1), Next(2), Next(3), Complete))
+  }
+
+  "dematerialize" in {
+    val elems = Source(1, 2, 3).materialize.dematerialize
+      .toSeq.block
+    elems should be (Seq(Next(1), Next(2), Next(3), Complete))
   }
 
   "merge with other" in {

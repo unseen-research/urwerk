@@ -14,6 +14,7 @@ import scala.jdk.FunctionConverters.given
 import org.reactivestreams.FlowAdapters
 import java.util.concurrent.Flow
 import reactor.adapter.JdkFlowAdapter
+import urwerk.source.Signal
 
 class FluxSource[+A](val flux: Flux[_<: A]) extends Source[A]:
   def concat[B](implicit evidence: Source[A] <:< Source[Source[B]]): Source[B] =
@@ -95,6 +96,10 @@ class FluxSource[+A](val flux: Flux[_<: A]) extends Source[A]:
   def map[B](op: A => B): Source[B] =
     Source.wrap(flux.map(op(_)))
 
+  def materialize: Source[Signal[A]] = 
+    Source.wrap(
+      flux.materialize.map(signal => Signal(signal)))
+  
   def merge[B >: A](that: Source[B]): Source[B] =
     Source.wrap(
       Flux.merge(flux, Source.unwrap(that)))

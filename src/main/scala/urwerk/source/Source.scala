@@ -137,6 +137,8 @@ trait Source[+A]:
   
   def map[B](op: A => B): Source[B]
 
+  def materialize: Source[Signal[A]]
+ 
   def merge[B >: A](that: Source[B]): Source[B]
 
   def merge[B](implicit evidence: Source[A] <:< Source[Source[B]]): Source[B]

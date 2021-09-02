@@ -11,6 +11,7 @@ import scala.collection.mutable.StringBuilder
 import scala.jdk.CollectionConverters.given
 import scala.jdk.FunctionConverters.given
 import scala.util.Try
+import urwerk.source.internal.FluxSource
 
 object Source:
 
@@ -64,8 +65,9 @@ object Source:
     wrap(flux)
   
   private[source] def wrap[A](flux: Flux[A]): Source[A] = 
-    new Source[A] with SourceOps[A] {
-      val underlying: Flux[_ <: A] = flux
+    new Source[A]{
+      val fluxSource = new FluxSource(flux)
+      export fluxSource.*
     }
 
   private[source] def unwrap[A](source: Source[A]): Flux[A] =
@@ -186,163 +188,3 @@ trait Source[+A]:
   def toSeq: Singleton[Seq[A]]
 
 end Source
-
-trait SourceOps[+A] extends Source[A]:
-  
-  import reactor.SourceConverters.* 
-  
-  private[source] val underlying: Flux[_ <: A]
-
-  def concat[B](implicit evidence: Source[A] <:< Source[Source[B]]): Source[B] =
-    Source.wrap(
-      Flux.concat(
-        underlying.asInstanceOf[Flux[Source[B]]]
-          .map(_.asFlux))) 
-
-  def concatDelayError[B](implicit evidence: Source[A] <:< Source[Source[B]]): Source[B] =
-    Source.wrap(
-      Flux.concatDelayError(
-        underlying.asInstanceOf[Flux[Source[B]]]
-          .map(_.asFlux)))
-
-
-  def doOnComplete(op: => Unit): Source[A] =
-    Source.wrap(
-      underlying.doOnComplete(() => op))
-      
-  def doOnError(op: Throwable => Unit): Source[A] =
-    Source.wrap(
-      underlying.doOnError(op(_)))
-      
-  def doOnNext(op: A => Unit): Source[A] =
-    Source.wrap(
-      underlying.doOnNext(op(_)))
-    
-  def filter(pred: A => Boolean): Source[A] =
-    Source.wrap(underlying.filter(pred(_)))
-
-  def filterNot(pred: A => Boolean): Source[A] =
-    filter(!pred(_))
-
-  def flatMap[B](op: A => Source[B]): Source[B] = 
-    Source.wrap(
-      underlying.flatMap(
-        op(_).asFlux))
-    
-  def flatMap[B](concurrency: Int)(op: A => Source[B]): Source[B] = 
-    Source.wrap(
-      underlying.flatMap(op(_).asFlux, 
-      concurrency))
-
-  def flatMap[B](concurrency: Int, prefetch: Int)(op: A => Source[B]): Source[B] = 
-    Source.wrap(
-      underlying.flatMap(op(_).asFlux,
-      concurrency,
-      prefetch))
-  
-  def fold[B](start: B)(op: (B, A) => B): Singleton[B] =
-    Singleton.wrap(
-      underlying.reduce(start,
-        op(_, _)).flux)
-  
-  def head: Singleton[A] =  
-    Singleton.wrap(
-      underlying
-        .next()
-        .single().flux())
-
-  def headOption: Optional[A] =
-    Optional.wrap(
-      underlying
-        .next().flux())
-
-  def last: Singleton[A] =
-    Singleton.wrap(
-      underlying
-        .last().flux())
-
-  def lastOption: Optional[A] =
-    Optional.wrap(
-      underlying
-        .last()
-        .onErrorResume(
-          classOf[NoSuchElementException],
-          _ => Mono.empty)
-        .flux())  
-        
-  def map[B](op: A => B): Source[B] =
-    Source.wrap(underlying.map(op(_)))
-
-  def merge[B >: A](that: Source[B]): Source[B] =
-    Source.wrap(
-      Flux.merge(underlying, Source.unwrap(that)))
-
-  def merge[B](implicit evidence: Source[A] <:< Source[Source[B]]): Source[B] = 
-    Source.wrap(
-      Flux.merge(
-        underlying.asInstanceOf[Flux[Source[B]]]
-          .map(_.asFlux)))
-
-  def mergeDelayError[B >: A](prefetch: Int, that: Source[B]): Source[B] =
-    Source.wrap(
-      Flux.mergeDelayError(prefetch, underlying, Source.unwrap(that)))
-
-  def mkString(start: String, sep: String, end: String): Singleton[String] =
-    fold(StringBuilder(start))((builder, elem) =>
-        builder.append(elem.toString)
-          .append(sep))
-      .map(_.dropRight(sep.size)
-        .append(end)
-        .toString)
-
-  def onErrorContinue(op: (Throwable, Any) => Unit): Source[A] = 
-    Source.wrap(
-      underlying.onErrorContinue(op.asJava))
-
-  def onErrorResume[B >: A](op: Throwable => Source[B]): Source[B] = 
-    Source.wrap(
-      underlying.asInstanceOf[Flux[B]]
-        .onErrorResume{(e) => op(e).asFlux})
-
-  def reduce[B >: A](op: (B, A) => B): Optional[B] =
-    def reduceOp[B1 <: A]: BiFunction[B1, B1, B1] = (v1, v2) =>
-      op(v1, v2).asInstanceOf[B1]
-    
-    Optional.wrap(underlying.reduce(reduceOp).flux)
-
-  def scan[B](start: B)(op: (B, A) => B): Source[B] = 
-    Source.wrap(
-      underlying.scan(start, op.asJavaBiFunction))
-
-  def scanWith[B](start: => B)(op: (B, A) => B): Source[B] = 
-    Source.wrap(
-      underlying.scanWith(()=> start, op.asJavaBiFunction))
-
-  def subscribe(): AutoCloseable = {
-    val disposable = underlying.subscribe()
-    () => {
-      disposable.dispose()
-    }
-  }
-
-  def subscribe[B >: A](subscriber: Flow.Subscriber[B]): Unit = {
-    underlying.subscribe(
-      FlowAdapters.toSubscriber(subscriber))
-  }
-  
-  def subscribe(onNext: A => Unit, onError: Throwable => Unit, onComplete: => Unit ): AutoCloseable = {
-    val disposable = underlying.subscribe(onNext(_), onError(_), () => onComplete)
-    () => {
-      disposable.dispose()
-    }
-  }
-
-  def toPublisher[B >: A]: Flow.Publisher[B] =
-    JdkFlowAdapter.publisherToFlowPublisher(underlying.asInstanceOf[Flux[B]])
-
-  def toSeq: Singleton[Seq[A]] =
-    Singleton.wrap(underlying
-      .collectList
-      .flux.map(_.asScala.toSeq))
-
-end SourceOps

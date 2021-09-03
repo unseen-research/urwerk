@@ -110,7 +110,7 @@ trait Source[+A]:
   def concatDelayError[B](implicit evidence: Source[A] <:< Source[Source[B]]): Source[B] 
 
   //def dematerialize[B](implicit evidence: Source[A] <:< Source[Signal[B]]): Source[B]
-  
+
   def doOnComplete(op: => Unit): Source[A]
   
   def doOnError(op: Throwable => Unit): Source[A]
@@ -168,6 +168,8 @@ trait Source[+A]:
   def subscribe[B >: A](subscriber: Flow.Subscriber[B]): Unit
 
   def subscribe(onNext: A => Unit, onError: Throwable => Unit, onComplete: => Unit ): AutoCloseable
+
+  def takeUntil(predicate: A => Boolean): Source[A]
 
   def takeWhile(predicate: A => Boolean): Source[A]
 

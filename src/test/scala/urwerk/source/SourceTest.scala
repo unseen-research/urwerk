@@ -480,6 +480,13 @@ class SourceTest extends TestBase:
     items should be(Seq("1", "2", "3", "onComplete"))
   }
 
+  "take until" in {
+    sourceProbe(Source(0, 1, 2, 3, 4)
+        .takeUntil(_ == 3))
+      .expectNext(0, 1, 2, 3)
+      .verifyComplete()
+  }
+
   "take while" in {
     sourceProbe(Source(0, 1, 2, 3, 4)
         .takeWhile(_ < 4))

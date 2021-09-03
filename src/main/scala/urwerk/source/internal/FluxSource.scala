@@ -173,6 +173,10 @@ class FluxSource[+A](val flux: Flux[_<: A]) extends Source[A]:
     }
   }
 
+  def takeUntil(predicate: A => Boolean): Source[A] = 
+    Source.wrap(
+      flux.takeUntil(predicate.asJava))
+
   def takeWhile(predicate: A => Boolean): Source[A] = 
     Source.wrap(
       flux.takeWhile(predicate.asJava))

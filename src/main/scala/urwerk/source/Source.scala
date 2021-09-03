@@ -109,6 +109,8 @@ trait Source[+A]:
 
   def concatDelayError[B](implicit evidence: Source[A] <:< Source[Source[B]]): Source[B] 
 
+  //def dematerialize[B](implicit evidence: Source[A] <:< Source[Signal[B]]): Source[B]
+  
   def doOnComplete(op: => Unit): Source[A]
   
   def doOnError(op: Throwable => Unit): Source[A]
@@ -138,7 +140,7 @@ trait Source[+A]:
   def map[B](op: A => B): Source[B]
 
   def materialize: Source[Signal[A]]
- 
+
   def merge[B >: A](that: Source[B]): Source[B]
 
   def merge[B](implicit evidence: Source[A] <:< Source[Source[B]]): Source[B]
@@ -166,6 +168,8 @@ trait Source[+A]:
   def subscribe[B >: A](subscriber: Flow.Subscriber[B]): Unit
 
   def subscribe(onNext: A => Unit, onError: Throwable => Unit, onComplete: => Unit ): AutoCloseable
+
+  def takeWhile(predicate: A => Boolean): Source[A]
 
   def toPublisher[B >: A]: Flow.Publisher[B]
 

@@ -29,6 +29,15 @@ class FluxSource[+A](val flux: Flux[_<: A]) extends Source[A]:
         flux.asInstanceOf[Flux[Source[B]]]
           .map(_.asFlux)))
 
+  // def dematerialize[B](implicit evidence: Source[A] <:< Source[Signal[B]]): Source[B] = 
+  //   takeWhile{
+  //     case Signal.Next(value) => true
+  //     case Signal.Complete => false
+  //     case Signal.Error(ex) =>
+  //       throw ex
+  //   }
+  //   .map{_.asInstanceOf[Signal.Next[B]].value}
+
   def doOnComplete(op: => Unit): Source[A] =
     Source.wrap(
       flux.doOnComplete(() => op))
@@ -164,6 +173,10 @@ class FluxSource[+A](val flux: Flux[_<: A]) extends Source[A]:
     }
   }
 
+  def takeWhile(predicate: A => Boolean): Source[A] = 
+    Source.wrap(
+      flux.takeWhile(predicate.asJava))
+    
   def toPublisher[B >: A]: Flow.Publisher[B] =
     JdkFlowAdapter.publisherToFlowPublisher(flux.asInstanceOf[Flux[B]])
 

@@ -10,9 +10,9 @@ object Signal:
       Next(signal.get)
     else if signal.isOnComplete() then
       Complete
-    else ???
+    else throw UnsupportedOperationException()
 
 enum Signal[+A]:
   case Error(error: Throwable) extends Signal[A]
-  case Next(next: A) extends Signal[A]
+  case Next(val next: A) extends Signal[A]
   case Complete extends Signal

@@ -16,9 +16,19 @@ import java.util.concurrent.Flow
 import reactor.adapter.JdkFlowAdapter
 import urwerk.source.Signal
 
+object FluxSource:
+  private[source] def wrap[A](flux: Flux[A]): Source[A] = 
+    new Source[A]{
+      private val fluxSource = new FluxSource(flux)
+      export fluxSource.*
+    }
+
+
 class FluxSource[+A](val flux: Flux[_<: A]) extends Source[A]:
+  import FluxSource.*
+
   def concat[B](implicit evidence: Source[A] <:< Source[Source[B]]): Source[B] =
-    Source.wrap(
+    wrap(
       Flux.concat(
         flux.asInstanceOf[Flux[Source[B]]]
           .map(_.asFlux))) 

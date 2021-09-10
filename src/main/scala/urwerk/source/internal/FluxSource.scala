@@ -15,11 +15,64 @@ import org.reactivestreams.FlowAdapters
 import java.util.concurrent.Flow
 import reactor.adapter.JdkFlowAdapter
 import urwerk.source.Signal
+import reactor.core.publisher.SynchronousSink
+import urwerk.source.Sink
+import urwerk.source.SourceFactory
 
-object FluxSource:
-  private[source] def wrap[A](flux: Flux[A]): Source[A] = FluxSource[A](flux)
+object FluxSource extends SourceFactory:
 
-  private[source] def unwrap[A](source: Source[A]): Flux[A] =
+  def apply[A](elems: A*): Source[A] = 
+    wrap(Flux.just(elems:_*))
+
+  def create[A](op: Sink[A] => Unit): Source[A] = 
+    wrap(  
+      Flux.create[A](sink => op(FluxSink(sink))))
+
+  def defer[A](op: => Source[A]): Source[A] =
+    wrap(Flux.defer(() => 
+      op.asFlux))
+
+  def deferError[A](op: => Throwable): Source[A] =
+    wrap(Flux.error(() => op))
+
+  def error[A](error: Throwable): Source[A] =
+    wrap(Flux.error(error))
+
+  def from[A](publisher: Flow.Publisher[A]): Source[A] =
+    wrap(
+      JdkFlowAdapter.flowPublisherToFlux(publisher))
+
+  def from[A](iterable: Iterable[A]): Source[A] =
+    wrap(
+      Flux.fromIterable(iterable.asJava))
+
+  def push[A](op: Sink[A] => Unit): Source[A] =
+    wrap(
+      Flux.push[A](sink => op(FluxSink(sink))))
+
+  def unfold[A, S](init: => S)(op: S => Option[(A, S)]): Source[A] =
+    unfold(init, (_) => {})(op)
+
+  def unfold[A, S](init: => S, doOnLastState: S => Unit)(op: S => Option[(A, S)]): Source[A] = 
+    val gen = (state: S, sink: SynchronousSink[A]) =>
+      op(state) match {
+        case Some((item, state)) =>
+          sink.next(item)
+          state
+        case None =>
+          sink.complete()
+          state
+      }
+    
+    val flux = Flux.generate(()=> init,
+      gen.asJavaBiFunction, 
+      (state) => doOnLastState(state))
+    
+    wrap(flux)
+    
+  private def wrap[A](flux: Flux[A]): Source[A] = new FluxSource[A](flux)
+
+  private def unwrap[A](source: Source[A]): Flux[A] =
     JdkFlowAdapter.flowPublisherToFlux(
       source.toPublisher.asInstanceOf[Flow.Publisher[A]])
 

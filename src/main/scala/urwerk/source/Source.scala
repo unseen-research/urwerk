@@ -13,7 +13,7 @@ import scala.jdk.FunctionConverters.given
 import scala.util.Try
 import urwerk.source.internal.FluxSource
 
-object Source:
+object Source extends SourceFactory:
 
   def apply[A](elems: A*): Source[A] = 
     wrap(Flux.just(elems:_*))
@@ -64,7 +64,7 @@ object Source:
     
     wrap(flux)
   
-  private[source] def wrap[A](flux: Flux[A]): Source[A] = FluxSource[A](flux)
+  private[source] def wrap[A](flux: Flux[A]): Source[A] = new FluxSource[A](flux)
 
   private[source] def unwrap[A](source: Source[A]): Flux[A] =
     JdkFlowAdapter.flowPublisherToFlux(
@@ -96,8 +96,7 @@ object Source:
       def requested: Long = 
         sink.requestedFromDownstream()
 
-
-end Source
+end Source // Object
 
 trait Source[+A]:
 
@@ -174,3 +173,24 @@ trait Source[+A]:
   def toSeq: Singleton[Seq[A]]
 
 end Source
+
+trait SourceFactory:
+  def apply[A](elems: A*): Source[A]
+  
+  def create[A](op: Sink[A] => Unit): Source[A]
+  
+  def defer[A](op: => Source[A]): Source[A] 
+
+  def deferError[A](op: => Throwable): Source[A]
+
+  def error[A](error: Throwable): Source[A]
+
+  def from[A](publisher: Flow.Publisher[A]): Source[A]
+
+  def from[A](iterable: Iterable[A]): Source[A]
+
+  def push[A](op: Sink[A] => Unit): Source[A]
+
+  def unfold[A, S](init: => S)(op: S => Option[(A, S)]): Source[A]
+
+  def unfold[A, S](init: => S, doOnLastState: S => Unit)(op: S => Option[(A, S)]): Source[A]

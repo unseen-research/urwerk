@@ -17,12 +17,11 @@ import reactor.adapter.JdkFlowAdapter
 import urwerk.source.Signal
 
 object FluxSource:
-  private[source] def wrap[A](flux: Flux[A]): Source[A] = 
-    new Source[A]{
-      private val fluxSource = new FluxSource(flux)
-      export fluxSource.*
-    }
+  private[source] def wrap[A](flux: Flux[A]): Source[A] = FluxSource[A](flux)
 
+  private[source] def unwrap[A](source: Source[A]): Flux[A] =
+    JdkFlowAdapter.flowPublisherToFlux(
+      source.toPublisher.asInstanceOf[Flow.Publisher[A]])
 
 class FluxSource[+A](val flux: Flux[_<: A]) extends Source[A]:
   import FluxSource.*
@@ -34,7 +33,7 @@ class FluxSource[+A](val flux: Flux[_<: A]) extends Source[A]:
           .map(_.asFlux))) 
 
   def concatDelayError[B](implicit evidence: Source[A] <:< Source[Source[B]]): Source[B] =
-    Source.wrap(
+    wrap(
       Flux.concatDelayError(
         flux.asInstanceOf[Flux[Source[B]]]
           .map(_.asFlux)))
@@ -49,35 +48,35 @@ class FluxSource[+A](val flux: Flux[_<: A]) extends Source[A]:
   //   .map{_.asInstanceOf[Signal.Next[B]].value}
 
   def doOnComplete(op: => Unit): Source[A] =
-    Source.wrap(
+    wrap(
       flux.doOnComplete(() => op))
       
   def doOnError(op: Throwable => Unit): Source[A] =
-    Source.wrap(
+    wrap(
       flux.doOnError(op(_)))
       
   def doOnNext(op: A => Unit): Source[A] =
-    Source.wrap(
+    wrap(
       flux.doOnNext(op(_)))
     
   def filter(pred: A => Boolean): Source[A] =
-    Source.wrap(flux.filter(pred(_)))
+    wrap(flux.filter(pred(_)))
 
   def filterNot(pred: A => Boolean): Source[A] =
     filter(!pred(_))
 
   def flatMap[B](op: A => Source[B]): Source[B] = 
-    Source.wrap(
+    wrap(
       flux.flatMap(
         op(_).asFlux))
     
   def flatMap[B](concurrency: Int)(op: A => Source[B]): Source[B] = 
-    Source.wrap(
+    wrap(
       flux.flatMap(op(_).asFlux, 
       concurrency))
 
   def flatMap[B](concurrency: Int, prefetch: Int)(op: A => Source[B]): Source[B] = 
-    Source.wrap(
+    wrap(
       flux.flatMap(op(_).asFlux,
       concurrency,
       prefetch))
@@ -113,25 +112,25 @@ class FluxSource[+A](val flux: Flux[_<: A]) extends Source[A]:
         .flux())  
         
   def map[B](op: A => B): Source[B] =
-    Source.wrap(flux.map(op(_)))
+    wrap(flux.map(op(_)))
 
   def materialize: Source[Signal[A]] = 
-    Source.wrap(
+    wrap(
       flux.materialize.map(signal => Signal(signal)))
   
   def merge[B >: A](that: Source[B]): Source[B] =
-    Source.wrap(
-      Flux.merge(flux, Source.unwrap(that)))
+    wrap(
+      Flux.merge(flux, unwrap(that)))
 
   def merge[B](implicit evidence: Source[A] <:< Source[Source[B]]): Source[B] = 
-    Source.wrap(
+    wrap(
       Flux.merge(
         flux.asInstanceOf[Flux[Source[B]]]
           .map(_.asFlux)))
 
   def mergeDelayError[B >: A](prefetch: Int, that: Source[B]): Source[B] =
-    Source.wrap(
-      Flux.mergeDelayError(prefetch, flux, Source.unwrap(that)))
+    wrap(
+      Flux.mergeDelayError(prefetch, flux, unwrap(that)))
 
   def mkString(start: String, sep: String, end: String): Singleton[String] =
     fold(StringBuilder(start))((builder, elem) =>
@@ -142,11 +141,11 @@ class FluxSource[+A](val flux: Flux[_<: A]) extends Source[A]:
         .toString)
 
   def onErrorContinue(op: (Throwable, Any) => Unit): Source[A] = 
-    Source.wrap(
+    wrap(
       flux.onErrorContinue(op.asJava))
 
   def onErrorResume[B >: A](op: Throwable => Source[B]): Source[B] = 
-    Source.wrap(
+    wrap(
       flux.asInstanceOf[Flux[B]]
         .onErrorResume{(e) => op(e).asFlux})
 
@@ -157,11 +156,11 @@ class FluxSource[+A](val flux: Flux[_<: A]) extends Source[A]:
     Optional.wrap(flux.reduce(reduceOp).flux)
 
   def scan[B](start: B)(op: (B, A) => B): Source[B] = 
-    Source.wrap(
+    wrap(
       flux.scan(start, op.asJavaBiFunction))
 
   def scanWith[B](start: => B)(op: (B, A) => B): Source[B] = 
-    Source.wrap(
+    wrap(
       flux.scanWith(()=> start, op.asJavaBiFunction))
 
   def subscribe(): AutoCloseable = {
@@ -184,11 +183,11 @@ class FluxSource[+A](val flux: Flux[_<: A]) extends Source[A]:
   }
 
   def takeUntil(predicate: A => Boolean): Source[A] = 
-    Source.wrap(
+    wrap(
       flux.takeUntil(predicate.asJava))
 
   def takeWhile(predicate: A => Boolean): Source[A] = 
-    Source.wrap(
+    wrap(
       flux.takeWhile(predicate.asJava))
     
   def toPublisher[B >: A]: Flow.Publisher[B] =

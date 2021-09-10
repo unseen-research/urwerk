@@ -64,16 +64,12 @@ object Source:
     
     wrap(flux)
   
-  private[source] def wrap[A](flux: Flux[A]): Source[A] = 
-    new Source[A]{
-      val fluxSource = new FluxSource(flux)
-      export fluxSource.*
-    }
+  private[source] def wrap[A](flux: Flux[A]): Source[A] = FluxSource[A](flux)
 
   private[source] def unwrap[A](source: Source[A]): Flux[A] =
     JdkFlowAdapter.flowPublisherToFlux(
-      source.toPublisher.asInstanceOf[Flow.Publisher[A]])
-
+      source.toPublisher.asInstanceOf[Flow.Publisher[A]])    
+      
   private[source] def wrapSink[A](sink: FluxSink[A]): Sink[A] = 
     new Sink[A]: 
       def complete(): Unit = 

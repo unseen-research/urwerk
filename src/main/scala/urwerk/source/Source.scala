@@ -2,8 +2,8 @@ package urwerk.source
 
 import _root_.reactor.adapter.JdkFlowAdapter
 import _root_.reactor.core.publisher.{Flux, FluxSink, Mono, SynchronousSink}
-import org.reactivestreams.FlowAdapters
-import urwerk.source.reactor.FluxConverters.*
+//import org.reactivestreams.FlowAdapters
+//import urwerk.source.reactor.FluxConverters.*
 
 import java.util.concurrent.Flow
 import java.util.function.{BiConsumer, BiFunction}
@@ -14,89 +14,7 @@ import scala.util.Try
 import urwerk.source.internal.FluxSource
 
 object Source extends SourceFactory:
-
-  def apply[A](elems: A*): Source[A] = 
-    wrap(Flux.just(elems:_*))
-
-  def create[A](op: Sink[A] => Unit): Source[A] = 
-    wrap(  
-      Flux.create[A](sink => op(wrapSink(sink))))
-
-  def defer[A](op: => Source[A]): Source[A] =
-    wrap(Flux.defer(() => 
-      op.asFlux))
-
-  def deferError[A](op: => Throwable): Source[A] =
-    wrap(Flux.error(() => op))
-
-  def error[A](error: Throwable): Source[A] =
-    wrap(Flux.error(error))
-
-  def from[A](publisher: Flow.Publisher[A]): Source[A] =
-    wrap(
-      JdkFlowAdapter.flowPublisherToFlux(publisher))
-
-  def from[A](iterable: Iterable[A]): Source[A] =
-    wrap(
-      Flux.fromIterable(iterable.asJava))
-
-  def push[A](op: Sink[A] => Unit): Source[A] =
-    wrap(
-      Flux.push[A](sink => op(wrapSink(sink))))
-
-  def unfold[A, S](init: => S)(op: S => Option[(A, S)]): Source[A] =
-    unfold(init, (_) => {})(op)
-
-  def unfold[A, S](init: => S, doOnLastState: S => Unit)(op: S => Option[(A, S)]): Source[A] = 
-    val gen = (state: S, sink: SynchronousSink[A]) =>
-      op(state) match {
-        case Some((item, state)) =>
-          sink.next(item)
-          state
-        case None =>
-          sink.complete()
-          state
-      }
-    
-    val flux = Flux.generate(()=> init,
-      gen.asJavaBiFunction, 
-      (state) => doOnLastState(state))
-    
-    wrap(flux)
-  
-  private[source] def wrap[A](flux: Flux[A]): Source[A] = new FluxSource[A](flux)
-
-  private[source] def unwrap[A](source: Source[A]): Flux[A] =
-    JdkFlowAdapter.flowPublisherToFlux(
-      source.toPublisher.asInstanceOf[Flow.Publisher[A]])    
-      
-  private[source] def wrapSink[A](sink: FluxSink[A]): Sink[A] = 
-    new Sink[A]: 
-      def complete(): Unit = 
-        sink.complete()
-
-      def error(error: Throwable): Unit =
-        sink.error(error)
-  
-      def isCancelled: Boolean =
-        sink.isCancelled
-  
-      def next(elem: A): Sink[A] =
-        wrapSink(sink.next(elem))
-  
-      def onCancel(op: => Unit): Sink[A] =
-        wrapSink(sink.onCancel(() => op))
-  
-      def onDispose(op: => Unit): Sink[A] =
-        wrapSink(sink.onDispose(() => op))
-  
-      def onRequest(op: Long => Unit): Sink[A] =
-        wrapSink(sink.onRequest(op(_)))
-  
-      def requested: Long = 
-        sink.requestedFromDownstream()
-
-end Source // Object
+  export FluxSource.*
 
 trait Source[+A]:
 

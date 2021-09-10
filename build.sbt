@@ -1,4 +1,4 @@
-val DottyVersion = "3.0.1"
+val DottyVersion = "3.0.2"
 val ReactorVersion = "3.4.9"
 
 lazy val root = project

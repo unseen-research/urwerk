@@ -99,7 +99,7 @@ class SingletonTest extends TestBase:
       .block
     value should be (77)
   }
-  
+
   "map" in {
     singletonProbe(
         Singleton(1)

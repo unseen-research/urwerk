@@ -61,8 +61,8 @@ class SourceTest extends TestBase:
       .expectNext(1, 2)
       .expectError(classOf[IllegalArgumentException])
       .verify()
-  }  
-  
+  }
+
   "defer" in {
     val sources = Iterator(
       Source(1, 2, 3),
@@ -121,15 +121,21 @@ class SourceTest extends TestBase:
 
     error shouldBe a[IllegalArgumentException]
   }
-  
+
   "do on next" in {
     val elems = ListBuffer[Int]()
-    
+
     Source(1, 2, 3)
       .doOnNext(elem => elems += elem)
       .subscribe()
-    
+
     elems should be(Seq(1, 2, 3))
+  }
+
+  "empty" in {
+    sourceProbe(
+        Source.empty)
+      .verifyComplete()
   }
 
   "error" in {
@@ -152,7 +158,7 @@ class SourceTest extends TestBase:
       Source(1, 2, 3, 4)
         .filterNot(_ % 2 == 0))
       .expectNext(1, 3)
-      .verifyComplete()    
+      .verifyComplete()
   }
 
   "flatMap" in {
@@ -171,7 +177,7 @@ class SourceTest extends TestBase:
       .expectNext("first 1", "second 1", "first 2", "second 2", "first 3", "second 3")
       .verifyComplete()
   }
-  
+
   "flat map with concurrency and prefetch" in {
     sourceProbe(
         Source(1, 2, 3).flatMap(2, 2) {item =>
@@ -196,7 +202,7 @@ class SourceTest extends TestBase:
       .expectNext(1, 2, 3)
       .verifyComplete()
   }
-  
+
   "from publisher" in {
     val publisher: Flow.Publisher[Int] = Source(1, 2, 3).toPublisher
 
@@ -346,7 +352,7 @@ class SourceTest extends TestBase:
     sourceProbe(
         Source(1, 2, 3)
           .doOnNext(elem => if elem == 2 then throw IllegalArgumentException())
-          .onErrorContinue{(error, elem) => 
+          .onErrorContinue{(error, elem) =>
             actualError = error
             actualElement = elem
           })
@@ -370,7 +376,7 @@ class SourceTest extends TestBase:
         Source.error[Int](IllegalArgumentException())
           .onErrorResume(_ => Source(1, 2, 3)))
       .expectNext(1, 2, 3)
-      .verifyComplete() 
+      .verifyComplete()
   }
 
   "push" in {
@@ -431,12 +437,12 @@ class SourceTest extends TestBase:
 
     elems should be(Seq("1", "2", "3", "completed"))
   }
-  
+
   "subscribe close" in {
     var onCancel = false
     var onDispose = false
     var onRequest = 0L
-    
+
     val closable = Source.create[Int]{ sink =>
         sink.onCancel{onCancel = true}
           .onDispose{onDispose = true}
@@ -445,7 +451,7 @@ class SourceTest extends TestBase:
       .subscribe()
 
     closable.close()
-    
+
     onCancel should be (true)
     onDispose should be (true)
     onRequest should be (Long.MaxValue)

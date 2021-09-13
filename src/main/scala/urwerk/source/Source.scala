@@ -9,18 +9,18 @@ object Source extends SourceFactory:
 
 trait Source[+A]:
 
-  def concat[B](implicit evidence: Source[A] <:< Source[Source[B]]): Source[B] 
+  def concat[B](implicit evidence: Source[A] <:< Source[Source[B]]): Source[B]
 
-  def concatDelayError[B](implicit evidence: Source[A] <:< Source[Source[B]]): Source[B] 
+  def concatDelayError[B](implicit evidence: Source[A] <:< Source[Source[B]]): Source[B]
 
   //def dematerialize[B](implicit evidence: Source[A] <:< Source[Signal[B]]): Source[B]
 
   def doOnComplete(op: => Unit): Source[A]
-  
+
   def doOnError(op: Throwable => Unit): Source[A]
-  
+
   def doOnNext(op: A => Unit): Source[A]
-  
+
   def filter(pred: A => Boolean): Source[A]
 
   def filterNot(pred: A => Boolean): Source[A]
@@ -40,7 +40,7 @@ trait Source[+A]:
   def last: Singleton[A]
 
   def lastOption: Optional[A]
-  
+
   def map[B](op: A => B): Source[B]
 
   def materialize: Source[Signal[A]]
@@ -60,11 +60,11 @@ trait Source[+A]:
   def onErrorContinue(op: (Throwable, Any) => Unit): Source[A]
 
   def onErrorResume[B >: A](op: Throwable => Source[B]): Source[B]
-  
+
   def reduce[B >: A](op: (B, A) => B): Optional[B]
 
   def scan[B](start: B)(op: (B, A) => B): Source[B]
-  
+
   def scanWith[B](start: => B)(op: (B, A) => B): Source[B]
 
   def subscribe(): AutoCloseable
@@ -85,13 +85,15 @@ end Source
 
 trait SourceFactory:
   def apply[A](elems: A*): Source[A]
-  
+
   def create[A](op: Sink[A] => Unit): Source[A]
-  
-  def defer[A](op: => Source[A]): Source[A] 
+
+  def defer[A](op: => Source[A]): Source[A]
 
   def deferError[A](op: => Throwable): Source[A]
 
+  def empty[A]: Source[A]
+  
   def error[A](error: Throwable): Source[A]
 
   def from[A](publisher: Flow.Publisher[A]): Source[A]

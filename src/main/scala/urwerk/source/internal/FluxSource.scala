@@ -30,7 +30,7 @@ object FluxSource extends SourceFactory:
 
   def defer[A](op: => Source[A]): Source[A] =
     wrap(Flux.defer(() => 
-      op.asFlux))
+      op.toFlux))
 
   def deferError[A](op: => Throwable): Source[A] =
     wrap(Flux.error(() => op))
@@ -83,13 +83,13 @@ class FluxSource[+A](val flux: Flux[_<: A]) extends Source[A]:
     wrap(
       Flux.concat(
         flux.asInstanceOf[Flux[Source[B]]]
-          .map(_.asFlux))) 
+          .map(_.toFlux))) 
 
   def concatDelayError[B](implicit evidence: Source[A] <:< Source[Source[B]]): Source[B] =
     wrap(
       Flux.concatDelayError(
         flux.asInstanceOf[Flux[Source[B]]]
-          .map(_.asFlux)))
+          .map(_.toFlux)))
 
   // def dematerialize[B](implicit evidence: Source[A] <:< Source[Signal[B]]): Source[B] = 
   //   takeWhile{
@@ -121,16 +121,16 @@ class FluxSource[+A](val flux: Flux[_<: A]) extends Source[A]:
   def flatMap[B](op: A => Source[B]): Source[B] = 
     wrap(
       flux.flatMap(
-        op(_).asFlux))
+        op(_).toFlux))
     
   def flatMap[B](concurrency: Int)(op: A => Source[B]): Source[B] = 
     wrap(
-      flux.flatMap(op(_).asFlux, 
+      flux.flatMap(op(_).toFlux, 
       concurrency))
 
   def flatMap[B](concurrency: Int, prefetch: Int)(op: A => Source[B]): Source[B] = 
     wrap(
-      flux.flatMap(op(_).asFlux,
+      flux.flatMap(op(_).toFlux,
       concurrency,
       prefetch))
   
@@ -179,7 +179,7 @@ class FluxSource[+A](val flux: Flux[_<: A]) extends Source[A]:
     wrap(
       Flux.merge(
         flux.asInstanceOf[Flux[Source[B]]]
-          .map(_.asFlux)))
+          .map(_.toFlux)))
 
   def mergeDelayError[B >: A](prefetch: Int, that: Source[B]): Source[B] =
     wrap(
@@ -200,7 +200,7 @@ class FluxSource[+A](val flux: Flux[_<: A]) extends Source[A]:
   def onErrorResume[B >: A](op: Throwable => Source[B]): Source[B] = 
     wrap(
       flux.asInstanceOf[Flux[B]]
-        .onErrorResume{(e) => op(e).asFlux})
+        .onErrorResume{(e) => op(e).toFlux})
 
   def reduce[B >: A](op: (B, A) => B): Optional[B] =
     def reduceOp[B1 <: A]: BiFunction[B1, B1, B1] = (v1, v2) =>

@@ -14,4 +14,4 @@ object TestOps:
     sourceProbe(source)
 
   def sourceProbe[A](source: Source[A]): FirstStep[A] =
-    StepVerifier.create(source.asFlux)
+    StepVerifier.create(source.toFlux)

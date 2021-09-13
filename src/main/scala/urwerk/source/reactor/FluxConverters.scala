@@ -9,6 +9,6 @@ import urwerk.source.internal.FluxSource
 
 object FluxConverters:
   extension [A](source: Source[A])
-    def asFlux: Flux[A] =
+    def toFlux: Flux[A] =
       JdkFlowAdapter.flowPublisherToFlux(
         source.toPublisher)

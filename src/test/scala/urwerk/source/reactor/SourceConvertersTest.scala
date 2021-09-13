@@ -12,7 +12,7 @@ import urwerk.test.TestBase
 
 class SourceConvertersTest extends TestBase:
   "source as flux" in {
-    val flux: Flux[Int] = Source(1, 2, 3).asFlux
+    val flux: Flux[Int] = Source(1, 2, 3).toFlux
     
     flux.collectList().block.asScala should be(Seq(1, 2, 3))
   }

@@ -18,7 +18,7 @@ class FluxOptional[+A](flux: Flux[_<: A]) extends FluxSource[A](flux):
   def flatMap[B](op: A => Optional[B]): Optional[B] =
     Optional.wrap(
       flux.flatMap(elem => 
-        op(elem).asFlux))
+        op(elem).toFlux))
   
   override def map[B](op: A => B): Optional[B] =
     Optional.wrap(flux.map(op(_)))

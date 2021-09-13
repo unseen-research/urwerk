@@ -1,16 +1,7 @@
 package urwerk.source
 
-import _root_.reactor.adapter.JdkFlowAdapter
-import _root_.reactor.core.publisher.{Flux, FluxSink, Mono, SynchronousSink}
-//import org.reactivestreams.FlowAdapters
-//import urwerk.source.reactor.FluxConverters.*
-
 import java.util.concurrent.Flow
-import java.util.function.{BiConsumer, BiFunction}
-import scala.collection.mutable.StringBuilder
-import scala.jdk.CollectionConverters.given
-import scala.jdk.FunctionConverters.given
-import scala.util.Try
+
 import urwerk.source.internal.FluxSource
 
 object Source extends SourceFactory:

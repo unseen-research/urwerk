@@ -13,7 +13,7 @@ object Singleton:
 
   def defer[A](op: => Singleton[A]): Singleton[A] =
     wrap(Flux.defer(() =>
-      op.asFlux))
+      op.toFlux))
 
   def error[A](error: Throwable): Singleton[A] =
     wrap(Flux.error(error))

@@ -169,7 +169,7 @@ class FluxSource[+A](val flux: Flux[_<: A]) extends Source[A]:
 
   def materialize: Source[Signal[A]] = 
     wrap(
-      flux.materialize.map(signal => Signal(signal)))
+      flux.materialize.map(signal => FluxSignal(signal)))
   
   def merge[B >: A](that: Source[B]): Source[B] =
     wrap(

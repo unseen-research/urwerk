@@ -30,11 +30,11 @@ class OptionalTest extends TestBase:
         Optional(None))
       .verifyComplete()
   }
-  
+
   "block some element" in {
     Optional(1).block should be(Some(1))
   }
-  
+
   "block none" in {
     Optional().block should be(None)
   }
@@ -44,7 +44,7 @@ class OptionalTest extends TestBase:
         Optional.empty[Int])
       .verifyComplete()
   }
-  
+
   "error" in {
     optionalProbe(
         Optional.error(IllegalArgumentException()))

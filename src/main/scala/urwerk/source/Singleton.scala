@@ -2,6 +2,7 @@ package urwerk.source
 
 import java.util.concurrent.CompletableFuture
 import urwerk.source.internal.FluxSingleton
+import scala.concurrent.Future
 
 object Singleton extends SingletonFactory:
   export FluxSingleton.*
@@ -25,3 +26,5 @@ trait SingletonFactory:
   def error[A](error: Throwable): Singleton[A]
 
   def from[A](future: CompletableFuture[A]): Singleton[A]
+
+  def from[A](future: Future[A]): Singleton[A]

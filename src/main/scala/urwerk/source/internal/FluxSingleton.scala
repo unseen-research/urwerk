@@ -1,13 +1,18 @@
 package urwerk.source.internal
 
+import java.util.concurrent.CompletableFuture
+
+import reactor.core.publisher.Mono
 import reactor.core.publisher.Flux
+
+import scala.concurrent.Future
+import scala.jdk.FutureConverters.given
+
 import urwerk.source.Source
 import urwerk.source.Optional
 import urwerk.source.reactor.FluxConverters.*
 import urwerk.source.Singleton
 import urwerk.source.SingletonFactory
-import java.util.concurrent.CompletableFuture
-import reactor.core.publisher.Mono
 
 object FluxSingleton extends SingletonFactory:
 
@@ -24,6 +29,12 @@ object FluxSingleton extends SingletonFactory:
   def from[A](future: CompletableFuture[A]): Singleton[A] =
     wrap(
       Mono.fromFuture(future)
+        .flux())
+
+  def from[A](future: Future[A]): Singleton[A] =
+    wrap(
+      Mono.fromFuture(
+          future.asJava.toCompletableFuture)
         .flux())
 
   private[source] def wrap[A](flux: Flux[A]): Singleton[A] =

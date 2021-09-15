@@ -197,6 +197,10 @@ class FluxSource[+A](val flux: Flux[_<: A]) extends Source[A]:
     wrap(
       flux.onErrorContinue(op.asJava))
 
+  def onErrorMap(op: Throwable => Throwable): Source[A] =
+    wrap(
+      flux.onErrorMap(op.asJava))
+
   def onErrorResume[B >: A](op: Throwable => Source[B]): Source[B] =
     wrap(
       flux.asInstanceOf[Flux[B]]

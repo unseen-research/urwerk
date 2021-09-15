@@ -13,6 +13,7 @@ import urwerk.io.Path
 import urwerk.source.Singleton
 import urwerk.source.Source
 import scala.concurrent.Promise
+import scala.util.Try
 
 object Process:
   object Out:
@@ -21,28 +22,28 @@ object Process:
         ???
 
   enum Status:
-    def info: Info
+    def process: Process
 
-    case Running(info: Info) extends Status
-    case Terminated(info: Info, exitStatus: Int) extends Status
+    case Running(process: Process) extends Status
+    case Terminated(process: Process, exitStatus: Int) extends Status
 
-  case class Info(executable: String, arguments: Seq[String], pid: Long, startInstant: Instant, user: String)
-
-  private def infoOf(proc: JProcess): Info =
+  private[system] def processOf(proc: JProcess): Process =
     val info = proc.info
-    val exec = info.command.toScala.getOrElse("")
-    val args = info.arguments.toScala.map(_.to(Seq)).getOrElse(Seq())
-    val startInstant = info.startInstant.toScala.getOrElse(Instant.now)
-    val user = info.user.toScala.getOrElse("")
+    val exec = info.command.get
+    val args = info.arguments.get.to(Seq)
+    val startInstant = info.startInstant.get
+    val user = info.user.get
 
-    Info(exec, args, proc.pid, startInstant, user)
+    Process(exec, args, proc.pid, startInstant, user)
+
+case class Process(executable: String, arguments: Seq[String], pid: Long, startInstant: Instant, user: String)
 
 object Exec:
   def apply(path: Path, args: String*): Exec = Exec(path, args, None, Map())
 
 case class Exec(path: Path, args: Seq[String], cwd: Option[Path], env: Map[String, String])
 
-class Process(proc: JProcess):
+class ProcessInterface(proc: JProcess):
   import Process.*
 
   def sdtOut: Source[String] = ???
@@ -60,26 +61,29 @@ class Process(proc: JProcess):
           Source(status)
       }
 
-  def info: Info = infoOf(proc)
+  val process: Process = processOf(proc)
 
   private def statusOf(proc: JProcess): Status =
     if proc.isAlive then
-      Status.Running(info)
+      Status.Running(process)
     else
-      Status.Terminated(info, proc.exitValue)
+      Status.Terminated(process, proc.exitValue)
 
 extension (exec: Exec)
 
-  def apply(input: Source[String]): Singleton[Process] = process(input)
+  def apply(input: Source[String]): Singleton[ProcessInterface] = process(input)
 
-  def process(input: Source[String]): Singleton[Process] = ???
+  def process(input: Source[String]): Singleton[ProcessInterface] = ???
 
-  def apply(): Singleton[Process] = process
+  def apply(): Singleton[ProcessInterface] = process
 
-  def process: Singleton[Process] =
-
+  def process: Singleton[ProcessInterface] =
     val cmd = exec.path.toString +: exec.args
+    val procBuilder = ProcessBuilder(cmd.asJava)
 
-    Singleton.defer(
-        Singleton(ProcessBuilder(cmd.asJava).start))
-      .map(new Process(_))
+    def start: Singleton[ProcessInterface] =
+      val procTry = Try(
+        ProcessInterface(procBuilder.start))
+      Singleton.from(procTry)
+
+    Singleton.defer(start)

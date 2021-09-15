@@ -2,6 +2,7 @@ package urwerk.source
 
 import urwerk.source.TestOps.*
 import urwerk.test.TestBase
+import java.io.IOException
 
 class OptionalTest extends TestBase:
 
@@ -37,6 +38,13 @@ class OptionalTest extends TestBase:
 
   "block none" in {
     Optional().block should be(None)
+  }
+
+  "block with IOExcepion" in {
+    intercept[IOException]{
+      Optional.error(IOException())
+        .block
+    }
   }
 
   "empty" in {

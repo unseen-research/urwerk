@@ -371,6 +371,14 @@ class SourceTest extends TestBase:
       .verifyError(classOf[IllegalArgumentException])
   }
 
+  "on error map" in {
+    sourceProbe(
+        Source.error(IllegalArgumentException())
+            .onErrorMap{case error: IllegalArgumentException =>
+              IllegalStateException()})
+      .verifyError(classOf[IllegalStateException])
+  }
+
   "on error resume" in {
     sourceProbe(
         Source.error[Int](IllegalArgumentException())

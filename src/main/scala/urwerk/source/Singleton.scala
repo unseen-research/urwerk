@@ -3,6 +3,7 @@ package urwerk.source
 import java.util.concurrent.CompletableFuture
 import urwerk.source.internal.FluxSingleton
 import scala.concurrent.Future
+import scala.util.Try
 
 object Singleton extends SingletonFactory:
   export FluxSingleton.*
@@ -28,3 +29,5 @@ trait SingletonFactory:
   def from[A](future: CompletableFuture[A]): Singleton[A]
 
   def from[A](future: Future[A]): Singleton[A]
+
+  def from[A](elemTry: Try[A]): Singleton[A]

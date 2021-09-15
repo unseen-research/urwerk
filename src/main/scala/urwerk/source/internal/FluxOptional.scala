@@ -29,7 +29,8 @@ object FluxOptional extends OptionalFactory:
 
 class FluxOptional[+A](flux: Flux[_<: A]) extends FluxSource[A](flux) with Optional[A]:
   def block: Option[A] =
-    flux.next.blockOptional.toScala
+    stripReactiveException(
+      flux.next.blockOptional.toScala)
 
   override def filter(pred: A => Boolean): Optional[A] =
     Optional.wrap(flux.filter(pred(_)))

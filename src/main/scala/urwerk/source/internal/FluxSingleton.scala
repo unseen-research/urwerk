@@ -13,6 +13,11 @@ import urwerk.source.Optional
 import urwerk.source.reactor.FluxConverters.*
 import urwerk.source.Singleton
 import urwerk.source.SingletonFactory
+import scala.util.Try
+import scala.util.Success
+import scala.util.Failure
+import urwerk.source.SourceException
+import java.io.IOException
 
 object FluxSingleton extends SingletonFactory:
 
@@ -32,10 +37,14 @@ object FluxSingleton extends SingletonFactory:
         .flux())
 
   def from[A](future: Future[A]): Singleton[A] =
-    wrap(
-      Mono.fromFuture(
-          future.asJava.toCompletableFuture)
-        .flux())
+    from(
+      future.asJava.toCompletableFuture)
+
+  def from[A](elemTry: Try[A]): Singleton[A] = elemTry match
+    case Success(elem) =>
+      Singleton(elem)
+    case Failure(e) =>
+      Singleton.error(e)
 
   private[source] def wrap[A](flux: Flux[A]): Singleton[A] =
     new Singleton[A]{
@@ -45,7 +54,7 @@ object FluxSingleton extends SingletonFactory:
 
 class FluxSingleton[+A](flux: Flux[_<: A]) extends FluxSource[A](flux):
   def block: A =
-    flux.blockFirst()
+    stripReactiveException(flux.blockFirst())
 
   override def filter(pred: A => Boolean): Optional[A] =
     Optional.wrap(flux.filter(pred(_)))

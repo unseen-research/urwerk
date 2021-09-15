@@ -59,6 +59,8 @@ trait Source[+A]:
 
   def onErrorContinue(op: (Throwable, Any) => Unit): Source[A]
 
+  def onErrorMap(op: Throwable => Throwable): Source[A]
+  
   def onErrorResume[B >: A](op: Throwable => Source[B]): Source[B]
 
   def reduce[B >: A](op: (B, A) => B): Optional[B]
@@ -93,7 +95,7 @@ trait SourceFactory:
   def deferError[A](op: => Throwable): Source[A]
 
   def empty[A]: Source[A]
-  
+
   def error[A](error: Throwable): Source[A]
 
   def from[A](publisher: Flow.Publisher[A]): Source[A]

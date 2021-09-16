@@ -1,96 +1,40 @@
 package urwerk.source.internal
 
 import java.util.function.{BiConsumer, BiFunction}
-import java.util.concurrent.Flow
 
 import org.reactivestreams.FlowAdapters
 
 import reactor.adapter.JdkFlowAdapter
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import reactor.core.publisher.SynchronousSink
 
-import scala.jdk.CollectionConverters.given
-import scala.jdk.FunctionConverters.given
+import scala.jdk.FunctionConverters.*
+import scala.jdk.CollectionConverters.*
 
-import urwerk.source.Source
 import urwerk.source.reactor.FluxConverters.*
 import urwerk.source.Optional
 import urwerk.source.Singleton
+import urwerk.source.Source
 import urwerk.source.Signal
-import urwerk.source.Sink
-import urwerk.source.SourceFactory
+import java.util.concurrent.Flow
 
-object FluxSource extends SourceFactory:
+trait Aux[+S[_]]:
+  def from[A](flux: Flux[? <: A]): S[A]
 
-  def apply[A](elems: A*): Source[A] = wrap(Flux.just(elems:_*))
+abstract class FluxSourceOps[+A, S[_]](val flux: Flux[_<: A]):
 
-  def create[A](op: Sink[A] => Unit): Source[A] =
-    wrap(
-      Flux.create[A](sink => op(FluxSink(sink))))
+  protected def wrap[B](flux: Flux[? <: B]): S[B]
 
-  def defer[A](op: => Source[A]): Source[A] =
-    wrap(Flux.defer(() =>
-      op.toFlux))
-
-  def deferError[A](op: => Throwable): Source[A] =
-    wrap(Flux.error(() => op))
-
-  def empty[A]: Source[A] = wrap(Flux.empty)
-
-  def error[A](error: Throwable): Source[A] = wrap(Flux.error(error))
-
-  def from[A](publisher: Flow.Publisher[A]): Source[A] =
-    wrap(
-      JdkFlowAdapter.flowPublisherToFlux(publisher))
-
-  def from[A](iterable: Iterable[A]): Source[A] =
-    wrap(
-      Flux.fromIterable(iterable.asJava))
-
-  def push[A](op: Sink[A] => Unit): Source[A] =
-    wrap(
-      Flux.push[A](sink => op(FluxSink(sink))))
-
-  def unfold[A, S](init: => S)(op: S => Option[(A, S)]): Source[A] =
-    unfold(init, (_) => {})(op)
-
-  def unfold[A, S](init: => S, doOnLastState: S => Unit)(op: S => Option[(A, S)]): Source[A] =
-    val gen = (state: S, sink: SynchronousSink[A]) =>
-      op(state) match {
-        case Some((item, state)) =>
-          sink.next(item)
-          state
-        case None =>
-          sink.complete()
-          state
-      }
-
-    val flux = Flux.generate(()=> init,
-      gen.asJavaBiFunction,
-      (state) => doOnLastState(state))
-
-    wrap(flux)
-
-  private[internal] def wrap[A](flux: Flux[A]): Source[A] = new FluxSource[A](flux)
-
-  //def from[A](flux: Flux[A]): Source[A] = new FluxSource[A](flux)
-
-  private[internal] def unwrap[A](source: Source[A]): Flux[A] =
-    JdkFlowAdapter.flowPublisherToFlux(
-      source.toPublisher.asInstanceOf[Flow.Publisher[A]])
-
-class FluxSource[+A](val flux: Flux[_<: A]) extends Source[A]:
-  import FluxSource.*
+  protected def unwrap[B, S1[_] >: S[B]](src: S1[B]): Flux[B]
 
   def concat[B](implicit evidence: Source[A] <:< Source[Source[B]]): Source[B] =
-    wrap(
+    FluxSource.wrap(
       Flux.concat(
         flux.asInstanceOf[Flux[Source[B]]]
           .map(_.toFlux)))
 
   def concatDelayError[B](implicit evidence: Source[A] <:< Source[Source[B]]): Source[B] =
-    wrap(
+    FluxSource.wrap(
       Flux.concatDelayError(
         flux.asInstanceOf[Flux[Source[B]]]
           .map(_.toFlux)))
@@ -104,42 +48,46 @@ class FluxSource[+A](val flux: Flux[_<: A]) extends Source[A]:
   //   }
   //   .map{_.asInstanceOf[Signal.Next[B]].value}
 
-  def doOnComplete(op: => Unit): Source[A] =
-    wrap(
-      flux.doOnComplete(() => op))
+  def doOnComplete[A1 >: A](op: => Unit): S[A1] =
+    wrap(flux.doOnComplete(() => op))
 
-  def doOnError(op: Throwable => Unit): Source[A] =
+  def doOnError[A1 >: A](op: Throwable => Unit): S[A1] =
     wrap(
       flux.doOnError(op(_)))
 
-  def doOnNext(op: A => Unit): Source[A] =
+  def doOnNext[A1 >: A](op: A => Unit): S[A1] =
     wrap(
       flux.doOnNext(op(_)))
 
-  def filter(pred: A => Boolean): Source[A] =
-    wrap(flux.filter(pred(_)))
+  // def filter(pred: A => Boolean): Source[A] =
+  //   wrap(flux.filter(pred(_)))
 
-  def filterNot(pred: A => Boolean): Source[A] =
-    filter(!pred(_))
+  // def filterNot(pred: A => Boolean): Source[A] =
+  //   filter(!pred(_))
 
   def flatMap[B](op: A => Source[B]): Source[B] =
-    wrap(
+    FluxSource.wrap(
       flux.flatMap(
         op(_).toFlux))
 
-  def flatMap[B](concurrency: Int)(op: A => Source[B]): Source[B] =
+  def flatMap[B](op: A => S[B]): S[B] =
     wrap(
+      flux.flatMap(elem =>
+        unwrap(op(elem))))
+
+  def flatMap[B](concurrency: Int)(op: A => Source[B]): Source[B] =
+    FluxSource.wrap(
       flux.flatMap(op(_).toFlux,
       concurrency))
 
   def flatMap[B](concurrency: Int, prefetch: Int)(op: A => Source[B]): Source[B] =
-    wrap(
+    FluxSource.wrap(
       flux.flatMap(op(_).toFlux,
       concurrency,
       prefetch))
 
   def fold[B](start: B)(op: (B, A) => B): urwerk.source.Singleton[B] =
-    urwerk.source.Singleton.wrap(
+    Singleton.wrap(
       flux.reduce(start,
         op(_, _)).flux)
 
@@ -168,26 +116,26 @@ class FluxSource[+A](val flux: Flux[_<: A]) extends Source[A]:
           _ => Mono.empty)
         .flux())
 
-  def map[B](op: A => B): Source[B] =
+  def map[B](op: A => B): S[B] =
     wrap(flux.map(op(_)))
 
-  def materialize: Source[Signal[A]] =
+  def materialize[A1 >: A]: S[Signal[A1]] =
     wrap(
       flux.materialize.map(signal => FluxSignal(signal)))
 
   def merge[B >: A](that: Source[B]): Source[B] =
-    wrap(
-      Flux.merge(flux, unwrap(that)))
+    FluxSource.wrap((
+      Flux.merge(flux, FluxSource.unwrap(that))))
 
   def merge[B](implicit evidence: Source[A] <:< Source[Source[B]]): Source[B] =
-    wrap(
+    FluxSource.wrap(
       Flux.merge(
         flux.asInstanceOf[Flux[Source[B]]]
           .map(_.toFlux)))
 
   def mergeDelayError[B >: A](prefetch: Int, that: Source[B]): Source[B] =
-    wrap(
-      Flux.mergeDelayError(prefetch, flux, unwrap(that)))
+    FluxSource.wrap(
+      Flux.mergeDelayError(prefetch, flux, FluxSource.unwrap(that)))
 
   def mkString(start: String, sep: String, end: String): Singleton[String] =
     fold(StringBuilder(start))((builder, elem) =>
@@ -198,17 +146,22 @@ class FluxSource[+A](val flux: Flux[_<: A]) extends Source[A]:
         .toString)
 
   def onErrorContinue(op: (Throwable, Any) => Unit): Source[A] =
-    wrap(
+    FluxSource.wrap(
       flux.onErrorContinue(op.asJava))
 
-  def onErrorMap(op: Throwable => Throwable): Source[A] =
+  def onErrorMap[A1 >: A](op: Throwable => Throwable): S[A1] =
     wrap(
       flux.onErrorMap(op.asJava))
 
   def onErrorResume[B >: A](op: Throwable => Source[B]): Source[B] =
-    wrap(
+    FluxSource.wrap(
       flux.asInstanceOf[Flux[B]]
         .onErrorResume{(e) => op(e).toFlux})
+
+  def onErrorResume[B >: A](op: Throwable => S[B]): S[B] =
+    wrap(
+      flux.asInstanceOf[Flux[B]]
+        .onErrorResume{(e) => unwrap(op(e))})
 
   def reduce[B >: A](op: (B, A) => B): Optional[B] =
     def reduceOp[B1 <: A]: BiFunction[B1, B1, B1] = (v1, v2) =>
@@ -216,11 +169,11 @@ class FluxSource[+A](val flux: Flux[_<: A]) extends Source[A]:
 
     Optional.wrap(flux.reduce(reduceOp).flux)
 
-  def scan[B](start: B)(op: (B, A) => B): Source[B] =
+  def scan[B](start: B)(op: (B, A) => B): S[B] =
     wrap(
       flux.scan(start, op.asJavaBiFunction))
 
-  def scanWith[B](start: => B)(op: (B, A) => B): Source[B] =
+  def scanWith[B](start: => B)(op: (B, A) => B): S[B] =
     wrap(
       flux.scanWith(()=> start, op.asJavaBiFunction))
 
@@ -243,11 +196,11 @@ class FluxSource[+A](val flux: Flux[_<: A]) extends Source[A]:
     }
   }
 
-  def takeUntil(predicate: A => Boolean): Source[A] =
+  def takeUntil[A1 >: A](predicate: A => Boolean): S[A1] =
     wrap(
       flux.takeUntil(predicate.asJava))
 
-  def takeWhile(predicate: A => Boolean): Source[A] =
+  def takeWhile[A1 >: A](predicate: A => Boolean): S[A1] =
     wrap(
       flux.takeWhile(predicate.asJava))
 

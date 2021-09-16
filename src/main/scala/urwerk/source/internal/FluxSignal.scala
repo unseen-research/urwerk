@@ -4,7 +4,7 @@ import reactor.core.publisher.Signal as ReactorSignal
 import urwerk.source.Signal
 import urwerk.source.Signal.{Next, Complete, Error}
 
-object FluxSignal:
+private object FluxSignal:
   def apply[A](signal: ReactorSignal[A]): Signal[A] =
     if signal.isOnError() then
         Error(signal.getThrowable())

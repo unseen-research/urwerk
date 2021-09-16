@@ -21,8 +21,7 @@ import urwerk.source.Signal
 import urwerk.source.Sink
 import urwerk.source.SourceFactory
 
-object FluxSource extends SourceFactory:
-
+private[source] object FluxSource extends SourceFactory:
   def apply[A](elems: A*): Source[A] = wrap(Flux.just(elems:_*))
 
   def create[A](op: Sink[A] => Unit): Source[A] =
@@ -74,11 +73,7 @@ object FluxSource extends SourceFactory:
 
   private[internal] def wrap[A](flux: Flux[A]): Source[A] = new FluxSource[A](flux)
 
-  private[internal] def unwrap[A](source: Source[A]): Flux[A] =
-    JdkFlowAdapter.flowPublisherToFlux(
-      source.toPublisher.asInstanceOf[Flow.Publisher[A]])
-
-class FluxSource[+A](flux: Flux[_<: A]) extends FluxSourceOps[A](flux), Source[A]:
+private class FluxSource[+A](flux: Flux[_<: A]) extends FluxSourceOps[A](flux), Source[A]:
   import FluxSource.*
 
   type S[A] = Source[A]

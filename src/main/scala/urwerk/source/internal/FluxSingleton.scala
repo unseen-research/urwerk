@@ -19,7 +19,7 @@ import urwerk.source.SingletonFactory
 import urwerk.source.SourceException
 import scala.collection.View.Single
 
-object FluxSingleton extends SingletonFactory:
+private[source] object FluxSingleton extends SingletonFactory:
 
   def apply[A](elem: A): Singleton[A] =
     wrap(Flux.just(elem))
@@ -46,14 +46,13 @@ object FluxSingleton extends SingletonFactory:
     case Failure(e) =>
       Singleton.error(e)
 
-  private[source] def wrap[A](flux: Flux[A]): Singleton[A] =
+  private[internal] def wrap[A](flux: Flux[A]): Singleton[A] =
+    val fluxSingleton = new FluxSingleton(flux)
     new Singleton[A]{
-      val fluxSingleton = new FluxSingleton(flux)
       export fluxSingleton.*
     }
 
-class FluxSingleton[+A](flux: Flux[? <: A]) extends FluxSourceOps[A](flux), Singleton[A]:
-
+private class FluxSingleton[+A](flux: Flux[? <: A]) extends FluxSourceOps[A](flux), Singleton[A]:
   type S[A] = Singleton[A]
 
   protected def wrap[B](flux: Flux[? <: B]): Singleton[B] = FluxSingleton.wrap(flux)
@@ -62,7 +61,7 @@ class FluxSingleton[+A](flux: Flux[? <: A]) extends FluxSourceOps[A](flux), Sing
     stripReactiveException(flux.blockFirst())
 
   def filter(pred: A => Boolean): Optional[A] =
-    Optional.wrap(flux.filter(pred(_)))
+    FluxOptional.wrap(flux.filter(pred(_)))
 
   def filterNot(pred: A => Boolean): Optional[A] =
     filter(!pred(_))

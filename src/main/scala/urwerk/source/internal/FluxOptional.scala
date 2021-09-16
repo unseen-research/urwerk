@@ -2,11 +2,11 @@ package urwerk.source.internal
 
 import reactor.core.publisher.Flux
 import urwerk.source.Optional
-import urwerk.source.reactor.FluxConverters.*
+
 import scala.jdk.OptionConverters.*
 import urwerk.source.OptionalFactory
 
-object FluxOptional extends OptionalFactory:
+private[source] object FluxOptional extends OptionalFactory:
   def apply[A](elem: A): Optional[A] =
     wrap(Flux.just(elem))
 
@@ -24,21 +24,21 @@ object FluxOptional extends OptionalFactory:
   def error[A](error: Throwable): Optional[A] =
     wrap(Flux.error(error))
 
-  private[source] def wrap[B](flux: Flux[B]): Optional[B] =
+  private[internal] def wrap[B](flux: Flux[B]): Optional[B] =
     new FluxOptional(flux)
 
-class FluxOptional[+A](flux: Flux[_<: A]) extends FluxSourceOps[A](flux), Optional[A]:
+private class FluxOptional[+A](flux: Flux[_<: A]) extends FluxSourceOps[A](flux), Optional[A]:
 
   type S[A] = Optional[A]
 
-  protected def wrap[B](flux: Flux[? <: B]): Optional[B] = Optional.wrap(flux)
+  protected def wrap[B](flux: Flux[? <: B]): Optional[B] = FluxOptional.wrap(flux)
 
   def block: Option[A] =
     stripReactiveException(
       flux.next.blockOptional.toScala)
 
   override def filter(pred: A => Boolean): Optional[A] =
-    Optional.wrap(flux.filter(pred(_)))
+    FluxOptional.wrap(flux.filter(pred(_)))
 
   override def filterNot(pred: A => Boolean): Optional[A] =
     filter(!pred(_))

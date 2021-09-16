@@ -3,9 +3,8 @@ package urwerk.source.internal
 import reactor.core.publisher.{FluxSink => ReactorSink}
 import urwerk.source.Sink
 
-class FluxSink[A](sink: ReactorSink[A]) extends Sink[A]:
-  def complete(): Unit = 
-    sink.complete()
+private class FluxSink[A](sink: ReactorSink[A]) extends Sink[A]:
+  def complete(): Unit = sink.complete()
 
   def error(error: Throwable): Unit = sink.error(error)
 
@@ -19,5 +18,5 @@ class FluxSink[A](sink: ReactorSink[A]) extends Sink[A]:
 
   def onRequest(op: Long => Unit): Sink[A] = FluxSink(sink.onRequest(op(_)))
 
-  def requested: Long = 
+  def requested: Long =
     sink.requestedFromDownstream()

@@ -18,13 +18,8 @@ import urwerk.source.Source
 import urwerk.source.Signal
 import java.util.concurrent.Flow
 
-object FluxSourceOps:
-  private def unwrap[B](source: Source[B]): Flux[B] = source.toFlux
-
-abstract class FluxSourceOps[+A](val flux: Flux[_<: A]):
+private abstract class FluxSourceOps[+A](val flux: Flux[_<: A]):
   type  S[+ _]
-
-  import FluxSourceOps.*
 
   protected def wrap[B](flux: Flux[? <: B]): S[B]
 
@@ -82,28 +77,28 @@ abstract class FluxSourceOps[+A](val flux: Flux[_<: A]):
       prefetch))
 
   def fold[B](start: B)(op: (B, A) => B): urwerk.source.Singleton[B] =
-    Singleton.wrap(
+    FluxSingleton.wrap(
       flux.reduce(start,
         op(_, _)).flux)
 
   def head: urwerk.source.Singleton[A] =
-    Singleton.wrap(
+    FluxSingleton.wrap(
       flux
         .next()
         .single().flux())
 
   def headOption: Optional[A] =
-    Optional.wrap(
+    FluxOptional.wrap(
       flux
         .next().flux())
 
   def last: Singleton[A] =
-    Singleton.wrap(
+    FluxSingleton.wrap(
       flux
         .last().flux())
 
   def lastOption: Optional[A] =
-    Optional.wrap(
+    FluxOptional.wrap(
       flux
         .last()
         .onErrorResume(
@@ -120,7 +115,7 @@ abstract class FluxSourceOps[+A](val flux: Flux[_<: A]):
 
   def merge[B >: A](that: Source[B]): Source[B] =
     FluxSource.wrap((
-      Flux.merge(flux, FluxSource.unwrap(that))))
+      Flux.merge(flux, unwrap(that))))
 
   def merge[B](implicit evidence: Source[A] <:< Source[Source[B]]): Source[B] =
     FluxSource.wrap(
@@ -130,7 +125,7 @@ abstract class FluxSourceOps[+A](val flux: Flux[_<: A]):
 
   def mergeDelayError[B >: A](prefetch: Int, that: Source[B]): Source[B] =
     FluxSource.wrap(
-      Flux.mergeDelayError(prefetch, flux, FluxSource.unwrap(that)))
+      Flux.mergeDelayError(prefetch, flux, unwrap(that)))
 
   def mkString(start: String, sep: String, end: String): Singleton[String] =
     fold(StringBuilder(start))((builder, elem) =>
@@ -162,7 +157,7 @@ abstract class FluxSourceOps[+A](val flux: Flux[_<: A]):
     def reduceOp[B1 <: A]: BiFunction[B1, B1, B1] = (v1, v2) =>
       op(v1, v2).asInstanceOf[B1]
 
-    Optional.wrap(flux.reduce(reduceOp).flux)
+    FluxOptional.wrap(flux.reduce(reduceOp).flux)
 
   def scan[B](start: B)(op: (B, A) => B): S[B] =
     wrap(
@@ -203,6 +198,6 @@ abstract class FluxSourceOps[+A](val flux: Flux[_<: A]):
     JdkFlowAdapter.publisherToFlowPublisher(flux.asInstanceOf[Flux[B]])
 
   def toSeq: Singleton[Seq[A]] =
-    Singleton.wrap(flux
+    FluxSingleton.wrap(flux
       .collectList
       .flux.map(_.asScala.toSeq))

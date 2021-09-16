@@ -18,13 +18,13 @@ import urwerk.source.reactor.FluxConverters.*
 import urwerk.source.Optional
 import urwerk.source.Singleton
 import urwerk.source.Signal
-import urwerk.source.Sink
+import urwerk.source.Subscriber
 import urwerk.source.SourceFactory
 
 private[source] object FluxSource extends SourceFactory:
   def apply[A](elems: A*): Source[A] = wrap(Flux.just(elems:_*))
 
-  def create[A](op: Sink[A] => Unit): Source[A] =
+  def create[A](op: Subscriber[A] => Unit): Source[A] =
     wrap(
       Flux.create[A](sink => op(FluxSink(sink))))
 
@@ -47,7 +47,7 @@ private[source] object FluxSource extends SourceFactory:
     wrap(
       Flux.fromIterable(iterable.asJava))
 
-  def push[A](op: Sink[A] => Unit): Source[A] =
+  def push[A](op: Subscriber[A] => Unit): Source[A] =
     wrap(
       Flux.push[A](sink => op(FluxSink(sink))))
 

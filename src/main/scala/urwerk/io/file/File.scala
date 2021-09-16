@@ -1,7 +1,7 @@
 package urwerk.io.file
 
 import urwerk.io.{ByteString, Path}
-import urwerk.source.Sink
+import urwerk.source.Subscriber
 import urwerk.source.{Singleton, Source}
 
 import java.nio.ByteBuffer
@@ -92,7 +92,7 @@ trait PathOps:
   private def readBytes(
       channel: ReadableByteChannel,
       requestCount: Long,
-      sink: Sink[ByteString],
+      sink: Subscriber[ByteString],
       options: ReadOptions): Unit =
     if channel.isOpen && requestCount > 0 then
       val buffer: ByteBuffer = ByteBuffer.allocate(options.chunkSize)

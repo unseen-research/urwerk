@@ -1,20 +1,12 @@
 package urwerk.source
 
-trait Sink[A]: 
-  def complete(): Unit
+trait Sink[A]:
+  def emitNext(next: A): Sink[A]
 
-  def error(error: Throwable): Unit
+  def emitError(error: Throwable): Unit
 
-  def isCancelled: Boolean
-  
-  def next(item: A): Sink[A]
+  def emitComplete(): Unit
 
-  def onCancel(op: => Unit): Sink[A]
+  def source: Source[A]
 
-  def onDispose(op: => Unit): Sink[A]
-
-  def onRequest(op: Long => Unit): Sink[A]
-
-  def requested: Long
-
-end Sink  
+  def subscriberCount: Int

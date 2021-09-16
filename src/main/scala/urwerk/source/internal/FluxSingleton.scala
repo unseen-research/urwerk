@@ -7,17 +7,17 @@ import reactor.core.publisher.Flux
 
 import scala.concurrent.Future
 import scala.jdk.FutureConverters.given
+import scala.util.Try
+import scala.util.Success
+import scala.util.Failure
 
 import urwerk.source.Source
 import urwerk.source.Optional
 import urwerk.source.reactor.FluxConverters.*
 import urwerk.source.Singleton
 import urwerk.source.SingletonFactory
-import scala.util.Try
-import scala.util.Success
-import scala.util.Failure
 import urwerk.source.SourceException
-import java.io.IOException
+import scala.collection.View.Single
 
 object FluxSingleton extends SingletonFactory:
 
@@ -52,20 +52,17 @@ object FluxSingleton extends SingletonFactory:
       export fluxSingleton.*
     }
 
-class FluxSingleton[+A](flux: Flux[_<: A]) extends FluxSource[A](flux):
+class FluxSingleton[+A](flux: Flux[? <: A]) extends FluxSourceOps[A](flux), Singleton[A]:
+
+  type S[A] = Singleton[A]
+
+  protected def wrap[B](flux: Flux[? <: B]): Singleton[B] = FluxSingleton.wrap(flux)
+
   def block: A =
     stripReactiveException(flux.blockFirst())
 
-  override def filter(pred: A => Boolean): Optional[A] =
+  def filter(pred: A => Boolean): Optional[A] =
     Optional.wrap(flux.filter(pred(_)))
 
-  override def filterNot(pred: A => Boolean): Optional[A] =
+  def filterNot(pred: A => Boolean): Optional[A] =
     filter(!pred(_))
-
-  def flatMap[B](op: A => Singleton[B]): Singleton[B] =
-    Singleton.wrap(
-      flux.flatMap(elem =>
-        op(elem).toFlux))
-
-  override def map[B](op: A => B): Singleton[B] =
-    Singleton.wrap(flux.map(op(_)))

@@ -18,14 +18,15 @@ import urwerk.source.Source
 import urwerk.source.Signal
 import java.util.concurrent.Flow
 
-trait Aux[+S[_]]:
-  def from[A](flux: Flux[? <: A]): S[A]
+object FluxSourceOps:
+  private def unwrap[B](source: Source[B]): Flux[B] = source.toFlux
 
-abstract class FluxSourceOps[+A, S[_]](val flux: Flux[_<: A]):
+abstract class FluxSourceOps[+A](val flux: Flux[_<: A]):
+  type  S[+ _]
+
+  import FluxSourceOps.*
 
   protected def wrap[B](flux: Flux[? <: B]): S[B]
-
-  protected def unwrap[B, S1[_] >: S[B]](src: S1[B]): Flux[B]
 
   def concat[B](implicit evidence: Source[A] <:< Source[Source[B]]): Source[B] =
     FluxSource.wrap(
@@ -48,22 +49,16 @@ abstract class FluxSourceOps[+A, S[_]](val flux: Flux[_<: A]):
   //   }
   //   .map{_.asInstanceOf[Signal.Next[B]].value}
 
-  def doOnComplete[A1 >: A](op: => Unit): S[A1] =
+  def doOnComplete(op: => Unit): S[A] =
     wrap(flux.doOnComplete(() => op))
 
-  def doOnError[A1 >: A](op: Throwable => Unit): S[A1] =
+  def doOnError(op: Throwable => Unit): S[A] =
     wrap(
       flux.doOnError(op(_)))
 
-  def doOnNext[A1 >: A](op: A => Unit): S[A1] =
+  def doOnNext(op: A => Unit): S[A] =
     wrap(
       flux.doOnNext(op(_)))
-
-  // def filter(pred: A => Boolean): Source[A] =
-  //   wrap(flux.filter(pred(_)))
-
-  // def filterNot(pred: A => Boolean): Source[A] =
-  //   filter(!pred(_))
 
   def flatMap[B](op: A => Source[B]): Source[B] =
     FluxSource.wrap(
@@ -73,7 +68,7 @@ abstract class FluxSourceOps[+A, S[_]](val flux: Flux[_<: A]):
   def flatMap[B](op: A => S[B]): S[B] =
     wrap(
       flux.flatMap(elem =>
-        unwrap(op(elem))))
+        unwrap(op(elem).asInstanceOf[Source[B]])))
 
   def flatMap[B](concurrency: Int)(op: A => Source[B]): Source[B] =
     FluxSource.wrap(
@@ -119,7 +114,7 @@ abstract class FluxSourceOps[+A, S[_]](val flux: Flux[_<: A]):
   def map[B](op: A => B): S[B] =
     wrap(flux.map(op(_)))
 
-  def materialize[A1 >: A]: S[Signal[A1]] =
+  def materialize: S[Signal[A]] =
     wrap(
       flux.materialize.map(signal => FluxSignal(signal)))
 
@@ -149,7 +144,7 @@ abstract class FluxSourceOps[+A, S[_]](val flux: Flux[_<: A]):
     FluxSource.wrap(
       flux.onErrorContinue(op.asJava))
 
-  def onErrorMap[A1 >: A](op: Throwable => Throwable): S[A1] =
+  def onErrorMap(op: Throwable => Throwable): S[A] =
     wrap(
       flux.onErrorMap(op.asJava))
 
@@ -161,7 +156,7 @@ abstract class FluxSourceOps[+A, S[_]](val flux: Flux[_<: A]):
   def onErrorResume[B >: A](op: Throwable => S[B]): S[B] =
     wrap(
       flux.asInstanceOf[Flux[B]]
-        .onErrorResume{(e) => unwrap(op(e))})
+              .onErrorResume{(e) => unwrap(op(e).asInstanceOf[Source[B]])})
 
   def reduce[B >: A](op: (B, A) => B): Optional[B] =
     def reduceOp[B1 <: A]: BiFunction[B1, B1, B1] = (v1, v2) =>
@@ -196,11 +191,11 @@ abstract class FluxSourceOps[+A, S[_]](val flux: Flux[_<: A]):
     }
   }
 
-  def takeUntil[A1 >: A](predicate: A => Boolean): S[A1] =
+  def takeUntil(predicate: A => Boolean): S[A] =
     wrap(
       flux.takeUntil(predicate.asJava))
 
-  def takeWhile[A1 >: A](predicate: A => Boolean): S[A1] =
+  def takeWhile(predicate: A => Boolean): S[A] =
     wrap(
       flux.takeWhile(predicate.asJava))
 

@@ -27,7 +27,12 @@ object FluxOptional extends OptionalFactory:
   private[source] def wrap[B](flux: Flux[B]): Optional[B] =
     new FluxOptional(flux)
 
-class FluxOptional[+A](flux: Flux[_<: A]) extends FluxSource[A](flux) with Optional[A]:
+class FluxOptional[+A](flux: Flux[_<: A]) extends FluxSourceOps[A](flux), Optional[A]:
+
+  type S[A] = Optional[A]
+
+  protected def wrap[B](flux: Flux[? <: B]): Optional[B] = Optional.wrap(flux)
+
   def block: Option[A] =
     stripReactiveException(
       flux.next.blockOptional.toScala)
@@ -37,12 +42,3 @@ class FluxOptional[+A](flux: Flux[_<: A]) extends FluxSource[A](flux) with Optio
 
   override def filterNot(pred: A => Boolean): Optional[A] =
     filter(!pred(_))
-
-  def flatMap[B](op: A => Optional[B]): Optional[B] =
-    Optional.wrap(
-      flux.flatMap(elem =>
-        op(elem).toFlux))
-
-  override def map[B](op: A => B): Optional[B] =
-    Optional.wrap(flux.map(op(_)))
-

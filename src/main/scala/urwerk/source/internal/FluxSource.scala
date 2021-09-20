@@ -13,6 +13,7 @@ import reactor.core.publisher.SynchronousSink
 import scala.jdk.CollectionConverters.given
 import scala.jdk.FunctionConverters.given
 
+import urwerk.source.BackPressureStrategy
 import urwerk.source.Source
 import urwerk.source.reactor.FluxConverters.*
 import urwerk.source.Optional
@@ -20,6 +21,7 @@ import urwerk.source.Singleton
 import urwerk.source.Signal
 import urwerk.source.Sink
 import urwerk.source.SourceFactory
+import urwerk.source.internal.given
 
 private[source] object FluxSource extends SourceFactory:
   def apply[A](elems: A*): Source[A] = wrap(Flux.just(elems:_*))
@@ -27,6 +29,11 @@ private[source] object FluxSource extends SourceFactory:
   def create[A](op: Sink[A] => Unit): Source[A] =
     wrap(
       Flux.create[A](sink => op(FluxSink(sink))))
+
+  def create[A](backpressure: BackPressureStrategy)(op: Sink[A] => Unit): Source[A] = 
+    wrap(
+      Flux.create[A](sink => op(FluxSink(sink)), 
+        backpressure.asJava))
 
   def defer[A](op: => Source[A]): Source[A] =
     wrap(Flux.defer(() =>

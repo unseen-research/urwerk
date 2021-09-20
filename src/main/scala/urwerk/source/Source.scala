@@ -3,10 +3,21 @@ package urwerk.source
 import java.util.concurrent.Flow
 
 import urwerk.source.internal.FluxSource
+import _root_.reactor.core.publisher.BufferOverflowStrategy
 
+enum BufferOverflowStrategy:
+  case DropLatest
+  case DropOldest
+  case Error
+
+enum BackPressureStrategy:
+  case Buffer
+  case Drop
+  case Error
+  case Ignore
+  case Latest
 object Source extends SourceFactory:
   export FluxSource.*
-
 trait Source[+A]:
 
   def concat[B](implicit evidence: Source[A] <:< Source[Source[B]]): Source[B]
@@ -91,6 +102,8 @@ trait SourceFactory:
   def apply[A](elems: A*): Source[A]
 
   def create[A](op: Sink[A] => Unit): Source[A]
+
+  def create[A](overflow: BackPressureStrategy)(op: Sink[A] => Unit): Source[A]
 
   def defer[A](op: => Source[A]): Source[A]
 

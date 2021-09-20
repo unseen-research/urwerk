@@ -1,22 +1,26 @@
 package urwerk.source
 
+import java.util.concurrent.Flow
+import java.util.concurrent.Flow.Subscriber
+import java.util.concurrent.Flow.Subscription
+import java.time.Duration
+
 import _root_.reactor.adapter.JdkFlowAdapter
+import _root_.reactor.core.Exceptions
 import _root_.reactor.core.publisher.Flux
 import _root_.reactor.test.StepVerifier
+import _root_.reactor.test.StepVerifierOptions
 import _root_.reactor.test.publisher.TestPublisher
-import urwerk.source.TestOps.*
-import urwerk.test.TestBase
 
-import java.util.concurrent.Flow
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success}
 
-import Signal.{Next, Complete, Error}
-import java.util.concurrent.Flow.Subscriber
-import java.util.concurrent.Flow.Subscription
+import urwerk.source.TestOps.*
+import urwerk.test.TestBase
+import urwerk.source.Signal.{Next, Complete, Error}
+import urwerk.source.reactor.FluxConverters.*
 
 class SourceTest extends TestBase:
-
   "apply" in {
     sourceProbe(
         Source(0, 8, 15))
@@ -55,7 +59,7 @@ class SourceTest extends TestBase:
 
   "create with error" in {
     sourceProbe(
-        Source.create[Int]{ sink =>
+        Source.create[Int]{sink =>
           sink.next(1)
             .next(2)
             .error(new IllegalArgumentException("message"))
@@ -65,6 +69,35 @@ class SourceTest extends TestBase:
       .verify()
   }
 
+  "create with back pressure strategy" in {
+    val tp = Source.create(BackPressureStrategy.Error){sink =>
+      sink.next("A", "B", "C", "D")
+    
+
+    
+    }.onBackpressureBuffer(3, BufferOverflowStrategy.Error).toFlux
+
+
+    StepVerifier.create(tp, StepVerifierOptions.create()
+        .initialRequest(0))
+      .expectSubscription()
+      .`then`(() => tp.next("A", "B", "C", "D"))
+      .expectNoEvent(Duration.ofMillis(100))
+      .thenRequest(3)
+      .expectNext("A", "B", "C")
+      .expectErrorMatches(Exceptions.isOverflow)
+      .verify(Duration.ofSeconds(5))
+    sourceProbe(
+        Source.create[Int](BackPressureStrategy.Error){sink =>
+          sink.next(1)
+            .next(2)
+            .next(3)
+            .complete()
+        })
+      .expectNext(1, 2, 3)
+      .verifyComplete()
+  }
+  
   "defer" in {
     val sources = Iterator(
       Source(1, 2, 3),

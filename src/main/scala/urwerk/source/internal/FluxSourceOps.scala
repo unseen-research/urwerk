@@ -7,6 +7,7 @@ import org.reactivestreams.FlowAdapters
 
 import reactor.adapter.JdkFlowAdapter
 import reactor.core.publisher.Flux
+import reactor.core.publisher.FluxCreate
 import reactor.core.publisher.Mono
 import reactor.core.publisher.{BufferOverflowStrategy => FluxBufferOverflowStrategy}
 

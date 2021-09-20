@@ -57,6 +57,8 @@ trait Source[+A]:
 
   def mkString(start: String, sep: String, end: String): Singleton[String]
 
+  def onBackpressureBuffer(capacity: Int, overflowStrategy: BufferOverflowStrategy): Source[A]
+
   def onErrorContinue(op: (Throwable, Any) => Unit): Source[A]
 
   def onErrorMap(op: Throwable => Throwable): Source[A]
@@ -88,7 +90,7 @@ end Source
 trait SourceFactory:
   def apply[A](elems: A*): Source[A]
 
-  def create[A](op: Subscriber[A] => Unit): Source[A]
+  def create[A](op: Sink[A] => Unit): Source[A]
 
   def defer[A](op: => Source[A]): Source[A]
 
@@ -102,7 +104,7 @@ trait SourceFactory:
 
   def from[A](iterable: Iterable[A]): Source[A]
 
-  def push[A](op: Subscriber[A] => Unit): Source[A]
+  def push[A](op: Sink[A] => Unit): Source[A]
 
   def unfold[A, S](init: => S)(op: S => Option[(A, S)]): Source[A]
 

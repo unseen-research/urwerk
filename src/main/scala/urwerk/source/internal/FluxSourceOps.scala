@@ -1,5 +1,6 @@
 package urwerk.source.internal
 
+import java.util.concurrent.Flow
 import java.util.function.{BiConsumer, BiFunction}
 
 import org.reactivestreams.FlowAdapters
@@ -7,6 +8,7 @@ import org.reactivestreams.FlowAdapters
 import reactor.adapter.JdkFlowAdapter
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import reactor.core.publisher.{BufferOverflowStrategy => FluxBufferOverflowStrategy}
 
 import scala.jdk.FunctionConverters.*
 import scala.jdk.CollectionConverters.*
@@ -16,7 +18,9 @@ import urwerk.source.Optional
 import urwerk.source.Singleton
 import urwerk.source.Source
 import urwerk.source.Signal
-import java.util.concurrent.Flow
+import urwerk.source.internal.given
+
+import urwerk.source.BufferOverflowStrategy
 
 private abstract class FluxSourceOps[+A](val flux: Flux[_<: A]):
   type  S[+ _]
@@ -134,6 +138,10 @@ private abstract class FluxSourceOps[+A](val flux: Flux[_<: A]):
       .map(_.dropRight(sep.size)
         .append(end)
         .toString)
+
+  def onBackpressureBuffer(capacity: Int, overflowStrategy: BufferOverflowStrategy): S[A] =
+    wrap(
+      flux.onBackpressureBuffer(capacity, overflowStrategy.asJava))
 
   def onErrorContinue(op: (Throwable, Any) => Unit): Source[A] =
     FluxSource.wrap(

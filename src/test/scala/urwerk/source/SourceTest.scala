@@ -12,6 +12,8 @@ import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success}
 
 import Signal.{Next, Complete, Error}
+import java.util.concurrent.Flow.Subscriber
+import java.util.concurrent.Flow.Subscription
 
 class SourceTest extends TestBase:
 
@@ -343,6 +345,28 @@ class SourceTest extends TestBase:
         .mkString("> ", ", ", " <"))
       .expectNext("> 1, 2, 3 <")
       .verifyComplete()
+  }
+
+  "on backpressure buffer drop oldest" in {
+    val elems = Source(1, 2, 3, 4, 5, 6, 7, 8)
+        .onBackpressureBuffer(2, BufferOverflowStrategy.Error)
+      .subscribe(new Subscriber{
+        def onNext(elem: Int) = {
+          println(s"ONNEXT: $elem")
+        }
+        def onError(e: Throwable) = {
+          println(s"ONError $e")
+        }
+        def onComplete() = {
+          println("ONCOMPLETE")
+        }
+        def onSubscribe(s: Subscription) =
+          s.request(2)
+      })
+    Thread.sleep(2000)
+
+
+
   }
 
   "on error continue recover from error" in {

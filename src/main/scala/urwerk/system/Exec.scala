@@ -14,6 +14,7 @@ import urwerk.source.Singleton
 import urwerk.source.Source
 import scala.concurrent.Promise
 import scala.util.Try
+import urwerk.source.BufferOverflowStrategy
 
 object Process:
   object Out:
@@ -46,9 +47,14 @@ case class Exec(path: Path, args: Seq[String], cwd: Option[Path], env: Map[Strin
 class ProcessInterface(proc: JProcess):
   import Process.*
 
-  def sdtOut: Source[String] = ???
+  def sdtOut: Source[String] = Source.create{sink =>
 
-  def errOut: Source[String] = ???
+  }
+
+  def errOut: Source[String] = Source.create{sink =>
+
+    }
+    
 
   def status: Source[Status] =
     Source(statusOf(proc))
@@ -61,7 +67,7 @@ class ProcessInterface(proc: JProcess):
           Source(status)
       }
 
-  val process: Process = processOf(proc)
+  private val process: Process = processOf(proc)
 
   private def statusOf(proc: JProcess): Status =
     if proc.isAlive then

@@ -75,6 +75,8 @@ class ProcessInterface(proc: JProcess):
 
   private val process: Process = processOf(proc)
 
+  private val initialStatus = statusOf(proc)
+
   private def statusOf(proc: JProcess): Status =
     if proc.isAlive then
       Status.Running(process)

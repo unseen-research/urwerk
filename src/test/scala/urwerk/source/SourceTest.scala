@@ -1,9 +1,9 @@
 package urwerk.source
 
+import java.time.Duration
 import java.util.concurrent.Flow
 import java.util.concurrent.Flow.Subscriber
 import java.util.concurrent.Flow.Subscription
-import java.time.Duration
 
 import _root_.reactor.adapter.JdkFlowAdapter
 import _root_.reactor.core.Exceptions
@@ -14,12 +14,12 @@ import _root_.reactor.test.publisher.TestPublisher
 
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success}
+import scala.util.Random
 
 import urwerk.source.TestOps.*
 import urwerk.test.TestBase
 import urwerk.source.Signal.{Next, Complete, Error}
 import urwerk.source.reactor.FluxConverters.*
-import scala.util.Random
 
 class SourceTest extends TestBase:
   "apply" in {

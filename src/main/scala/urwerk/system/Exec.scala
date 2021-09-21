@@ -11,10 +11,12 @@ import scala.jdk.OptionConverters.given
 
 import urwerk.io.Path
 import urwerk.source.Singleton
+import urwerk.source.Sink
 import urwerk.source.Source
 import scala.concurrent.Promise
 import scala.util.Try
 import urwerk.source.BufferOverflowStrategy
+import java.util.concurrent.atomic.AtomicReference
 
 object Process:
   object Out:
@@ -47,6 +49,10 @@ case class Exec(path: Path, args: Seq[String], cwd: Option[Path], env: Map[Strin
 class ProcessInterface(proc: JProcess):
   import Process.*
 
+  private val stdOutSink = AtomicReference[Sink[String]]()
+  private val errOutSink = AtomicReference[Sink[String]]()
+  private val statusSink = AtomicReference[Sink[Status]]()
+
   def sdtOut: Source[String] = Source.create{sink =>
 
   }
@@ -54,7 +60,7 @@ class ProcessInterface(proc: JProcess):
   def errOut: Source[String] = Source.create{sink =>
 
     }
-    
+
 
   def status: Source[Status] =
     Source(statusOf(proc))

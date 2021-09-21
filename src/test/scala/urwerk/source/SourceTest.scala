@@ -19,6 +19,7 @@ import urwerk.source.TestOps.*
 import urwerk.test.TestBase
 import urwerk.source.Signal.{Next, Complete, Error}
 import urwerk.source.reactor.FluxConverters.*
+import scala.util.Random
 
 class SourceTest extends TestBase:
   "apply" in {
@@ -26,6 +27,16 @@ class SourceTest extends TestBase:
         Source(0, 8, 15))
       .expectNext(0, 8, 15)
       .verifyComplete()
+  }
+
+  "cache" in {
+    val src = Source.create[Int](
+        _.next(Random.nextInt).next(Random.nextInt).next(Random.nextInt).complete())
+      .cache
+
+    val r1 = src.toSeq.block
+    val r2 = src.toSeq.block
+    r1 should be (r2)
   }
 
   "concat" in {
@@ -70,34 +81,46 @@ class SourceTest extends TestBase:
   }
 
   "create with back pressure strategy" in {
-    val tp = Source.create(BackPressureStrategy.Error){sink =>
-      sink.next("A", "B", "C", "D")
-    
-
-    
-    }.onBackpressureBuffer(3, BufferOverflowStrategy.Error).toFlux
-
-
-    StepVerifier.create(tp, StepVerifierOptions.create()
-        .initialRequest(0))
-      .expectSubscription()
-      .`then`(() => tp.next("A", "B", "C", "D"))
-      .expectNoEvent(Duration.ofMillis(100))
-      .thenRequest(3)
-      .expectNext("A", "B", "C")
-      .expectErrorMatches(Exceptions.isOverflow)
-      .verify(Duration.ofSeconds(5))
+    //TODO test the backpressure strategy
     sourceProbe(
         Source.create[Int](BackPressureStrategy.Error){sink =>
           sink.next(1)
             .next(2)
-            .next(3)
-            .complete()
+            .error(new IllegalArgumentException("message"))
         })
-      .expectNext(1, 2, 3)
-      .verifyComplete()
+      .expectNext(1, 2)
+      .expectError(classOf[IllegalArgumentException])
+      .verify()
+
+
+    // val tp = Source.create(BackPressureStrategy.Error){sink =>
+    //   sink.next("A", "B", "C", "D")
+
+
+
+    // }.onBackpressureBuffer(3, BufferOverflowStrategy.Error).toFlux
+
+
+    // StepVerifier.create(tp, StepVerifierOptions.create()
+    //     .initialRequest(0))
+    //   .expectSubscription()
+    //   .`then`(() => tp.next("A", "B", "C", "D"))
+    //   .expectNoEvent(Duration.ofMillis(100))
+    //   .thenRequest(3)
+    //   .expectNext("A", "B", "C")
+    //   .expectErrorMatches(Exceptions.isOverflow)
+    //   .verify(Duration.ofSeconds(5))
+    // sourceProbe(
+    //     Source.create[Int](BackPressureStrategy.Error){sink =>
+    //       sink.next(1)
+    //         .next(2)
+    //         .next(3)
+    //         .complete()
+    //     })
+    //   .expectNext(1, 2, 3)
+    //   .verifyComplete()
   }
-  
+
   "defer" in {
     val sources = Iterator(
       Source(1, 2, 3),
@@ -135,6 +158,13 @@ class SourceTest extends TestBase:
     sourceProbe(source)
       .expectError(classOf[IllegalStateException])
       .verify()
+  }
+
+  "distinct" in {
+    sourceProbe(
+        Source(true, false, true, false, true, false).distinct)
+      .expectNext(true, false)
+      .verifyComplete()
   }
 
   "do on complete" in {
@@ -381,25 +411,22 @@ class SourceTest extends TestBase:
   }
 
   "on backpressure buffer drop oldest" in {
+    //TODO: test the buffer overflow strategy
     val elems = Source(1, 2, 3, 4, 5, 6, 7, 8)
         .onBackpressureBuffer(2, BufferOverflowStrategy.Error)
       .subscribe(new Subscriber{
         def onNext(elem: Int) = {
-          println(s"ONNEXT: $elem")
+          //println(s"ONNEXT: $elem")
         }
         def onError(e: Throwable) = {
-          println(s"ONError $e")
+          //println(s"ONError $e")
         }
         def onComplete() = {
-          println("ONCOMPLETE")
+          //println("ONCOMPLETE")
         }
         def onSubscribe(s: Subscription) =
           s.request(2)
       })
-    Thread.sleep(2000)
-
-
-
   }
 
   "on error continue recover from error" in {

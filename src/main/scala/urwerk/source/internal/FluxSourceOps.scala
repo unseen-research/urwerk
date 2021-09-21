@@ -28,6 +28,8 @@ private abstract class FluxSourceOps[+A](val flux: Flux[_<: A]):
 
   protected def wrap[B](flux: Flux[? <: B]): S[B]
 
+  def cache: S[A] = wrap(flux.cache())
+
   def concat[B](implicit evidence: Source[A] <:< Source[Source[B]]): Source[B] =
     FluxSource.wrap(
       Flux.concat(
@@ -48,6 +50,8 @@ private abstract class FluxSourceOps[+A](val flux: Flux[_<: A]):
   //       throw ex
   //   }
   //   .map{_.asInstanceOf[Signal.Next[B]].value}
+
+  def distinct: S[A] = wrap(flux.distinct)
 
   def doOnComplete(op: => Unit): S[A] =
     wrap(flux.doOnComplete(() => op))

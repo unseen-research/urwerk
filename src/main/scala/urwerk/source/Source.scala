@@ -20,11 +20,15 @@ object Source extends SourceFactory:
   export FluxSource.*
 trait Source[+A]:
 
+  def cache: Source[A]
+
   def concat[B](implicit evidence: Source[A] <:< Source[Source[B]]): Source[B]
 
   def concatDelayError[B](implicit evidence: Source[A] <:< Source[Source[B]]): Source[B]
 
   //def dematerialize[B](implicit evidence: Source[A] <:< Source[Signal[B]]): Source[B]
+
+  def distinct: Source[A]
 
   def doOnComplete(op: => Unit): Source[A]
 

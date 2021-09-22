@@ -17,6 +17,7 @@ import scala.concurrent.Promise
 import scala.util.Try
 import urwerk.source.BufferOverflowStrategy
 import java.util.concurrent.atomic.AtomicReference
+import urwerk.system.Process.Status
 
 object Process:
   object Out:
@@ -25,7 +26,7 @@ object Process:
         ???
 
   enum Status:
-    def process: Process
+    val process: Process
 
     case Running(process: Process) extends Status
     case Terminated(process: Process, exitStatus: Int) extends Status
@@ -46,42 +47,27 @@ object Exec:
 
 case class Exec(path: Path, args: Seq[String], cwd: Option[Path], env: Map[String, String])
 
-class ProcessInterface(proc: JProcess):
-  import Process.*
+trait ProcessInterface(proc: JProcess):
+  def sdtOut: Source[String]
+  def errOut: Source[String]
+  def status: Source[Status]
+  //   Source(statusOf(proc))
+  //     .flatMap{
+  //       case status: Status.Running =>
+  //         Source(
+  //             Source(status), Singleton.from(proc.onExit.thenApply(statusOf(_))))
+  //           .concat
+  //       case status: Status.Terminated =>
+  //         Source(status)
+  //     }
 
-  private val stdOutSink = AtomicReference[Sink[String]]()
-  private val errOutSink = AtomicReference[Sink[String]]()
-  private val statusSink = AtomicReference[Sink[Status]]()
+  // private val process: Process = processOf(proc)
 
-  def sdtOut: Source[String] = Source.create{sink =>
-
-  }
-
-  def errOut: Source[String] = Source.create{sink =>
-
-    }
-
-
-  def status: Source[Status] =
-    Source(statusOf(proc))
-      .flatMap{
-        case status: Status.Running =>
-          Source(
-              Source(status), Singleton.from(proc.onExit.thenApply(statusOf(_))))
-            .concat
-        case status: Status.Terminated =>
-          Source(status)
-      }
-
-  private val process: Process = processOf(proc)
-
-  private val initialStatus = statusOf(proc)
-
-  private def statusOf(proc: JProcess): Status =
-    if proc.isAlive then
-      Status.Running(process)
-    else
-      Status.Terminated(process, proc.exitValue)
+  // private def statusOf(proc: JProcess): Status =
+  //   if proc.isAlive then
+  //     Status.Running(process)
+  //   else
+  //     Status.Terminated(process, proc.exitValue)
 
 extension (exec: Exec)
 
@@ -97,7 +83,17 @@ extension (exec: Exec)
 
     def start: Singleton[ProcessInterface] =
       val procTry = Try(
-        ProcessInterface(procBuilder.start))
+        val proc = procBuilder.start
+
+        val statusSrc = Source.create[Status]{sink =>
+
+        }
+        new ProcessInterface{
+          def sdtOut: Source[String] = ???
+          def errOut: Source[String] = ???
+          def status: Source[Status] = statusSrc
+        }
+
       Singleton.from(procTry)
 
     Singleton.defer(start)

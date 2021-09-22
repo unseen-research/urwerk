@@ -35,10 +35,10 @@ object Process:
 
   private[system] def processOf(proc: JProcess): Process =
     val info = proc.info
-    val exec = info.command.get
-    val args = info.arguments.get.to(Seq)
-    val startInstant = info.startInstant.get
-    val user = info.user.get
+    val exec = info.command.orElse("")
+    val args = info.arguments.orElse(Array.empty).to(Seq)
+    val startInstant = info.startInstant.orElse(Instant.now)
+    val user = info.user.orElse("")
 
     Process(exec, args, proc.pid, startInstant, user)
 

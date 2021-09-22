@@ -20,6 +20,8 @@ import urwerk.system.Process.Status
 import scala.concurrent.ExecutionContext
 
 import Process.*
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.atomic.AtomicReference
 
 object Process:
   object Out:
@@ -47,59 +49,66 @@ case class Process(executable: String, arguments: Seq[String], pid: Long, startI
 object Exec:
   def apply(path: Path, args: String*): Exec = Exec(path, args, None, Map())
 
-case class Exec(path: Path, args: Seq[String], cwd: Option[Path], env: Map[String, String])
+case class Exec(path: Path, args: Seq[String], cwd: Option[Path], env: Map[String, String]):
+  def arg(arg: String): Exec = 
+    copy(args = args :+ arg)
+
+  def args(arg: String*): Exec = 
+    copy(args = args ++ args)
+
+  def param(name: String, value: String): Exec = 
+    copy(args = args ++ Seq(name, value))
+
+  def cwd(path: Path): Exec = 
+    copy(cwd = Some(path))
 
 trait ProcessInterface:
   def sdtOut: Source[String]
   def errOut: Source[String]
   def status: Source[Status]
-  //   Source(statusOf(proc))
-  //     .flatMap{
-  //       case status: Status.Running =>
-  //         Source(
-  //             Source(status), Singleton.from(proc.onExit.thenApply(statusOf(_))))
-  //           .concat
-  //       case status: Status.Terminated =>
-  //         Source(status)
-  //     }
-
-  // private def statusOf(proc: JProcess): Status =
-  //   if proc.isAlive then
-  //     Status.Running(process)
-  //   else
-  //     Status.Terminated(process, proc.exitValue)
-
 
 extension (exec: Exec)
   def process(using executor: ExecutionContext): Singleton[ProcessInterface] =
-    val cmd = exec.path.toString +: exec.args
-    val procBuilder = ProcessBuilder(cmd.asJava)
+    _process(exec, executor)
 
-    def start: Singleton[ProcessInterface] =
-      val procTry = Try{
-        val jproc = procBuilder.start
-        val proc: Process = processOf(jproc)
+private def _process(executable: Exec, executor: ExecutionContext): Singleton[ProcessInterface] =
+  val cmd = executable.path.toString +: executable.args
+  val procBuilder = ProcessBuilder(cmd.asJava)
 
-        val statusSrc = Source.create[Status]{sink =>
-          if jproc.isAlive then
-            sink.next(Status.Running(proc))
-            executor.execute{()=>
-              while(jproc.isAlive)
-                Thread.sleep(10)
-              sink.next(Status.Terminated(proc, jproc.exitValue))
-              sink.complete()
-            }
-          else
-            sink.next(Status.Terminated(proc, jproc.exitValue))
-            sink.complete()
-        }
-        new ProcessInterface {
-          def sdtOut: Source[String] = ???
-          def errOut: Source[String] = ???
-          def status: Source[Status] = statusSrc
-        }
+  case class Con
+  def start: Singleton[ProcessInterface] =
+    val procTry = Try{
+      val jproc = procBuilder.start
+      val proc: Process = processOf(jproc)
+
+      val threadStarted = LinkedBlockingQueue[Boolean]
+      val stdSink = AtomicReference[Option[Sink[String]]](None)
+      val errSink = AtomicReference[Option[Sink[String]]](None)
+      val statusSink = AtomicReference[Option[Sink[Status]]](None)
+
+      // def run(): Unit = 
+      //   while jproc.isAlive 
+
+      //   if !jproc.isAlive then
+      //     statusSink.get().foreach(
+      //       _.next(Status.Terminated(proc, jproc.exitValue)))
+      //     statusSink.complete()
+
+      val statusSrc = Source.create[Status]{sink =>
+        if jproc.isAlive then
+          statusSink.set(Some(sink))
+          if threadStarted.          }
+        else
+          sink.next(Status.Terminated(proc, jproc.exitValue))
+          sink.complete()
       }
+      new ProcessInterface {
+        def sdtOut: Source[String] = ???
+        def errOut: Source[String] = ???
+        def status: Source[Status] = statusSrc
+      }
+    }
 
-      Singleton.from(procTry)
+    Singleton.from(procTry)
 
-    Singleton.defer(start)
+  Singleton.defer(start)

@@ -25,6 +25,10 @@ case class Path private (val absolute: Boolean, val elements: Seq[String]):
     if path.absolute then path
     else Path(absolute, elements ++ path.elements)
 
+  def toAbsolute: Path = 
+    if absolute then this
+    else Path("/").resolve(this)
+
   override def toString: String =
     val start = if absolute then "/" else ""
     elements.mkString(start, "/", "")

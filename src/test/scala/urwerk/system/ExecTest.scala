@@ -10,43 +10,39 @@ import urwerk.source.{Source, Singleton}
 import urwerk.system.Process.Status.*
 import scala.concurrent.ExecutionContext
 
-
 class ExecTest extends TestBase:
   given ExecutionContext = ExecutionContext.fromExecutor(Executors.newCachedThreadPool)
 
   "exec not existing" in {
-    val exec = Path("/0815")
+    val path = Path("/0815")
     intercept[IOException]{
-      Exec(exec, "--version").process
+      Exec(path, "--version").process
         .block
     }
   }
 
-  "exec status" in {
-    val exec = Path(sys.props("java.home") + "/bin/java")
-    val status = Exec(exec, "--version").process
+  "exec process status" in {
+    val status = exec.arg("42").process
       .flatMap(_.status)
       .toSeq.block
 
-    val Running(runningProc) = status(0)
-    val Terminated(terminatedProc, exitStatus) = status(1)
+    val Running(running) = status(0)
+    val Terminated(terminated, exitStatus) = status(1)
 
-    println(s"RUN: $runningProc")
-    println(s"Term: $terminatedProc")
+    running should be (terminated)
+    exitStatus should be (42)
+    running.executable should be (execPath.toString)
   }
 
-  "exec stdout" in {
-    val exec = Path(sys.props("java.home") + "/bin/java")
-    val classPath = sys.props("java.class.path")
-
-
-
-
-    val file = uniqueFile
-
-    val status = Exec(exec, "--class-path", classPath, "urwerk.system.TestMain", "77", "std", "10", "err", "10").process
-      .flatMap(_.status)
-      .toSeq.block
-
-    println(s"SAT: $status")
+  "exec process stdout" in {
+    val stdOut = exec.args("0", "abc", "3").process
+      .flatMap(_.sdtOut)
+      .mkString
+      .block
+    stdOut should be("abcabcabc")
   }
+
+  val execPath = Path(sys.props("java.home") + "/bin/java").toAbsolute
+  val exec = Exec(execPath)
+    .param("--class-path", sys.props("java.class.path"))
+    .arg("urwerk.system.TestMain")

@@ -114,3 +114,11 @@ class PathTest extends TestBase:
     Path("abc/def").resolve(Path("/123/456")) should be (Path("/", "123", "456"))
     Path("/abc/def").resolve(Path("/123/456")) should be (Path("/", "123", "456"))
   }
+
+  "toAbsolute from absolute path" in {
+    Path("/abc/def").toAbsolute should be (Path("/abc/def"))
+  }
+
+  "toAbsolute from relative path" in {
+    Path("abc/def").toAbsolute should be (Path("/abc/def"))
+  }

@@ -16,8 +16,10 @@ import urwerk.source.Source
 import scala.concurrent.Promise
 import scala.util.Try
 import urwerk.source.BufferOverflowStrategy
-import java.util.concurrent.atomic.AtomicReference
 import urwerk.system.Process.Status
+import scala.concurrent.ExecutionContext
+
+import Process.*
 
 object Process:
   object Out:
@@ -47,7 +49,7 @@ object Exec:
 
 case class Exec(path: Path, args: Seq[String], cwd: Option[Path], env: Map[String, String])
 
-trait ProcessInterface(proc: JProcess):
+trait ProcessInterface:
   def sdtOut: Source[String]
   def errOut: Source[String]
   def status: Source[Status]
@@ -61,38 +63,42 @@ trait ProcessInterface(proc: JProcess):
   //         Source(status)
   //     }
 
-  // private val process: Process = processOf(proc)
-
   // private def statusOf(proc: JProcess): Status =
   //   if proc.isAlive then
   //     Status.Running(process)
   //   else
   //     Status.Terminated(process, proc.exitValue)
 
+
 extension (exec: Exec)
-
-  def apply(input: Source[String]): Singleton[ProcessInterface] = process(input)
-
-  def process(input: Source[String]): Singleton[ProcessInterface] = ???
-
-  def apply(): Singleton[ProcessInterface] = process
-
-  def process: Singleton[ProcessInterface] =
+  def process(using executor: ExecutionContext): Singleton[ProcessInterface] =
     val cmd = exec.path.toString +: exec.args
     val procBuilder = ProcessBuilder(cmd.asJava)
 
     def start: Singleton[ProcessInterface] =
-      val procTry = Try(
-        val proc = procBuilder.start
+      val procTry = Try{
+        val jproc = procBuilder.start
+        val proc: Process = processOf(jproc)
 
         val statusSrc = Source.create[Status]{sink =>
-
+          if jproc.isAlive then
+            sink.next(Status.Running(proc))
+            executor.execute{()=>
+              while(jproc.isAlive)
+                Thread.sleep(10)
+              sink.next(Status.Terminated(proc, jproc.exitValue))
+              sink.complete()
+            }
+          else
+            sink.next(Status.Terminated(proc, jproc.exitValue))
+            sink.complete()
         }
-        new ProcessInterface{
+        new ProcessInterface {
           def sdtOut: Source[String] = ???
           def errOut: Source[String] = ???
           def status: Source[Status] = statusSrc
         }
+      }
 
       Singleton.from(procTry)
 

@@ -1,44 +1,16 @@
 package urwerk.system
 
+import java.io.IOException
+
 import urwerk.test.TestBase
 import urwerk.io.Path
 import urwerk.source.{Source, Singleton}
 import urwerk.system.Process.Status.*
-import java.io.IOException
+import scala.concurrent.ExecutionContext
+import java.util.concurrent.Executors
 
 class ExecTest extends TestBase:
-
-  trait SrcOps[+A, +SS[_]]:
-    self: Src[A] =>
-
-    protected def fromSrc[B](src: Src[B]): SS[B] = ???
-
-    def map[B](op: A => B): SS[B] =
-      ???
-
-
-  object Src:
-    class Impl[+A] extends SrcOps[A, Src] with Src[A]
-
-    def apply[A](elems: A*): Src[A] = ???
-
-  trait Src[+A]:
-    def map[B](op: A => B): Src[B]
-
-  object Single:
-    class Impl[+A] extends SrcOps[A, Single] with Single[A]
-
-    def apply[A](elem: A): Single[A] = ???
-
-  trait Single[+A] extends Src[A]:
-    def map[B](op: A => B): Single[B]
-
-  object Opt:
-    def apply[A](elem: A): Opt[A] = ???
-
-  trait Opt[+A] extends Src[A]:
-    def map[B](op: A => B): Opt[B]
-
+  given ExecutionContext = ExecutionContext.fromExecutor(Executors.newCachedThreadPool)
 
   "exec not existing" in {
     val exec = Path("/0815")

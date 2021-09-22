@@ -4,7 +4,7 @@ import java.io.IOException
 import java.nio.file
 import java.util.concurrent.Executors
 
-import urwerk.test.TestBase
+import urwerk.test.*
 import urwerk.io.Path
 import urwerk.source.{Source, Singleton}
 import urwerk.system.Process.Status.*
@@ -39,7 +39,12 @@ class ExecTest extends TestBase:
     val exec = Path(sys.props("java.home") + "/bin/java")
     val classPath = sys.props("java.class.path")
 
-    val status = Exec(exec, "--class-path", classPath, "urwerk.system.TestMain", "abcdefg", "xyz").process
+
+
+
+    val file = uniqueFile
+
+    val status = Exec(exec, "--class-path", classPath, "urwerk.system.TestMain", "77", "std", "10", "err", "10").process
       .flatMap(_.status)
       .toSeq.block
 

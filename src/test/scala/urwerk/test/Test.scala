@@ -7,7 +7,7 @@ import org.scalatestplus.junit.JUnitRunner
 
 import urwerk.io
 import urwerk.io.file
-import urwerk.io.file.*
+import urwerk.io.file.given
 
 import java.io.OutputStream
 import java.nio.file.{Files, Paths}
@@ -43,8 +43,8 @@ def uniqueFile: io.Path =
   Files.createFile(path).toPath
 
 def uniqueFile(bytes: Array[Byte]): io.Path =
-  Files.write(Path(uniqueFile), bytes).toPath
+  Files.write(file.Path(uniqueFile), bytes).toPath
 
 def uniqueFile(content: String)(using codec: Codec): io.Path =
-  Files.writeString(Path(uniqueFile), content, codec.charSet).toPath
+  Files.writeString(file.Path(uniqueFile), content, codec.charSet).toPath
 

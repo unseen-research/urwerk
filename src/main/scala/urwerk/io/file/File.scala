@@ -140,8 +140,11 @@ object Path:
   def apply(path: io.Path): Path =
     apply(path.toString)
 
-extension (path: Path)
-  def toPath: io.Path = io.Path(path.toString)
+trait PathExtensions:
+  extension (path: Path)
+    def toPath: io.Path = io.Path(path.toString)
+
+given PathExtensions = new PathExtensions {}
 
 trait File:
   extension (file: Path)(using ec: ExecutionContext)

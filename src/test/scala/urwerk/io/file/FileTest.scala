@@ -171,7 +171,6 @@ class FileTest extends TestBase:
     val givenBytes = Random.nextBytes(4096 * 3)
     val file = Path(uniqueFile(givenBytes))
     given ExecutionContext = ExecutionContext.global
-    import File.*
 
     val actualBytes = file.createByteSource()
       .reduce(_ ++ _).block.get 
@@ -183,7 +182,6 @@ class FileTest extends TestBase:
     val givenBuffers = givenBytes.map(byte => ByteString(byte))
     val file = Path(uniqueFile(givenBytes))
     given ExecutionContext = ExecutionContext.global
-    import File.*
 
     val actualBuffers = file.createByteSource(1).toSeq.block 
     actualBuffers should be (givenBuffers)

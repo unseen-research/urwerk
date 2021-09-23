@@ -145,11 +145,9 @@ import scala.jdk.CollectionConverters.given
 
 import urwerk.concurrent.given
 
-def read(path: JNFPath, options: OpenOption*)(using ec: ExecutionContext): Source[ByteString] =
-
-
+def read(path: JNFPath)(using ec: ExecutionContext): Source[ByteString] =
   Source.create{sink =>
-    val channel = AsynchronousFileChannel.open(path, options.toSet.asJava, ec.toExecutorService)
+    val channel = AsynchronousFileChannel.open(path, Set(StandardOpenOption.READ).asJava, ec.toExecutorService)
     val buffer = ByteBuffer.allocate(4096)
     channel.read(buffer, 0, (), ReadCompletionHandler())
   }

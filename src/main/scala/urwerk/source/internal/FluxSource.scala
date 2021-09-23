@@ -22,6 +22,9 @@ import urwerk.source.Signal
 import urwerk.source.Sink
 import urwerk.source.SourceFactory
 import urwerk.source.internal.given
+import java.util.concurrent.Callable
+import org.reactivestreams.Publisher
+import java.util.function.Consumer
 
 private[source] object FluxSource extends SourceFactory:
   def apply[A](elems: A*): Source[A] = wrap(Flux.just(elems:_*))
@@ -30,9 +33,9 @@ private[source] object FluxSource extends SourceFactory:
     wrap(
       Flux.create[A](sink => op(FluxSink(sink))))
 
-  def create[A](backpressure: BackPressureStrategy)(op: Sink[A] => Unit): Source[A] = 
+  def create[A](backpressure: BackPressureStrategy)(op: Sink[A] => Unit): Source[A] =
     wrap(
-      Flux.create[A](sink => op(FluxSink(sink)), 
+      Flux.create[A](sink => op(FluxSink(sink)),
         backpressure.asJava))
 
   def defer[A](op: => Source[A]): Source[A] =
@@ -77,6 +80,12 @@ private[source] object FluxSource extends SourceFactory:
       (state) => doOnLastState(state))
 
     wrap(flux)
+
+  def using[A, B](createResource: () => B, disposeResource: B => Unit)(createSource: B => Source[A]): Source[A] =
+    wrap(
+      Flux.using[A, B](() => createResource(),
+        (res) => createSource(res).toFlux,
+        (res: B) => disposeResource(res)))
 
   private[internal] def wrap[A](flux: Flux[A]): Source[A] = new FluxSource[A](flux)
 

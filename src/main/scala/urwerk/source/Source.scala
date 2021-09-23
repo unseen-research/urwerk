@@ -126,3 +126,5 @@ trait SourceFactory:
   def unfold[A, S](init: => S)(op: S => Option[(A, S)]): Source[A]
 
   def unfold[A, S](init: => S, doOnLastState: S => Unit)(op: S => Option[(A, S)]): Source[A]
+
+  def using[A, B](createResource: () => B, disposeResource: B => Unit)(createSource: B => Source[A]): Source[A]

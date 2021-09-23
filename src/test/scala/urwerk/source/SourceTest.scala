@@ -660,3 +660,16 @@ class SourceTest extends TestBase:
       .expectNext(1, 2, 3)
       .verifyComplete()
   }
+
+  "using" in {
+    val resources = Seq("A", "B").iterator
+
+    var disposeRes = ""
+    val src = Source.using(()=> resources.next, res => disposeRes = res){res => Source(res)}
+
+    src.last.block should be ("A")
+    disposeRes should be ("A")
+
+    src.last.block should be ("B")
+    disposeRes should be ("B")
+  }

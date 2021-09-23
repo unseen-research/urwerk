@@ -87,31 +87,10 @@ object ByteString extends SpecificIterableFactory[Byte, ByteString] {
   }
 
   def unsafeWrap(buffer: ByteBuffer): ByteString = {
-    if(!buffer.hasArray){
+    if !buffer.hasArray then
       throw new UnsupportedOperationException("The given buffer has no array that could be wrapped")
-    }
+    
     unsafeWrap(buffer.array(), 0, buffer.limit)
-  }
-
-  def unsafeWrapRemaining(buffer: ByteBuffer): ByteString = {
-    if(!buffer.hasArray){
-      throw new UnsupportedOperationException("The given buffer has no array that could be wrapped")
-    }
-    unsafeWrap(buffer.array(), buffer.position, buffer.remaining)
-  }
-
-  def unsafeWrapOrCopy(buffer: ByteBuffer): ByteString = {
-    if(!buffer.hasArray){
-      from(buffer)
-    }
-    unsafeWrap(buffer)
-  }
-
-  def unsafeWrapOrCopyRemaining(buffer: ByteBuffer): ByteString = {
-    if(!buffer.hasArray){
-      from(buffer)
-    }
-    unsafeWrapRemaining(buffer)
   }
 }
 

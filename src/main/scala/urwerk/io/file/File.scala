@@ -104,7 +104,7 @@ trait PathOps:
       } else
         buffer.flip()
         if (buffer.limit() > 0) {
-          sink.next(ByteString.unsafeWrapOrCopy(buffer))
+          sink.next(ByteString.from(buffer))
         }
         readBytes(channel, requestCount - 1, sink, options)
     else
@@ -136,6 +136,7 @@ given Conversion[JNFPath, Path] with {
   }
 }
 
+//////////////////
 import java.nio.channels.AsynchronousFileChannel
 import java.nio.channels.CompletionHandler
 import java.nio.file.OpenOption
@@ -145,35 +146,46 @@ import scala.jdk.CollectionConverters.given
 
 import urwerk.concurrent.given
 
-case class FileOptions(chunkSize: Int)
+trait File:
+  extension (file: JNFPath)(using ec: ExecutionContext)
+    def createByteSource(): Source[ByteString] =
+      read(file)
 
-given FileOptions = FileOptions(4096)
+    def createByteSource(maxChunkSize: Int): Source[ByteString] =
+      read(file, maxChunkSize)
 
-def read(path: JNFPath)(using ec: ExecutionContext, options: FileOptions): Source[ByteString] =
+object File extends File
+
+given File = File
+
+private def read(path: JNFPath)(using ec: ExecutionContext): Source[ByteString] =
+  read(path, 4096)
+
+private def read(path: JNFPath, maxChunkSize: Int)(using ec: ExecutionContext): Source[ByteString] =
   Source.using[ByteString, AsynchronousFileChannel](
       AsynchronousFileChannel.open(path, Set(StandardOpenOption.READ).asJava, ec.toExecutorService),
       channel => channel.close())
     {channel =>
-      val chunkSize = options.chunkSize
       Source.create{sink =>
-        val buffer = ByteBuffer.allocate(chunkSize)
-        channel.read(buffer, 0, buffer, ReadCompletionHandler(channel, sink, 0, chunkSize))
+        val buffer = ByteBuffer.allocate(maxChunkSize)
+        channel.read(buffer, 0, buffer, ReadCompletionHandler(channel, sink, 0, maxChunkSize))
       }
     }
 
-private class ReadCompletionHandler(channel: AsynchronousFileChannel, sink: Sink[ByteString], position: Long, chunkSize: Int) extends CompletionHandler[Integer, ByteBuffer]:
-
-  private val pos = AtomicLong(position)
-  private val disposed = AtomicBoolean()
-
+private class ReadCompletionHandler(channel: AsynchronousFileChannel, sink: Sink[ByteString], val position: Long, maxChunkSize: Int) extends CompletionHandler[Integer, ByteBuffer]:
   def completed(readCount: Integer, buffer: ByteBuffer): Unit =
     if readCount >= 0 then
-      ???
+      buffer.flip()
+      if buffer.limit() > 0 then
+        sink.next(ByteString.from(buffer))
+      val nextPos = position + readCount
+      channel.read(buffer, nextPos, buffer.clear(), 
+        ReadCompletionHandler(channel, sink, nextPos, maxChunkSize))
     else
-      ???
-      this.sink.complete();
+      sink.complete();
 
-  def failed(error: Throwable, buffer: ByteBuffer): Unit = ???
+  def failed(error: Throwable, buffer: ByteBuffer): Unit = 
+    sink.error(error)
 
 // private static class AsynchronousFileChannelReadCompletionHandler
 //             implements CompletionHandler<integer, databuffer=""> {

@@ -144,13 +144,6 @@ class ByteStringTest extends TestBase:
         ByteString.unsafeWrap(ByteBuffer.allocate(100).asReadOnlyBuffer())
       }
     }
-    "remaining buffer" in {
-      val buffer = ByteBuffer.allocate(100)
-        .put(Array.tabulate[Byte](42) { _.toByte })
-        .flip().position(10)
-
-      ByteString.unsafeWrapRemaining(buffer) should be(ByteString(Array.tabulate[Byte](32)(index => (index + 10).toByte)))
-    }
     "remaining buffer fail if has no array" in {
       intercept[UnsupportedOperationException] {
         ByteString.unsafeWrap(ByteBuffer.allocate(100).asReadOnlyBuffer())

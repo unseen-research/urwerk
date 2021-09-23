@@ -2,7 +2,7 @@ package urwerk.io.file
 
 import org.reactivestreams.{Subscriber, Subscription}
 import reactor.core.publisher.Flux
-import reactor.core.scheduler.Schedulers
+
 import urwerk.io.{ByteString, Path}
 import urwerk.source.TestOps.{singletonProbe, sourceProbe}
 import urwerk.source.{Singleton, Source, TestOps}
@@ -19,6 +19,7 @@ import scala.io.Codec
 import scala.jdk.CollectionConverters
 import scala.util.Random
 import scala.language.implicitConversions
+import java.nio.file.Paths
 
 class FileTest extends TestBase:
 
@@ -162,4 +163,27 @@ class FileTest extends TestBase:
 
     val givenPathAttrs = givenSrc.map(path => (path, Files.isRegularFile(path), Files.isDirectory(path)))
     pathsWithAttrs should be(givenPathAttrs)
+  }
+
+////////////
+  "create byte source" in {
+    val givenBytes = Random.nextBytes(4096 * 3)
+    val file = uniqueFile(givenBytes)
+    given ExecutionContext = ExecutionContext.global
+    import File.*
+
+    val actualBytes = file.createByteSource()
+      .reduce(_ ++ _).block.get 
+    actualBytes should be(ByteString(givenBytes))
+  }
+
+  "create byte source with custom chunk size" in {
+    val givenBytes = Random.nextBytes(100)
+    val givenBuffers = givenBytes.map(byte => ByteString(byte))
+    val file = uniqueFile(givenBytes)
+    given ExecutionContext = ExecutionContext.global
+    import File.*
+
+    val actualBuffers = file.createByteSource(1).toSeq.block 
+    actualBuffers should be (givenBuffers)
   }

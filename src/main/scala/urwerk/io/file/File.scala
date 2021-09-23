@@ -1,25 +1,25 @@
 package urwerk.io.file
 
-import urwerk.io.{ByteString, Path}
+import urwerk.io
+import urwerk.io.{ByteString}
 import urwerk.source.{Singleton, Sink, Source}
 
 import java.nio.ByteBuffer
 import java.nio.channels.{FileChannel, ReadableByteChannel}
 import java.nio.charset.Charset
 import java.nio.file.attribute.{BasicFileAttributeView, BasicFileAttributes}
-import java.nio.file.{Files, Path => JNFPath, Paths, StandardOpenOption}
+import java.nio.file.{Files, Paths, StandardOpenOption}
 
 import scala.annotation.tailrec
 import scala.io.Codec
 import scala.jdk.CollectionConverters.given
-import scala.language.implicitConversions
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicBoolean
 
-val Cwd: Path = Paths.get("")
-  .toAbsolutePath
+val Cwd: io.Path = Path("")
+  .toAbsolutePath.toPath
 
-val Root = Path("/")
+val Root = io.Path("/")
 
 trait ReadOptions:
   def chunkSize: Int
@@ -29,16 +29,16 @@ given ReadOptions with {
 }
 
 trait GetAttributes[A]:
-  def attributesOf(path: Path): A
+  def attributesOf(path: io.Path): A
 
 given GetAttributes[BasicFileAttributes] with {
-  def attributesOf(path: Path): BasicFileAttributes =
-    Files.getFileAttributeView(path, classOf[BasicFileAttributeView])
+  def attributesOf(path: io.Path): BasicFileAttributes =
+    Files.getFileAttributeView(Path(path), classOf[BasicFileAttributeView])
       .readAttributes()
 }
 
 trait PathOps:
-  extension (path: Path)
+  extension (path: io.Path)
     def bytes(using options: ReadOptions): Source[ByteString] =
       readBytes(path, options)
 
@@ -49,12 +49,12 @@ trait PathOps:
     def strings(using codec: Codec, options: ReadOptions): Source[String] =
       bytes.map(_.mkString)
 
-    def isFile: Boolean = Files.isRegularFile(path)
+    def isFile: Boolean = Files.isRegularFile(Path(path))
 
-    def isDirectory: Boolean = Files.isDirectory(path)
+    def isDirectory: Boolean = Files.isDirectory(Path(path))
 
-    def list: Source[Path] = Source.create[Path]{sink =>
-      val stream = Files.list(path)
+    def list: Source[io.Path] = Source.create[io.Path]{sink =>
+      val stream = Files.list(Path(path))
         .onClose(() => onDirectoryStreamClose(path))
 
       val iterator = stream.iterator.asScala
@@ -66,7 +66,7 @@ trait PathOps:
         while remaining > 0 && iterator.hasNext do
           remaining -= 1
           sink.next(
-            iterator.next())
+            iterator.next().toPath)
 
         if !iterator.hasNext then
           sink.complete()
@@ -74,15 +74,15 @@ trait PathOps:
       }
     }
 
-    def directories: Source[Path] =
+    def directories: Source[io.Path] =
       list.filter(_.isDirectory)
 
-    def files: Source[Path] =
+    def files: Source[io.Path] =
       list.filter(_.isFile)
 
-  private def readBytes(path: Path, options: ReadOptions): Source[ByteString] =
+  private def readBytes(path: io.Path, options: ReadOptions): Source[ByteString] =
     Source.create[ByteString]{sink =>
-      val fileChan = FileChannel.open(path, StandardOpenOption.READ)
+      val fileChan = FileChannel.open(Path(path), StandardOpenOption.READ)
       sink.onRequest(requestCount =>
         readBytes(fileChan, requestCount, sink, options))
         .onDispose(
@@ -110,31 +110,16 @@ trait PathOps:
     else
       ()
 
-  private[file] def onDirectoryStreamClose(path: Path): Unit = {}
+  private[file] def onDirectoryStreamClose(path: io.Path): Unit = {}
 
   private[file] def readChannel(channel: ReadableByteChannel, buffer: ByteBuffer): Int =
     channel.read(buffer)
 
 given PathOps with {}
 
-extension (source: Source[Path])
-  def zipWithAttributes[A](using getOp: GetAttributes[A]): Source[(Path, A)] =
+extension (source: Source[io.Path])
+  def zipWithAttributes[A](using getOp: GetAttributes[A]): Source[(io.Path, A)] =
     source.map(path => (path, getOp.attributesOf(path)))
-
-given Conversion[Path, JNFPath] with {
-  def apply(path: Path): JNFPath = {
-    val root = if path.absolute then "/" else ""
-    val head = root + path.elements.applyOrElse(0, _ => "")
-    val tail = path.elements.drop(1)
-    JNFPath.of(head, tail*)
-  }
-}
-
-given Conversion[JNFPath, Path] with {
-  def apply(path: JNFPath): Path = {
-    Path(path.toString)
-  }
-}
 
 //////////////////
 import java.nio.channels.AsynchronousFileChannel
@@ -146,8 +131,20 @@ import scala.jdk.CollectionConverters.given
 
 import urwerk.concurrent.given
 
+type Path = java.nio.file.Path
+
+object Path:
+  def apply(element: String, elements: String*): Path = 
+    Paths.get(element, elements*)
+
+  def apply(path: io.Path): Path =
+    apply(path.toString)
+
+extension (path: Path)
+  def toPath: io.Path = io.Path(path.toString)
+
 trait File:
-  extension (file: JNFPath)(using ec: ExecutionContext)
+  extension (file: Path)(using ec: ExecutionContext)
     def createByteSource(): Source[ByteString] =
       read(file)
 
@@ -158,10 +155,10 @@ object File extends File
 
 given File = File
 
-private def read(path: JNFPath)(using ec: ExecutionContext): Source[ByteString] =
+private def read(path: Path)(using ec: ExecutionContext): Source[ByteString] =
   read(path, 4096)
 
-private def read(path: JNFPath, maxChunkSize: Int)(using ec: ExecutionContext): Source[ByteString] =
+private def read(path: Path, maxChunkSize: Int)(using ec: ExecutionContext): Source[ByteString] =
   Source.using[ByteString, AsynchronousFileChannel](
       AsynchronousFileChannel.open(path, Set(StandardOpenOption.READ).asJava, ec.toExecutorService),
       channel => channel.close())
@@ -186,58 +183,3 @@ private class ReadCompletionHandler(channel: AsynchronousFileChannel, sink: Sink
 
   def failed(error: Throwable, buffer: ByteBuffer): Unit = 
     sink.error(error)
-
-// private static class AsynchronousFileChannelReadCompletionHandler
-//             implements CompletionHandler<integer, databuffer=""> {
-
-//         private final AsynchronousFileChannel channel;
-
-//         private final FluxSink<databuffer> sink;
-
-//         private final DataBufferFactory dataBufferFactory;
-
-//         private final int bufferSize;
-
-//         private final AtomicLong position;
-
-//         private final AtomicBoolean disposed = new AtomicBoolean();
-
-//         public AsynchronousFileChannelReadCompletionHandler(AsynchronousFileChannel channel,
-//                 FluxSink<databuffer> sink, long position, DataBufferFactory dataBufferFactory, int bufferSize) {
-
-//             this.channel = channel;
-//             this.sink = sink;
-//             this.position = new AtomicLong(position);
-//             this.dataBufferFactory = dataBufferFactory;
-//             this.bufferSize = bufferSize;
-//         }
-
-//         @Override
-//         public void completed(Integer read, DataBuffer dataBuffer) {
-//             if (read != -1) {
-//                 long pos = this.position.addAndGet(read);
-//                 dataBuffer.writePosition(read);
-//                 this.sink.next(dataBuffer);
-//                 if (!this.disposed.get()) {
-//                     DataBuffer newDataBuffer = this.dataBufferFactory.allocateBuffer(this.bufferSize);
-//                     ByteBuffer newByteBuffer = newDataBuffer.asByteBuffer(0, this.bufferSize);
-//                     this.channel.read(newByteBuffer, pos, newDataBuffer, this);
-//                 }
-//             }
-//             else {
-//                 release(dataBuffer);
-//                 this.sink.complete();
-//             }
-//         }
-
-//         @Override
-//         public void failed(Throwable exc, DataBuffer dataBuffer) {
-//             release(dataBuffer);
-//             this.sink.error(exc);
-//         }
-
-//         public void dispose() {
-//             this.disposed.set(true);
-//         }
-//     }
-

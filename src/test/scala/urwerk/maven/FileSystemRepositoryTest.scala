@@ -1,12 +1,13 @@
 package urwerk.maven
 
+import urwerk.io
 import urwerk.io.file.ReadOptions
-import urwerk.io.{ByteString, Path}
+import urwerk.io.{ByteString}
 import urwerk.io.file.given
+import urwerk.io.file.Path
 import urwerk.source.TestOps.sourceProbe
 import urwerk.test.{TestBase, uniqueDirectory, uniqueFile, uniquePath}
 
-import java.nio.file.{Path => JNFPath}
 import java.nio.file.Files
 
 import scala.util.Random
@@ -29,7 +30,7 @@ class FileSystemRepositoryTest extends TestBase:
     val repo = repository
     val modulePath = repo.path / "org" / "foo" / "bar" / "foo-bar"
 
-    Files.createDirectories(modulePath)
+    Files.createDirectories(Path(modulePath))
 
     val metadataXml = repo
       .metadataXml(ModuleId("org.foo.bar", "foo-bar"))
@@ -52,10 +53,10 @@ class FileSystemRepositoryTest extends TestBase:
 
   "list versions" in {
     val repo = repository
-    val modulePath = repo.path.resolve(Path("org", "foo", "bar", "foo-bar"))
-    Files.createDirectories(modulePath / "1")
-    Files.createDirectories(modulePath / "2.1")
-    Files.createDirectories(modulePath / "3.2.1")
+    val modulePath = repo.path.resolve(io.Path("org", "foo", "bar", "foo-bar"))
+    Files.createDirectories(Path(modulePath / "1"))
+    Files.createDirectories(Path(modulePath / "2.1"))
+    Files.createDirectories(Path(modulePath / "3.2.1"))
 
     val versions = repo
       .listVersions(ModuleId("org.foo.bar", "foo-bar"))
@@ -74,7 +75,7 @@ class FileSystemRepositoryTest extends TestBase:
       }
       .head.block
 
-    actual should be((artifactId, repo.path.resolve(Maven.artifactPath(artifactId)).toUri, 10, ByteString(givenBytes)))
+    actual should be((artifactId, Path(repo.path.resolve(Maven.artifactPath(artifactId))).toUri, 10, ByteString(givenBytes)))
   }
 
   def repoWithFile(file: Path, content: String): FileSystemRepository =
@@ -82,9 +83,9 @@ class FileSystemRepositoryTest extends TestBase:
 
   def repoWithFile(file: Path, content: Array[Byte]): FileSystemRepository =
     val repo = repository
-    val repoFile = repo.path.resolve(file)
-    Files.createDirectories(repoFile.parent)
-    Files.write(repoFile, content)
+    val repoFile = repo.path.resolve(file.toString)
+    Files.createDirectories(Path(repoFile.parent))
+    Files.write(Path(repoFile), content)
     repo
 
   def repository: FileSystemRepository =

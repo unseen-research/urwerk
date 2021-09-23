@@ -3,7 +3,8 @@ package urwerk.io.file
 import org.reactivestreams.{Subscriber, Subscription}
 import reactor.core.publisher.Flux
 
-import urwerk.io.{ByteString, Path}
+import urwerk.io
+import urwerk.io.{ByteString}
 import urwerk.source.TestOps.{singletonProbe, sourceProbe}
 import urwerk.source.{Singleton, Source, TestOps}
 import urwerk.test.{TestBase, uniqueDirectory, uniqueFile, uniquePath}
@@ -12,7 +13,7 @@ import java.net.URI
 import java.nio.ByteBuffer
 import java.nio.channels.ReadableByteChannel
 import java.nio.file.attribute.BasicFileAttributes
-import java.nio.file.{Files, NoSuchFileException, Path => JNFPath}
+import java.nio.file.{Files, NoSuchFileException}
 
 import scala.concurrent.ExecutionContext
 import scala.io.Codec
@@ -29,23 +30,23 @@ class FileTest extends TestBase:
   }
 
   Seq(
-    (Path(""), JNFPath.of("")),
-    (Path("/"), JNFPath.of("/")),
-    (Path("/abc"), JNFPath.of("/abc")),
-    (Path("abc/def"), JNFPath.of("abc/def")))
-    .foreach{(givenPath, givenJnfPath) =>
-      val suffix = s"from='$givenPath' to='$givenJnfPath'"
+    (io.Path(""), Path("")),
+    (io.Path("/"), Path("/")),
+    (io.Path("/abc"), Path("/abc")),
+    (io.Path("abc/def"), Path("abc/def")))
+    .foreach{(givenIoPath, givenFilePath) =>
+      val suffix = s"from='$givenIoPath' to='$givenFilePath'"
 
-      s"conversion to java.nio.file.Path $suffix" in {
-        val jnfPath: JNFPath = givenPath
-        jnfPath should be (givenJnfPath)
-        jnfPath.isAbsolute should be (givenPath.absolute)
+      s"from io.Path to file.Path $suffix" in {
+        val path: Path = Path(givenIoPath)
+        path should be (givenFilePath)
+        path.isAbsolute should be (givenIoPath.absolute)
       }
 
-      s"conversion from java.nio.file.Path $suffix" in {
-        val path: Path = givenJnfPath
-        path should be (givenPath)
-        path.absolute should be (givenJnfPath.isAbsolute)
+      s"from file.Path to ioPath $suffix" in {
+        val path: io.Path = givenFilePath.toPath
+        path should be (givenIoPath)
+        path.absolute should be (givenFilePath.isAbsolute)
       }
     }
 
@@ -64,7 +65,7 @@ class FileTest extends TestBase:
   }
 
   "path by string" in {
-    Path("abc", "def/ghi").elements.map(_.toString) should be(Seq("abc", "def", "ghi"))
+    io.Path("abc", "def/ghi").elements.map(_.toString) should be(Seq("abc", "def", "ghi"))
   }
 
   "file bytes" in {
@@ -117,15 +118,15 @@ class FileTest extends TestBase:
   "list" - {
     val dir = uniqueDirectory
     val givenPaths = Set[Path](
-      Files.createDirectory(dir / "dir-1"),
-      Files.createFile(dir / "file-1"),
-      Files.createDirectory(dir / "dir-2"),
-      Files.createFile(dir / "file-2"))
+      Files.createDirectory(Path(dir / "dir-1")),
+      Files.createFile(Path(dir / "file-1")),
+      Files.createDirectory(Path(dir / "dir-2")),
+      Files.createFile(Path(dir / "file-2")))
 
     "pathes" in {
       var closed = false
       given PathOps with {
-        override private[file] def onDirectoryStreamClose(path: Path): Unit =
+        override private[file] def onDirectoryStreamClose(path: io.Path): Unit =
           closed = true
       }
 
@@ -158,17 +159,17 @@ class FileTest extends TestBase:
     val givenSrc = Seq(uniqueFile, uniqueDirectory, uniqueFile, uniqueDirectory)
     val pathsWithAttrs = Source.from(givenSrc)
       .zipWithAttributes[BasicFileAttributes]
-      .map((path: Path, attrs: BasicFileAttributes) => (path, attrs.isRegularFile, attrs.isDirectory))
+      .map((path: io.Path, attrs: BasicFileAttributes) => (path, attrs.isRegularFile, attrs.isDirectory))
       .toSeq.block
 
-    val givenPathAttrs = givenSrc.map(path => (path, Files.isRegularFile(path), Files.isDirectory(path)))
+    val givenPathAttrs = givenSrc.map(path => (path, Files.isRegularFile(Path(path)), Files.isDirectory(Path(path))))
     pathsWithAttrs should be(givenPathAttrs)
   }
 
 ////////////
   "create byte source" in {
     val givenBytes = Random.nextBytes(4096 * 3)
-    val file = uniqueFile(givenBytes)
+    val file = Path(uniqueFile(givenBytes))
     given ExecutionContext = ExecutionContext.global
     import File.*
 
@@ -180,7 +181,7 @@ class FileTest extends TestBase:
   "create byte source with custom chunk size" in {
     val givenBytes = Random.nextBytes(100)
     val givenBuffers = givenBytes.map(byte => ByteString(byte))
-    val file = uniqueFile(givenBytes)
+    val file = Path(uniqueFile(givenBytes))
     given ExecutionContext = ExecutionContext.global
     import File.*
 

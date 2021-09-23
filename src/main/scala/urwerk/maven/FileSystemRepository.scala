@@ -3,16 +3,17 @@ package urwerk.maven
 import java.nio.file.{Files, NoSuchFileException}
 import java.nio.file.attribute.BasicFileAttributes
 
-import urwerk.io.{ByteString, Path, Uri}
+import urwerk.io
+import urwerk.io.{ByteString, Uri}
 import urwerk.io.file.given
 import urwerk.io.file.*
 import urwerk.source.{Optional, Singleton, Source}
 
 import scala.language.implicitConversions
 
-class FileSystemRepository(val path: Path) extends Repository:
+class FileSystemRepository(val path: io.Path) extends Repository:
 
-  def uri: Uri = path.toUri
+  def uri: Uri = Path(path).toUri
 
   def listVersions(moduleId: ModuleId): Source[Version] =
     path.resolve(
@@ -29,7 +30,7 @@ class FileSystemRepository(val path: Path) extends Repository:
       .map(modId =>
         path.resolve(Maven.metadataXmlPath(modId)))
       .flatMap(path =>
-        if Files.isRegularFile(path) then path.strings
+        if Files.isRegularFile(Path(path)) then path.strings
         else Source("")
         //        else if Files.isDirectory(path) then Source.error(NoSuchFileException())
         //        else if !Files.isDirectory(path.parent)
@@ -49,6 +50,6 @@ class FileSystemRepository(val path: Path) extends Repository:
         new ArtifactSource:
           val artifactId: ArtifactId = id
           def size: Long = _size
-          def uri: Uri = path.toUri
+          def uri: Uri = Path(path).toUri
           def bytes: Source[ByteString] = path.bytes
       }

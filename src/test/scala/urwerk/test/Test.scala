@@ -5,8 +5,9 @@ import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatestplus.junit.JUnitRunner
 
-import urwerk.io.Path
-import urwerk.io.file.given
+import urwerk.io
+import urwerk.io.file
+import urwerk.io.file.*
 
 import java.io.OutputStream
 import java.nio.file.{Files, Paths}
@@ -32,18 +33,18 @@ abstract class TestBase extends AnyFreeSpec with Matchers:
 
 def uniqueString: String = UUID.randomUUID().toString
 
-def uniquePath: Path = Paths.get(s"build/tests/$uniqueString")
+def uniquePath: io.Path = file.Path(s"build/tests/$uniqueString").toPath
 
-def uniqueDirectory: Path = Files.createDirectories(uniquePath)
+def uniqueDirectory: io.Path = Files.createDirectories(file.Path(uniquePath)).toPath
 
-def uniqueFile: Path =
-  val path = uniquePath
+def uniqueFile: io.Path =
+  val path = file.Path(uniquePath)
   Files.createDirectories(path.getParent)
-  Files.createFile(path)
+  Files.createFile(path).toPath
 
-def uniqueFile(bytes: Array[Byte]): Path =
-  Files.write(uniqueFile, bytes)
+def uniqueFile(bytes: Array[Byte]): io.Path =
+  Files.write(Path(uniqueFile), bytes).toPath
 
-def uniqueFile(content: String)(using codec: Codec): Path =
-  Files.writeString(uniqueFile, content, codec.charSet)
+def uniqueFile(content: String)(using codec: Codec): io.Path =
+  Files.writeString(Path(uniqueFile), content, codec.charSet).toPath
 

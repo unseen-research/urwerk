@@ -665,7 +665,7 @@ class SourceTest extends TestBase:
     val resources = Seq("A", "B").iterator
 
     var disposeRes = ""
-    val src = Source.using(()=> resources.next, res => disposeRes = res){res => Source(res)}
+    val src = Source.using(resources.next, res => disposeRes = res){res => Source(res)}
 
     src.last.block should be ("A")
     disposeRes should be ("A")

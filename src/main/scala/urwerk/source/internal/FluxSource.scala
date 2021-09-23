@@ -81,9 +81,9 @@ private[source] object FluxSource extends SourceFactory:
 
     wrap(flux)
 
-  def using[A, B](createResource: () => B, disposeResource: B => Unit)(createSource: B => Source[A]): Source[A] =
+  def using[A, B](createResource: => B, disposeResource: B => Unit)(createSource: B => Source[A]): Source[A] =
     wrap(
-      Flux.using[A, B](() => createResource(),
+      Flux.using[A, B](() => createResource,
         (res) => createSource(res).toFlux,
         (res: B) => disposeResource(res)))
 

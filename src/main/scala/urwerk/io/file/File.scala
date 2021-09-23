@@ -13,9 +13,8 @@ import scala.annotation.tailrec
 import scala.io.Codec
 import scala.jdk.CollectionConverters.given
 import scala.language.implicitConversions
-import java.nio.channels.CompletionHandler
-
-
+import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicBoolean
 
 val Cwd: Path = Paths.get("")
   .toAbsolutePath
@@ -138,6 +137,7 @@ given Conversion[JNFPath, Path] with {
 }
 
 import java.nio.channels.AsynchronousFileChannel
+import java.nio.channels.CompletionHandler
 import java.nio.file.OpenOption
 
 import scala.concurrent.ExecutionContext
@@ -145,16 +145,35 @@ import scala.jdk.CollectionConverters.given
 
 import urwerk.concurrent.given
 
-def read(path: JNFPath)(using ec: ExecutionContext): Source[ByteString] =
-  Source.create{sink =>
-    val channel = AsynchronousFileChannel.open(path, Set(StandardOpenOption.READ).asJava, ec.toExecutorService)
-    val buffer = ByteBuffer.allocate(4096)
-    channel.read(buffer, 0, (), ReadCompletionHandler())
-  }
+case class FileOptions(chunkSize: Int)
 
-private class ReadCompletionHandler extends CompletionHandler[Integer, Any]:
-  def completed(readCount: Integer, attachment: Any): Unit = ???
-  def failed(error: Throwable, attachment: Any): Unit = ???
+given FileOptions = FileOptions(4096)
+
+def read(path: JNFPath)(using ec: ExecutionContext, options: FileOptions): Source[ByteString] =
+  Source.using[ByteString, AsynchronousFileChannel](
+      AsynchronousFileChannel.open(path, Set(StandardOpenOption.READ).asJava, ec.toExecutorService),
+      channel => channel.close())
+    {channel =>
+      val chunkSize = options.chunkSize
+      Source.create{sink =>
+        val buffer = ByteBuffer.allocate(chunkSize)
+        channel.read(buffer, 0, buffer, ReadCompletionHandler(channel, sink, 0, chunkSize))
+      }
+    }
+
+private class ReadCompletionHandler(channel: AsynchronousFileChannel, sink: Sink[ByteString], position: Long, chunkSize: Int) extends CompletionHandler[Integer, ByteBuffer]:
+
+  private val pos = AtomicLong(position)
+  private val disposed = AtomicBoolean()
+
+  def completed(readCount: Integer, buffer: ByteBuffer): Unit =
+    if readCount >= 0 then
+      ???
+    else
+      ???
+      this.sink.complete();
+
+  def failed(error: Throwable, buffer: ByteBuffer): Unit = ???
 
 // private static class AsynchronousFileChannelReadCompletionHandler
 //             implements CompletionHandler<integer, databuffer=""> {

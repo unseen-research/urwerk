@@ -13,6 +13,9 @@ import scala.annotation.tailrec
 import scala.io.Codec
 import scala.jdk.CollectionConverters.given
 import scala.language.implicitConversions
+import java.nio.channels.CompletionHandler
+
+
 
 val Cwd: Path = Paths.get("")
   .toAbsolutePath
@@ -133,3 +136,79 @@ given Conversion[JNFPath, Path] with {
     Path(path.toString)
   }
 }
+
+import java.nio.channels.AsynchronousFileChannel
+import java.nio.file.OpenOption
+
+import scala.concurrent.ExecutionContext
+import scala.jdk.CollectionConverters.given
+
+import urwerk.concurrent.given
+
+def read(path: JNFPath, options: OpenOption*)(using ec: ExecutionContext): Source[ByteString] =
+
+
+  Source.create{sink =>
+    val channel = AsynchronousFileChannel.open(path, options.toSet.asJava, ec.toExecutorService)
+    val buffer = ByteBuffer.allocate(4096)
+    channel.read(buffer, 0, (), ReadCompletionHandler())
+  }
+
+private class ReadCompletionHandler extends CompletionHandler[Integer, Any]:
+  def completed(readCount: Integer, attachment: Any): Unit = ???
+  def failed(error: Throwable, attachment: Any): Unit = ???
+
+// private static class AsynchronousFileChannelReadCompletionHandler
+//             implements CompletionHandler<integer, databuffer=""> {
+
+//         private final AsynchronousFileChannel channel;
+
+//         private final FluxSink<databuffer> sink;
+
+//         private final DataBufferFactory dataBufferFactory;
+
+//         private final int bufferSize;
+
+//         private final AtomicLong position;
+
+//         private final AtomicBoolean disposed = new AtomicBoolean();
+
+//         public AsynchronousFileChannelReadCompletionHandler(AsynchronousFileChannel channel,
+//                 FluxSink<databuffer> sink, long position, DataBufferFactory dataBufferFactory, int bufferSize) {
+
+//             this.channel = channel;
+//             this.sink = sink;
+//             this.position = new AtomicLong(position);
+//             this.dataBufferFactory = dataBufferFactory;
+//             this.bufferSize = bufferSize;
+//         }
+
+//         @Override
+//         public void completed(Integer read, DataBuffer dataBuffer) {
+//             if (read != -1) {
+//                 long pos = this.position.addAndGet(read);
+//                 dataBuffer.writePosition(read);
+//                 this.sink.next(dataBuffer);
+//                 if (!this.disposed.get()) {
+//                     DataBuffer newDataBuffer = this.dataBufferFactory.allocateBuffer(this.bufferSize);
+//                     ByteBuffer newByteBuffer = newDataBuffer.asByteBuffer(0, this.bufferSize);
+//                     this.channel.read(newByteBuffer, pos, newDataBuffer, this);
+//                 }
+//             }
+//             else {
+//                 release(dataBuffer);
+//                 this.sink.complete();
+//             }
+//         }
+
+//         @Override
+//         public void failed(Throwable exc, DataBuffer dataBuffer) {
+//             release(dataBuffer);
+//             this.sink.error(exc);
+//         }
+
+//         public void dispose() {
+//             this.disposed.set(true);
+//         }
+//     }
+

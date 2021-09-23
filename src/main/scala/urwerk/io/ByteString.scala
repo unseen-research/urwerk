@@ -2,7 +2,6 @@ package urwerk.io
 
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
-import urwerk.source.{Singleton, Source}
 
 import scala.collection.immutable.{IndexedSeq, IndexedSeqOps, StrictOptimizedSeqOps}
 import scala.collection.{IterableOnce, SpecificIterableFactory, mutable}
@@ -116,7 +115,7 @@ object ByteString extends SpecificIterableFactory[Byte, ByteString] {
   }
 }
 
-class ByteString (private[io] val array: Array[Byte], private[io] val offset: Int, val length: Int) extends IndexedSeq[Byte], 
+class ByteString (private[io] val array: Array[Byte], private[io] val offset: Int, val length: Int) extends IndexedSeq[Byte],
   IndexedSeqOps[Byte, IndexedSeq, ByteString],
   StrictOptimizedSeqOps[Byte, IndexedSeq, ByteString] {
 
@@ -177,7 +176,7 @@ class ByteString (private[io] val array: Array[Byte], private[io] val offset: In
   def mkString(using codec: Codec): String = {
     new String(array, offset, length, codec.charSet)
   }
-  
+
   override def toString: String = mkString
 }
 

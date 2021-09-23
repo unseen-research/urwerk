@@ -22,6 +22,9 @@ import scala.concurrent.ExecutionContext
 import Process.*
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.atomic.AtomicReference
+import urwerk.io.ByteString
+import java.io.InputStream
+import java.nio.channels.Channels
 
 object Process:
   object Out:
@@ -63,8 +66,8 @@ case class Exec(path: Path, args: Seq[String], cwd: Option[Path], env: Map[Strin
     copy(cwd = Some(path))
 
 trait ProcessInterface:
-  def sdtOut: Source[String]
-  def errOut: Source[String]
+  def output: Source[ByteString]
+  def errorOutput: Source[ByteString]
   def status: Source[Status]
 
 extension (exec: Exec)
@@ -84,8 +87,8 @@ private def _process(executable: Exec, executor: ExecutionContext): Singleton[Pr
       val jproc = procBuilder.start
 
       new ProcessInterface {
-        def sdtOut: Source[String] = ???
-        def errOut: Source[String] = ???
+        def output: Source[ByteString] = createOutputSource(jproc.getInputStream(), executor)
+        def errorOutput: Source[ByteString] = createOutputSource(jproc.getErrorStream(), executor)
         def status: Source[Status] = createStatusSource(jproc)
       }
     }
@@ -108,3 +111,6 @@ private def createStatusSource(jproc: JProcess): Source[Status] =
       sink.next(Status.Terminated(proc, jproc.exitValue))
       sink.complete()
   }
+
+private def createOutputSource(stream: InputStream, executor: ExecutionContext): Source[ByteString] =
+  Source.create(sink => ??? )

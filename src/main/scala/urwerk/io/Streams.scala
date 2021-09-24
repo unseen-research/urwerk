@@ -1,6 +1,7 @@
 package urwerk.io
 
 import java.io.InputStream
+import java.nio.ByteBuffer
 import java.nio.channels.ReadableByteChannel
 import java.nio.channels.Channels
 
@@ -8,7 +9,6 @@ import scala.annotation.tailrec
 
 import urwerk.source.Source
 import urwerk.source.Sink
-import java.nio.ByteBuffer
 
 object Stream:
   val DefaultBufferSize: Int = 4096 * 2

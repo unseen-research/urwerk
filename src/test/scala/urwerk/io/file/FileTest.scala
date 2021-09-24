@@ -17,7 +17,6 @@ import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 
 import scala.concurrent.ExecutionContext
-import scala.io.Codec
 import scala.util.Random
 
 given ExecutionContext = ExecutionContext.global
@@ -55,6 +54,11 @@ class FileTest extends TestBase:
         uniquePath.createByteSource())
       .expectError(classOf[NoSuchFileException])
       .verify()
+  }
+
+  "cwd" in {
+    Cwd should be (Path(sys.props("user.dir")))
+    Cwd.isAbsolute should be (true)
   }
 
   // "current working directory" in {

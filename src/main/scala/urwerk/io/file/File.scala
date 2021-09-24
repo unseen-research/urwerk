@@ -24,6 +24,8 @@ object Path:
   def apply(path: io.Path): Path =
     apply(path.toString)
 
+val Cwd: Path = Path("").toAbsolutePath
+
 trait PathExtensions:
   extension (path: Path)
     def toPath: io.Path = io.Path(path.toString)

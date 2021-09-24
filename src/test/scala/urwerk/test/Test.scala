@@ -24,7 +24,7 @@ abstract class TestBase extends AnyFreeSpec with Matchers:
   def withOut(testFn: (OutputStream, OutputStream) => Unit): Unit = {
     val out = new java.io.ByteArrayOutputStream()
     val err = new java.io.ByteArrayOutputStream()
-  
+
     Console.withOut(out){
       Console.withErr(err){
         testFn(out, err)
@@ -33,18 +33,18 @@ abstract class TestBase extends AnyFreeSpec with Matchers:
 
 def uniqueString: String = UUID.randomUUID().toString
 
-def uniquePath: io.Path = file.Path(s"build/tests/$uniqueString").toPath
+def uniquePath: file.Path = file.Path(s"build/tests/$uniqueString")
 
-def uniqueDirectory: io.Path = Files.createDirectories(file.Path(uniquePath)).toPath
+def uniqueDirectory: file.Path = Files.createDirectories(uniquePath)
 
-def uniqueFile: io.Path =
-  val path = file.Path(uniquePath)
+def uniqueFile: file.Path =
+  val path = uniquePath
   Files.createDirectories(path.getParent)
-  Files.createFile(path).toPath
+  Files.createFile(path)
 
-def uniqueFile(bytes: Array[Byte]): io.Path =
-  Files.write(file.Path(uniqueFile), bytes).toPath
+def uniqueFile(bytes: Array[Byte]): file.Path =
+  Files.write(uniqueFile, bytes)
 
-def uniqueFile(content: String)(using codec: Codec): io.Path =
-  Files.writeString(file.Path(uniqueFile), content, codec.charSet).toPath
+def uniqueFile(content: String)(using codec: Codec): file.Path =
+  Files.writeString(uniqueFile, content, codec.charSet)
 

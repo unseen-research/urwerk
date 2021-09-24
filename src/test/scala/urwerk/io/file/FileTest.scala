@@ -56,10 +56,6 @@ class FileTest extends TestBase:
       .verify()
   }
 
-  "cwd" in {
-    Cwd should be (Path(sys.props("user.dir")))
-    Cwd.isAbsolute should be (true)
-  }
 
   // "current working directory" in {
   //   Cwd.absolute should be (true)

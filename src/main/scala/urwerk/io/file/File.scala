@@ -1,46 +1,29 @@
 package urwerk.io.file
 
-import urwerk.io
-import urwerk.io.{ByteString}
-import urwerk.source.{Singleton, Sink, Source}
+import urwerk.io.ByteString
+import urwerk.source.Sink
+import urwerk.source.Source
 
 import java.nio.ByteBuffer
 import java.nio.channels.AsynchronousFileChannel
 import java.nio.channels.CompletionHandler
-import java.nio.file.{Files, Paths, StandardOpenOption}
-import java.nio.file.OpenOption
+import java.nio.file.{Files, StandardOpenOption}
 
 import scala.concurrent.ExecutionContext
 import scala.jdk.CollectionConverters.given
 
 import urwerk.concurrent.given
 
-type Path = java.nio.file.Path
-
-object Path:
-  def apply(element: String, elements: String*): Path =
-    Paths.get(element, elements*)
-
-  def apply(path: io.Path): Path =
-    apply(path.toString)
-
-val Cwd: Path = Path("").toAbsolutePath
-
-trait PathExtensions:
-  extension (path: Path)
-    def toPath: io.Path = io.Path(path.toString)
-
-given PathExtensions = new PathExtensions {}
-
-trait File:
+trait FileOps {
   extension (file: Path)(using ec: ExecutionContext)
     def createByteSource(): Source[ByteString] =
       read(file)
 
     def createByteSource(blockSize: Int): Source[ByteString] =
       read(file, blockSize)
+}
 
-given File = new File{}
+given FileOps = new FileOps{}
 
 private def read(path: Path)(using ec: ExecutionContext): Source[ByteString] =
   read(path, -1)

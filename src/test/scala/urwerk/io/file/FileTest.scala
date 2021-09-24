@@ -33,7 +33,7 @@ class FileTest extends TestBase:
       ByteString.unsafeWrap(givenBytes, blockSize * 2, blockSize))
     Files.write(file, givenBytes)
 
-    val actualBytes = file.createByteSource()
+    val actualBytes = file.byteSource()
       .toSeq.block
 
     actualBytes should be(givenByteStrings)
@@ -45,13 +45,13 @@ class FileTest extends TestBase:
     val file = uniqueFile(givenBytes)
     given ExecutionContext = ExecutionContext.global
 
-    val actualBuffers = file.createByteSource(1).toSeq.block
+    val actualBuffers = file.byteSource(1).toSeq.block
     actualBuffers should be (givenBuffers)
   }
 
   "create byte source fails with no such file" in {
     sourceProbe(
-        uniquePath.createByteSource())
+        uniquePath.byteSource())
       .expectError(classOf[NoSuchFileException])
       .verify()
   }

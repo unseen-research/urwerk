@@ -16,10 +16,10 @@ import urwerk.concurrent.given
 
 trait FileOps {
   extension (file: Path)(using ec: ExecutionContext)
-    def createByteSource(): Source[ByteString] =
+    def byteSource(): Source[ByteString] =
       read(file)
 
-    def createByteSource(blockSize: Int): Source[ByteString] =
+    def byteSource(blockSize: Int): Source[ByteString] =
       read(file, blockSize)
 }
 

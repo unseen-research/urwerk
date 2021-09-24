@@ -41,8 +41,7 @@ trait File:
 given File = new File{}
 
 private def read(path: Path)(using ec: ExecutionContext): Source[ByteString] =
-  val blockSize = Files.getFileStore(path).getBlockSize.toInt
-  read(path, blockSize)
+  read(path, -1)
 
 private def read(path: Path, blockSize: Int)(using ec: ExecutionContext): Source[ByteString] =
   Source.using[ByteString, AsynchronousFileChannel](
@@ -50,7 +49,9 @@ private def read(path: Path, blockSize: Int)(using ec: ExecutionContext): Source
       channel => channel.close())
     {channel =>
       Source.create{sink =>
-        val buffer = ByteBuffer.allocate(blockSize.toInt)
+        val bs = if blockSize <=0 then Files.getFileStore(path).getBlockSize.toInt
+          else blockSize
+        val buffer = ByteBuffer.allocate(bs.toInt)
         channel.read(buffer, 0, buffer, ReadCompletionHandler(channel, sink, 0, blockSize.toInt))
       }
     }

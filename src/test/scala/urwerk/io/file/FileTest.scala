@@ -50,12 +50,12 @@ class FileTest extends TestBase:
     actualBuffers should be (givenBuffers)
   }
 
-  // "file bytes fail with no such file" in {
-  //   sourceProbe(
-  //       uniquePath.bytes)
-  //     .expectError(classOf[NoSuchFileException])
-  //     .verify()
-  // }
+  "create byte source fails with no such file" in {
+    sourceProbe(
+        uniquePath.createByteSource())
+      .expectError(classOf[NoSuchFileException])
+      .verify()
+  }
 
   // "current working directory" in {
   //   Cwd.absolute should be (true)

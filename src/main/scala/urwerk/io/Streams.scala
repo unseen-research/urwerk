@@ -10,17 +10,17 @@ import scala.annotation.tailrec
 import urwerk.source.Source
 import urwerk.source.Sink
 
-object Stream:
+object Streams:
   val DefaultBufferSize: Int = 4096 * 2
+
+  given StreamOps = new StreamOps{}
 
 trait StreamOps:
   extension (inputStream: InputStream)
     def toSource: Source[ByteString] =
-      toSource(Stream.DefaultBufferSize)
+      toSource(Streams.DefaultBufferSize)
 
     def toSource(blockSize: Int): Source[ByteString] = readBytes(inputStream, blockSize)
-
-given StreamOps = new StreamOps{}
 
 private def readBytes(inputStream: InputStream, blockSize: Int): Source[ByteString] =
   Source.using(Channels.newChannel(inputStream), _.close){channel =>

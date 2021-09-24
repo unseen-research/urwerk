@@ -7,7 +7,7 @@ import java.io.ByteArrayInputStream
 
 class StreamsTest extends TestBase:
   "input stream to source" in {
-    val blockSize = Stream.DefaultBufferSize
+    val blockSize = Streams.DefaultBufferSize
     val givenBytes = Random.nextBytes(blockSize * 3)
 
     val givenByteStrings = Seq(

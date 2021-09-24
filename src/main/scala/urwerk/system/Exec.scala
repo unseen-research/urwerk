@@ -1,8 +1,12 @@
 package urwerk.system
 
+import java.io.InputStream
+import java.nio.channels.Channels
 import java.time.Instant
 import java.lang.Process as JProcess
 import java.lang.ProcessHandle as JProcessHandle
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.atomic.AtomicReference
 
 import scala.concurrent.duration.Duration
 import scala.jdk.CollectionConverters.given
@@ -20,11 +24,8 @@ import urwerk.system.Process.Status
 import scala.concurrent.ExecutionContext
 
 import Process.*
-import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.atomic.AtomicReference
 import urwerk.io.ByteString
-import java.io.InputStream
-import java.nio.channels.Channels
+import urwerk.io.Streams.given
 
 object Process:
   object Out:
@@ -78,7 +79,7 @@ extension (exec: Exec)
 
   def errorOutput(using executor: ExecutionContext): Singleton[ProcessInterface] = ???
 
-private def _process(executable: Exec, executor: ExecutionContext): Singleton[ProcessInterface] =
+private def _process(executable: Exec, ec: ExecutionContext): Singleton[ProcessInterface] =
   val cmd = executable.path.toString +: executable.args
   val procBuilder = ProcessBuilder(cmd.asJava)
 
@@ -87,8 +88,12 @@ private def _process(executable: Exec, executor: ExecutionContext): Singleton[Pr
       val jproc = procBuilder.start
 
       new ProcessInterface {
-        def output: Source[ByteString] = createOutputSource(jproc.getInputStream(), executor)
-        def errorOutput: Source[ByteString] = createOutputSource(jproc.getErrorStream(), executor)
+        def output: Source[ByteString] = jproc.getInputStream()
+          .toSource
+          .subscribeOn(ec)
+        def errorOutput: Source[ByteString] = jproc.getErrorStream()
+          .toSource
+          .subscribeOn(ec)
         def status: Source[Status] = createStatusSource(jproc)
       }
     }
@@ -111,6 +116,3 @@ private def createStatusSource(jproc: JProcess): Source[Status] =
       sink.next(Status.Terminated(proc, jproc.exitValue))
       sink.complete()
   }
-
-private def createOutputSource(stream: InputStream, executor: ExecutionContext): Source[ByteString] =
-  Source.create(sink => ??? )

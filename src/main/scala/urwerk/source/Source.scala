@@ -4,6 +4,7 @@ import java.util.concurrent.Flow
 
 import urwerk.source.internal.FluxSource
 import _root_.reactor.core.publisher.BufferOverflowStrategy
+import scala.concurrent.ExecutionContext
 
 enum BufferOverflowStrategy:
   case DropLatest
@@ -91,6 +92,10 @@ trait Source[+A]:
   def subscribe[B >: A](subscriber: Flow.Subscriber[B]): Unit
 
   def subscribe(onNext: A => Unit, onError: Throwable => Unit, onComplete: => Unit ): AutoCloseable
+
+  def subscribeOn(ec: ExecutionContext): Source[A]
+
+  def subscribeOn(ec: ExecutionContext, requestOnSeparateThread: Boolean): Source[A]
 
   def takeUntil(predicate: A => Boolean): Source[A]
 

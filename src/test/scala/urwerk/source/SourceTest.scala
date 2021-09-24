@@ -20,6 +20,9 @@ import urwerk.source.TestOps.*
 import urwerk.test.TestBase
 import urwerk.source.Signal.{Next, Complete, Error}
 import urwerk.source.reactor.FluxConverters.*
+import scala.concurrent.ExecutionContext
+import java.util.concurrent.Executors
+import java.util.concurrent.CountDownLatch
 
 class SourceTest extends TestBase:
   "apply" in {
@@ -576,6 +579,34 @@ class SourceTest extends TestBase:
         items += "onComplete")
 
     items should be(Seq("1", "2", "3", "onComplete"))
+  }
+
+  "subscribe on execution context" in {
+    val ec = ExecutionContext.fromExecutor(Executors.newSingleThreadExecutor)
+    ec.execute(() => Thread.currentThread.setName("test thread name"))
+
+    val src = Source.create[String]{sink =>
+        val name = Thread.currentThread.getName
+        sink.next(name)
+        sink.complete()
+      }
+      .subscribeOn(ec)
+
+    src.last.block should be ("test thread name")
+  }
+
+  "subscribe on execution context with requestOnSeparateThread option" in {
+    val ec = ExecutionContext.fromExecutor(Executors.newSingleThreadExecutor)
+    ec.execute(() => Thread.currentThread.setName("test thread name"))
+
+    val src = Source.create[String]{sink =>
+        val name = Thread.currentThread.getName
+        sink.next(name)
+        sink.complete()
+      }
+      .subscribeOn(ec, true)
+
+    src.last.block should be ("test thread name")
   }
 
   "take until" in {

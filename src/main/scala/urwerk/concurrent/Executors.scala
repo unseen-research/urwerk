@@ -1,12 +1,17 @@
 package urwerk.concurrent
 
-import scala.concurrent.{ExecutionContext, ExecutionContextExecutorService}
 import java.util.concurrent.{ AbstractExecutorService, TimeUnit }
 import java.util.Collections
 import java.util.concurrent.Executor
 
+import scala.concurrent.ExecutionContext
+import scala.concurrent.ExecutionContextExecutor
+import scala.concurrent.ExecutionContextExecutorService
+
 trait ExecutorsConverters:
   extension (executionContext: ExecutionContext)
+    def toExecutor: ExecutionContextExecutor = toExecutorService
+
     def toExecutorService: ExecutionContextExecutorService = executionContext match
       case null => throw null
       case ec: ExecutionContextExecutorService => ec

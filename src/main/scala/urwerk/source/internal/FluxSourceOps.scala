@@ -9,17 +9,19 @@ import reactor.adapter.JdkFlowAdapter
 import reactor.core.publisher.Flux
 import reactor.core.publisher.FluxCreate
 import reactor.core.publisher.Mono
+import reactor.core.scheduler.Schedulers
 
+import scala.concurrent.ExecutionContext
 import scala.jdk.FunctionConverters.*
 import scala.jdk.CollectionConverters.*
 
+import urwerk.concurrent.given
 import urwerk.source.reactor.FluxConverters.*
 import urwerk.source.Optional
 import urwerk.source.Singleton
 import urwerk.source.Source
 import urwerk.source.Signal
 import urwerk.source.internal.given
-
 import urwerk.source.BufferOverflowStrategy
 
 private abstract class FluxSourceOps[+A](val flux: Flux[_<: A]):
@@ -197,6 +199,15 @@ private abstract class FluxSourceOps[+A](val flux: Flux[_<: A]):
       disposable.dispose()
     }
   }
+
+  def subscribeOn(ec: ExecutionContext): S[A] =
+    wrap(
+      flux.subscribeOn(Schedulers.fromExecutor(ec.toExecutor)))
+
+  def subscribeOn(ec: ExecutionContext, requestOnSeparateThread: Boolean): S[A] =
+    wrap(
+      flux.subscribeOn(Schedulers.fromExecutor(ec.toExecutor), requestOnSeparateThread))
+
 
   def takeUntil(predicate: A => Boolean): S[A] =
     wrap(

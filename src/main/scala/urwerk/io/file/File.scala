@@ -26,20 +26,20 @@ trait FileOps {
 given FileOps = new FileOps{}
 
 private def read(path: Path)(using ec: ExecutionContext): Source[ByteString] =
-  read(path, -1)
+  read(path, -1).subscribeOn(ec)
 
 private def read(path: Path, blockSize: Int)(using ec: ExecutionContext): Source[ByteString] =
-  Source.using[ByteString, AsynchronousFileChannel](
-      AsynchronousFileChannel.open(path, Set(StandardOpenOption.READ).asJava, ec.toExecutorService),
-      channel => channel.close())
-    {channel =>
-      Source.create{sink =>
-        val bs = if blockSize <=0 then Files.getFileStore(path).getBlockSize.toInt
-          else blockSize
-        val buffer = ByteBuffer.allocate(bs.toInt)
-        channel.read(buffer, 0, buffer, ReadCompletionHandler(channel, sink, 0, blockSize.toInt))
-      }
+  def openChannel() =
+    AsynchronousFileChannel.open(path, Set(StandardOpenOption.READ).asJava, ec.toExecutorService)
+
+  Source.using(openChannel(), _.close()){channel =>
+    Source.create{sink =>
+      val bs = if blockSize <=0 then Files.getFileStore(path).getBlockSize.toInt
+        else blockSize
+      val buffer = ByteBuffer.allocate(bs.toInt)
+      channel.read(buffer, 0, buffer, ReadCompletionHandler(channel, sink, 0, blockSize.toInt))
     }
+  }
 
 private class ReadCompletionHandler(channel: AsynchronousFileChannel, sink: Sink[ByteString], val position: Long, blockSize: Int) extends CompletionHandler[Integer, ByteBuffer]:
   def completed(readCount: Integer, buffer: ByteBuffer): Unit =

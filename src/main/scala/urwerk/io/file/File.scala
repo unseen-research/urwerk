@@ -134,7 +134,7 @@ import urwerk.concurrent.given
 type Path = java.nio.file.Path
 
 object Path:
-  def apply(element: String, elements: String*): Path = 
+  def apply(element: String, elements: String*): Path =
     Paths.get(element, elements*)
 
   def apply(path: io.Path): Path =
@@ -151,38 +151,39 @@ trait File:
     def createByteSource(): Source[ByteString] =
       read(file)
 
-    def createByteSource(maxChunkSize: Int): Source[ByteString] =
-      read(file, maxChunkSize)
+    def createByteSource(blockSize: Int): Source[ByteString] =
+      read(file, blockSize)
 
 object File extends File
 
 given File = File
 
 private def read(path: Path)(using ec: ExecutionContext): Source[ByteString] =
-  read(path, 4096)
+  val blockSize = Files.getFileStore(path).getBlockSize.toInt
+  read(path, blockSize)
 
-private def read(path: Path, maxChunkSize: Int)(using ec: ExecutionContext): Source[ByteString] =
+private def read(path: Path, blockSize: Int)(using ec: ExecutionContext): Source[ByteString] =
   Source.using[ByteString, AsynchronousFileChannel](
       AsynchronousFileChannel.open(path, Set(StandardOpenOption.READ).asJava, ec.toExecutorService),
       channel => channel.close())
     {channel =>
       Source.create{sink =>
-        val buffer = ByteBuffer.allocate(maxChunkSize)
-        channel.read(buffer, 0, buffer, ReadCompletionHandler(channel, sink, 0, maxChunkSize))
+        val buffer = ByteBuffer.allocate(blockSize.toInt)
+        channel.read(buffer, 0, buffer, ReadCompletionHandler(channel, sink, 0, blockSize.toInt))
       }
     }
 
-private class ReadCompletionHandler(channel: AsynchronousFileChannel, sink: Sink[ByteString], val position: Long, maxChunkSize: Int) extends CompletionHandler[Integer, ByteBuffer]:
+private class ReadCompletionHandler(channel: AsynchronousFileChannel, sink: Sink[ByteString], val position: Long, blockSize: Int) extends CompletionHandler[Integer, ByteBuffer]:
   def completed(readCount: Integer, buffer: ByteBuffer): Unit =
     if readCount >= 0 then
       buffer.flip()
       if buffer.limit() > 0 then
         sink.next(ByteString.from(buffer))
       val nextPos = position + readCount
-      channel.read(buffer, nextPos, buffer.clear(), 
-        ReadCompletionHandler(channel, sink, nextPos, maxChunkSize))
+      channel.read(buffer, nextPos, buffer.clear(),
+        ReadCompletionHandler(channel, sink, nextPos, blockSize))
     else
       sink.complete();
 
-  def failed(error: Throwable, buffer: ByteBuffer): Unit = 
+  def failed(error: Throwable, buffer: ByteBuffer): Unit =
     sink.error(error)

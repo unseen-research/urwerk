@@ -167,22 +167,30 @@ class FileTest extends TestBase:
   }
 
 ////////////
-  "create byte source" in {
-    val givenBytes = Random.nextBytes(4096 * 3)
-    val file = Path(uniqueFile(givenBytes))
+  "create byte source with filesystem block size" in {
+    val file = Path(uniqueFile)
+    val blockSize: Int = Files.getFileStore(file).getBlockSize.toInt
+    val givenBytes = Random.nextBytes(blockSize * 3)
+    val givenByteStrings = Seq(
+      ByteString.unsafeWrap(givenBytes, 0, blockSize),
+      ByteString.unsafeWrap(givenBytes, blockSize, blockSize),
+      ByteString.unsafeWrap(givenBytes, blockSize * 2, blockSize))
+    Files.write(file, givenBytes)
+
     given ExecutionContext = ExecutionContext.global
 
     val actualBytes = file.createByteSource()
-      .reduce(_ ++ _).block.get 
-    actualBytes should be(ByteString(givenBytes))
+      .toSeq.block
+
+    actualBytes should be(givenByteStrings)
   }
 
-  "create byte source with custom chunk size" in {
+  "create byte source with custom block size" in {
     val givenBytes = Random.nextBytes(100)
     val givenBuffers = givenBytes.map(byte => ByteString(byte))
     val file = Path(uniqueFile(givenBytes))
     given ExecutionContext = ExecutionContext.global
 
-    val actualBuffers = file.createByteSource(1).toSeq.block 
+    val actualBuffers = file.createByteSource(1).toSeq.block
     actualBuffers should be (givenBuffers)
   }

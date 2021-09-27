@@ -14,8 +14,10 @@ object TestMain:
 
     val repetition = math.max(stdOutLineRepetition, errOutLineRepetition)
 
+    println(s"ARGS $exitCode $stdOutLine $stdOutLineRepetition")
     for(i <- 0 to repetition)
       if i < stdOutLineRepetition then
+        println("std " + stdOutLine)
         System.out.println(stdOutLine)
 
       if i < errOutLineRepetition then

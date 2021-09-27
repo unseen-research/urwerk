@@ -90,6 +90,7 @@ private def _process(executable: Exec, ec: ExecutionContext): Singleton[ProcessI
       new ProcessInterface {
         def output: Source[ByteString] = jproc.getInputStream()
           .toSource
+          .doOnNext{x => println(s" ON NEXT $x")}
           .subscribeOn(ec)
         def errorOutput: Source[ByteString] = jproc.getErrorStream()
           .toSource

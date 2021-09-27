@@ -89,7 +89,7 @@ object ByteString extends SpecificIterableFactory[Byte, ByteString] {
   def unsafeWrap(buffer: ByteBuffer): ByteString = {
     if !buffer.hasArray then
       throw new UnsupportedOperationException("The given buffer has no array that could be wrapped")
-    
+
     unsafeWrap(buffer.array(), 0, buffer.limit)
   }
 }
@@ -152,10 +152,10 @@ class ByteString (private[io] val array: Array[Byte], private[io] val offset: In
     }
   }
 
-  def mkString(using codec: Codec): String = {
+  def toString(using codec: Codec): String =
     new String(array, offset, length, codec.charSet)
-  }
 
-  override def toString: String = mkString
+  override def toString: String =
+    new String(array, offset, length)
 }
 

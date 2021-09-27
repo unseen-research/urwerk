@@ -1,9 +1,11 @@
 package urwerk.io
 
+import java.io.ByteArrayInputStream
+
 import scala.util.Random
 
 import urwerk.test.TestBase
-import java.io.ByteArrayInputStream
+import urwerk.io.Streams.given
 
 class StreamsTest extends TestBase:
   "input stream to source" in {

@@ -5,6 +5,7 @@ import java.nio.charset.StandardCharsets.UTF_8
 import urwerk.io.ByteString.*
 import urwerk.source.Source
 import urwerk.test.TestBase
+import scala.io.Codec
 
 class ByteStringTest extends TestBase:
   "empty" - {
@@ -247,17 +248,17 @@ class ByteStringTest extends TestBase:
   "to seq" in {
     ByteString(1, 2).toSeq should be(Seq[Byte](1, 2))
   }
-  "make string" in {
-    val byteString = ByteString.unsafeWrap(
-      Array[Byte](1, 2, 3) ++ Array.from[Byte]("abc".getBytes) ++ Array[Byte](4, 5, 6),
-      3, 3)
-    byteString.mkString should be ("abc")
-  }
   "to string" in {
     val byteString = ByteString.unsafeWrap(
       Array[Byte](1, 2, 3) ++ Array.from[Byte]("abc".getBytes) ++ Array[Byte](4, 5, 6),
       3, 3)
     byteString.toString should be ("abc")
+  }
+  "to string with char encoding" in {
+    val byteString = ByteString.unsafeWrap(
+      Array[Byte](1, 2, 3) ++ Array.from[Byte]("abc".getBytes) ++ Array[Byte](4, 5, 6),
+      3, 3)
+    byteString.toString(using Codec.UTF8) should be ("abc")
   }
 
   private def array(bytes: Byte*) = Array[Byte](bytes: _*)

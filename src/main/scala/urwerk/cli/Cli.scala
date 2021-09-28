@@ -9,23 +9,6 @@ import OptionSpec.OverflowStrategy
 import OptionSpec.OverflowStrategy.*
 import java.util.jar.Attributes.Name
 
-object Xyz:
-  
-  trait Token
-  trait Name extends Token
-  trait Value extends Token
-  trait Divider extends Token
-
-  val tokens: Seq[Token | (Name, Value)] = Seq()
-
-object Abc:
-  trait Item
-   
-  trait Value extends Item
-  trait Name extends Item
-  trait NamedValue extends Item
-  trait Divider extends Item
-
 class OptionSpec[+A](val names: Seq[String],
       val arity: (Int, Int),
       val default: Option[A],

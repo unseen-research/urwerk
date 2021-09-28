@@ -42,9 +42,9 @@ object Process:
   case class Info(executable: String, arguments: Seq[String], pid: Long, startInstant: Instant, user: String)
 
 object Exec:
-  def apply(path: Path, args: String*): Exec = Exec(path, args, None, Map())
+  def apply(path: Path, args: String*): Exec = Exec(path, args, None, Map(), false)
 
-case class Exec(path: Path, args: Seq[String], cwd: Option[Path], env: Map[String, String]):
+case class Exec(path: Path, args: Seq[String], cwd: Option[Path], env: Map[String, String], connectErrorToOutput: Boolean):
   def arg(arg: String): Exec =
     copy(args = args :+ arg)
 
@@ -56,6 +56,9 @@ case class Exec(path: Path, args: Seq[String], cwd: Option[Path], env: Map[Strin
       else if name.size == 1 then "-" + name
       else "--" +name
     copy(args = args ++ Seq(prefixedName, value))
+
+  def connectErrorToOutput(connect: Boolean): Exec =
+    copy(connectErrorToOutput = connect)
 
   def cwd(path: Path): Exec =
     copy(cwd = Some(path))
@@ -74,14 +77,16 @@ extension (exec: Exec)
 
   def errorOutput(using executor: ExecutionContext): Singleton[ByteString] = ???
 
-private def _process(executable: Exec, ec: ExecutionContext): Singleton[Process] =
-  val cmd = executable.path.toString +: executable.args
+private def _process(exec: Exec, ec: ExecutionContext): Singleton[Process] =
+  val cmd = exec.path.toString +: exec.args
   val procBuilder = ProcessBuilder(cmd.asJava)
 
   def start: Singleton[Process] =
     val procTry = Try{
       val proc = procBuilder
+        .redirectErrorStream(exec.connectErrorToOutput)
         .start
+
       val info: Info = processOf(proc)
       new Process {
         val info = info

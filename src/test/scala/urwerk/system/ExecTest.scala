@@ -77,6 +77,17 @@ class ExecTest extends TestBase:
     stdOut should be(s"xyz${nl}xyz${nl}xyz${nl}")
   }
 
+  "exec process connect error to output" in {
+    val stdOut = exec.args("0", "abc", "3", "xyz", "3")
+      .connectErrorToOutput(true)
+      .process
+      .flatMap(_.output)
+      .mkString.block
+
+    stdOut should be(s"xyz${nl}xyz${nl}xyz${nl}")
+  }
+
+
   val nl = System.lineSeparator
 
   val execPath = Path(sys.props("java.home") + "/bin/java").toAbsolutePath

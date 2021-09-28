@@ -62,29 +62,43 @@ class ExecTest extends TestBase:
   }
 
   "exec process stdout" in {
-    val stdOut = exec.args("0", "abc", "3", "err", "3").process
+    val out = exec.args("0", "abc", "3", "err", "3").process
       .flatMap(_.output)
       .mkString.block
 
-    stdOut should be(s"abc${nl}abc${nl}abc${nl}")
+    out should be(s"abc${nl}abc${nl}abc${nl}")
   }
 
   "exec process error output" in {
-    val stdOut = exec.args("0", "abc", "3", "xyz", "3").process
+    val out = exec.args("0", "abc", "3", "xyz", "3").process
       .flatMap(_.errorOutput)
       .mkString.block
 
-    stdOut should be(s"xyz${nl}xyz${nl}xyz${nl}")
+    out should be(s"xyz${nl}xyz${nl}xyz${nl}")
   }
 
   "exec process connect error to output" in {
-    val stdOut = exec.args("0", "abc", "3", "xyz", "3")
+    val out = exec.args("0", "abc", "3", "xyz", "3")
       .connectErrorToOutput(true)
       .process
       .flatMap(proc => Source(proc.output, proc.errorOutput).concat)
       .mkString.block
 
-    stdOut should be(s"abc${nl}xyz${nl}abc${nl}xyz${nl}abc${nl}xyz${nl}")
+    out should be(s"abc${nl}xyz${nl}abc${nl}xyz${nl}abc${nl}xyz${nl}")
+  }
+
+  "exec output" in {
+    val out = exec.args("0", "abc", "3", "err", "3").output
+      .mkString.block
+
+    out should be(s"abc${nl}abc${nl}abc${nl}")
+  }
+
+  "exec error output" in {
+    val out = exec.args("0", "abc", "3", "xyz", "3").errorOutput
+      .mkString.block
+
+    out should be(s"xyz${nl}xyz${nl}xyz${nl}")
   }
 
   val nl = System.lineSeparator

@@ -24,6 +24,8 @@ import urwerk.io.ByteString
 import urwerk.io.Streams.given
 
 import Process.*
+import scala.util.Success
+import scala.util.Failure
 
 object Process:
   enum Status:
@@ -71,22 +73,25 @@ trait Process:
 
 extension (exec: Exec)
   def process(using executor: ExecutionContext): Singleton[Process] =
-    _process(exec, executor)
+    processSource(exec, executor)
 
-  def output(using executor: ExecutionContext): Singleton[ByteString] = ???
+  def output(using executor: ExecutionContext): Source[ByteString] = outputSource(exec, executor)
 
-  def errorOutput(using executor: ExecutionContext): Singleton[ByteString] = ???
+  def errorOutput(using executor: ExecutionContext): Source[ByteString] = errorOutputSource(exec, executor)
 
-private def _process(exec: Exec, ec: ExecutionContext): Singleton[Process] =
-  val cmd = exec.path.toString +: exec.args
-  val procBuilder = ProcessBuilder(cmd.asJava)
+private def outputSource(exec: Exec, ec: ExecutionContext): Source[ByteString] =
+  startProc(exec).map(_.getInputStream().toSource) match
+    case Success(source) => source
+    case Failure(error) => ???
 
+private def errorOutputSource(exec: Exec, ec: ExecutionContext): Source[ByteString] =
+  startProc(exec).map(_.getErrorStream().toSource) match
+  case Success(source) => source
+  case Failure(error) => ???
+
+private def processSource(exec: Exec, ec: ExecutionContext): Singleton[Process] =
   def start: Singleton[Process] =
-    val procTry = Try{
-      val proc = procBuilder
-        .redirectErrorStream(exec.connectErrorToOutput)
-        .start
-
+    val procTry = startProc(exec).map{proc =>
       val info: Info = processOf(proc)
       new Process {
         val info = info
@@ -98,11 +103,20 @@ private def _process(exec: Exec, ec: ExecutionContext): Singleton[Process] =
           .subscribeOn(ec)
         def status: Source[Status] = createStatusSource(proc)
       }
-    }
 
+    }
     Singleton.from(procTry)
 
   Singleton.defer(start)
+
+private def startProc(exec: Exec) =
+  val cmd = exec.path.toString +: exec.args
+  val procBuilder = ProcessBuilder(cmd.asJava)
+  Try{
+    procBuilder
+    .redirectErrorStream(exec.connectErrorToOutput)
+    .start
+  }
 
 private def createStatusSource(jproc: JProcess): Source[Status] =
   Source.create[Status]{sink =>

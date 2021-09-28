@@ -87,6 +87,13 @@ extension (exec: Exec)
 
   def errorOutput(using executor: ExecutionContext): Source[ByteString] = errorOutputSource(exec, executor)
 
+  def status(using executor: ExecutionContext): Source[Status] = statusSource(exec, executor)
+
+private def statusSource(exec: Exec, ec: ExecutionContext): Source[Status] =
+  startProc(exec) match
+    case Success(proc) => createStatusSource(proc)
+    case Failure(e) => Source.error(e)
+
 private def outputSource(exec: Exec, ec: ExecutionContext): Source[ByteString] =
   startProc(exec) match
     case Success(proc) =>  

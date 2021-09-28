@@ -176,6 +176,15 @@ class ExecTest extends TestBase:
     }
   }
 
+  "exec status" in {
+    val status = exec.args("44", "abc", "3", "xyz", "3").status
+      .toSeq.block
+
+    val Status.Running = status(0)
+    val Status.Terminated(statusCode) = status(1)
+    statusCode should be (44)
+  }
+
   val nl = System.lineSeparator
 
   val execPath = Path(sys.props("java.home") + "/bin/java").toAbsolutePath

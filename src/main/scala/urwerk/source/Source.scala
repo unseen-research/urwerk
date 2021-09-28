@@ -19,11 +19,14 @@ enum BackPressureStrategy:
   case Latest
 object Source extends SourceFactory:
   export FluxSource.*
+
 trait Source[+A]:
 
   def cache: Source[A]
 
   def concat[B](implicit evidence: Source[A] <:< Source[Source[B]]): Source[B]
+
+  def concat[A1 >: A](other: Source[A1]): Source[A1]
 
   def concatDelayError[B](implicit evidence: Source[A] <:< Source[Source[B]]): Source[B]
 

@@ -42,7 +42,7 @@ class SourceTest extends TestBase:
     r1 should be (r2)
   }
 
-  "concat" in {
+  "concat sources" in {
     sourceProbe(
         Source(Source("abc", "def"), Source("123", "456"))
           .concat)
@@ -50,13 +50,21 @@ class SourceTest extends TestBase:
       .verifyComplete()
   }
 
-  "concat delay error" in {
+  "concat sources delay error" in {
     sourceProbe(
         Source(Source.error(IllegalArgumentException()), Source("abc", "def"), Source("123", "456"))
           .concatDelayError)
       .expectNext("abc", "def", "123", "456")
       .expectError(classOf[IllegalArgumentException])
       .verify()
+  }
+
+  "concat other source" in {
+    sourceProbe(
+        Source("abc", "def")
+          .concat(Source("123", "456")))
+      .expectNext("abc", "def", "123", "456")
+      .verifyComplete()
   }
 
   "create" in {

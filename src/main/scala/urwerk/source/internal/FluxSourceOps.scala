@@ -23,8 +23,9 @@ import urwerk.source.Source
 import urwerk.source.Signal
 import urwerk.source.internal.given
 import urwerk.source.BufferOverflowStrategy
+import org.reactivestreams.Publisher
 
-private abstract class FluxSourceOps[+A](val flux: Flux[_<: A]):
+private abstract class FluxSourceOps[+A](val flux: Flux[_ <: A]):
   type  S[+ _]
 
   protected def wrap[B](flux: Flux[? <: B]): S[B]
@@ -42,6 +43,11 @@ private abstract class FluxSourceOps[+A](val flux: Flux[_<: A]):
       Flux.concatDelayError(
         flux.asInstanceOf[Flux[Source[B]]]
           .map(_.toFlux)))
+
+  def concat[A1 >: A](other: Source[A1]): Source[A1] = 
+    FluxSource.wrap(
+      flux.asInstanceOf[Flux[A1]]
+        .concatWith(other.toFlux))
 
   // def dematerialize[B](implicit evidence: Source[A] <:< Source[Signal[B]]): Source[B] =
   //   takeWhile{
@@ -123,7 +129,7 @@ private abstract class FluxSourceOps[+A](val flux: Flux[_<: A]):
     wrap(
       flux.materialize.map(signal => FluxSignal(signal)))
 
-  def merge[B >: A](that: Source[B]): Source[B] =
+  def merge[A1 >: A](that: Source[A1]): Source[A1] =
     FluxSource.wrap((
       Flux.merge(flux, unwrap(that))))
 
@@ -133,7 +139,7 @@ private abstract class FluxSourceOps[+A](val flux: Flux[_<: A]):
         flux.asInstanceOf[Flux[Source[B]]]
           .map(_.toFlux)))
 
-  def mergeDelayError[B >: A](prefetch: Int, that: Source[B]): Source[B] =
+  def mergeDelayError[A1 >: A](prefetch: Int, that: Source[A1]): Source[A1] =
     FluxSource.wrap(
       Flux.mergeDelayError(prefetch, flux, unwrap(that)))
 
@@ -157,17 +163,17 @@ private abstract class FluxSourceOps[+A](val flux: Flux[_<: A]):
     wrap(
       flux.onErrorMap(op.asJava))
 
-  def onErrorResume[B >: A](op: Throwable => Source[B]): Source[B] =
+  def onErrorResume[A1 >: A](op: Throwable => Source[A1]): Source[A1] =
     FluxSource.wrap(
-      flux.asInstanceOf[Flux[B]]
+      flux.asInstanceOf[Flux[A1]]
         .onErrorResume{(e) => op(e).toFlux})
 
-  def onErrorResume[B >: A](op: Throwable => S[B]): S[B] =
+  def onErrorResume[A1 >: A](op: Throwable => S[A1]): S[A1] =
     wrap(
-      flux.asInstanceOf[Flux[B]]
-              .onErrorResume{(e) => unwrap(op(e).asInstanceOf[Source[B]])})
+      flux.asInstanceOf[Flux[A1]]
+              .onErrorResume{(e) => unwrap(op(e).asInstanceOf[Source[A1]])})
 
-  def reduce[B >: A](op: (B, A) => B): Optional[B] =
+  def reduce[A1 >: A](op: (A1, A) => A1): Optional[A1] =
     def reduceOp[B1 <: A]: BiFunction[B1, B1, B1] = (v1, v2) =>
       op(v1, v2).asInstanceOf[B1]
 
@@ -188,7 +194,7 @@ private abstract class FluxSourceOps[+A](val flux: Flux[_<: A]):
     }
   }
 
-  def subscribe[B >: A](subscriber: Flow.Subscriber[B]): Unit = {
+  def subscribe[A1 >: A](subscriber: Flow.Subscriber[A1]): Unit = {
     flux.subscribe(
       FlowAdapters.toSubscriber(subscriber))
   }
@@ -217,8 +223,8 @@ private abstract class FluxSourceOps[+A](val flux: Flux[_<: A]):
     wrap(
       flux.takeWhile(predicate.asJava))
 
-  def toPublisher[B >: A]: Flow.Publisher[B] =
-    JdkFlowAdapter.publisherToFlowPublisher(flux.asInstanceOf[Flux[B]])
+  def toPublisher[A1 >: A]: Flow.Publisher[A1] =
+    JdkFlowAdapter.publisherToFlowPublisher(flux.asInstanceOf[Flux[A1]])
 
   def toSeq: Singleton[Seq[A]] =
     FluxSingleton.wrap(flux

@@ -12,20 +12,18 @@ import scala.concurrent.duration.Duration
 import scala.jdk.CollectionConverters.given
 import scala.jdk.FutureConverters.given
 import scala.jdk.OptionConverters.given
+import scala.concurrent.Promise
+import scala.util.Try
+import scala.concurrent.ExecutionContext
 
-import urwerk.io.Path
+import urwerk.io.file.Path
 import urwerk.source.Singleton
 import urwerk.source.Sink
 import urwerk.source.Source
-import scala.concurrent.Promise
-import scala.util.Try
-import urwerk.source.BufferOverflowStrategy
-import urwerk.system.Process.Status
-import scala.concurrent.ExecutionContext
-
-import Process.*
 import urwerk.io.ByteString
 import urwerk.io.Streams.given
+
+import Process.*
 
 object Process:
   object Out:
@@ -57,11 +55,14 @@ case class Exec(path: Path, args: Seq[String], cwd: Option[Path], env: Map[Strin
   def arg(arg: String): Exec =
     copy(args = args :+ arg)
 
-  def args(arg: String*): Exec =
-    copy(args = args ++ args)
+  def args(args: String*): Exec =
+    copy(args = this.args ++ args)
 
   def param(name: String, value: String): Exec =
-    copy(args = args ++ Seq(name, value))
+    val prefixedName = if name.startsWith("-") then name
+      else if name.size == 1 then "-" + name
+      else "--" +name
+    copy(args = args ++ Seq(prefixedName, value))
 
   def cwd(path: Path): Exec =
     copy(cwd = Some(path))
@@ -85,12 +86,12 @@ private def _process(executable: Exec, ec: ExecutionContext): Singleton[ProcessI
 
   def start: Singleton[ProcessInterface] =
     val procTry = Try{
-      val jproc = procBuilder.start
+      val jproc = procBuilder
+      .start
 
       new ProcessInterface {
         def output: Source[ByteString] = jproc.getInputStream()
           .toSource
-          .doOnNext{x => println(s" ON NEXT $x")}
           .subscribeOn(ec)
         def errorOutput: Source[ByteString] = jproc.getErrorStream()
           .toSource

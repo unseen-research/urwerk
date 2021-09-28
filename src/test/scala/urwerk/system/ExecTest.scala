@@ -84,7 +84,7 @@ class ExecTest extends TestBase:
       .flatMap(_.output)
       .mkString.block
 
-    stdOut should be(s"xyz${nl}xyz${nl}xyz${nl}")
+    stdOut should be(s"abc${nl}xyz${nl}abc${nl}xyz${nl}abc${nl}xyz${nl}")
   }
 
 

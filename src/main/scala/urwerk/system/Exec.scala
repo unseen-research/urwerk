@@ -29,6 +29,7 @@ import scala.util.Failure
 import java.nio.file.NoSuchFileException
 import java.nio.file.Files
 import urwerk.system.Exec.NoSuchExecutableException
+import urwerk.system.Exec.ExecutionException
 
 object Process:
   enum Status:
@@ -50,6 +51,8 @@ object Exec:
   def apply(path: Path, args: String*): Exec = Exec(path, args, None, Map(), false)
 
   class NoSuchExecutableException(path: Path, message: String) extends NoSuchFileException(message)
+
+  class ExecutionException(exitCode: Int) extends RuntimeException(s"Execution failed: exitCode=$exitCode")
 
 case class Exec(path: Path, args: Seq[String], cwd: Option[Path], env: Map[String, String], connectErrorToOutput: Boolean):
   def arg(arg: String): Exec =
@@ -85,13 +88,28 @@ extension (exec: Exec)
   def errorOutput(using executor: ExecutionContext): Source[ByteString] = errorOutputSource(exec, executor)
 
 private def outputSource(exec: Exec, ec: ExecutionContext): Source[ByteString] =
-  startProc(exec).map(_.getInputStream().toSource) match
-    case Success(source) => source
+  startProc(exec) match
+    case Success(proc) =>  
+      outputSource(proc, 
+        proc.getInputStream()
+        .toSource)
     case Failure(error) => Source.error(error)
 
+private def outputSource(proc: JProcess, source: Source[ByteString]) = 
+  source.concat(Source.create[ByteString]{sink =>
+    val exitCode = proc.waitFor
+    if exitCode == 0 then
+      sink.complete()
+    else 
+      sink.error(ExecutionException(exitCode))
+  })
+
 private def errorOutputSource(exec: Exec, ec: ExecutionContext): Source[ByteString] =
-  startProc(exec).map(_.getErrorStream().toSource) match
-  case Success(source) => source
+  startProc(exec) match
+  case Success(proc) =>  
+      outputSource(proc, 
+        proc.getErrorStream()
+        .toSource)
   case Failure(error) => Source.error(error)
 
 private def processSource(exec: Exec, ec: ExecutionContext): Singleton[Process] =

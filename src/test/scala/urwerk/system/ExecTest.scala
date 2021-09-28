@@ -3,16 +3,18 @@ package urwerk.system
 import java.io.IOException
 import java.nio.file
 import java.util.concurrent.Executors
+import java.nio.file.NoSuchFileException
+
+import scala.concurrent.ExecutionContext
+import scala.io.Codec
 
 import urwerk.test.*
 import urwerk.io.file.Path
 import urwerk.source.{Source, Singleton}
 import urwerk.system.Process.Status.*
-import scala.concurrent.ExecutionContext
-import scala.io.Codec
 import urwerk.system.Process.Status
-import java.nio.file.NoSuchFileException
 import urwerk.system.Exec.NoSuchExecutableException
+import urwerk.system.Exec.ExecutionException
 
 class ExecTest extends TestBase:
   given ExecutionContext = ExecutionContext.fromExecutor(Executors.newCachedThreadPool)
@@ -126,6 +128,13 @@ class ExecTest extends TestBase:
         .output.last.block
     }
   }
+  
+  "exec output fails with non zero exit code" in {
+    intercept[ExecutionException]{
+      exec.args("77", "abc", "3", "err", "3")
+        .output.last.block
+    }
+  }
 
   "exec error output" in {
     val out = exec.args("0", "abc", "3", "xyz", "3").errorOutput
@@ -146,6 +155,13 @@ class ExecTest extends TestBase:
     val path = uniqueFile
     intercept[NoSuchExecutableException]{
       Exec(path, "--version")
+        .errorOutput.last.block
+    }
+  }
+
+  "exec error output fails with non zero exit code" in {
+    intercept[ExecutionException]{
+      exec.args("77", "abc", "3", "err", "3")
         .errorOutput.last.block
     }
   }

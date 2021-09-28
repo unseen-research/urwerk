@@ -26,27 +26,20 @@ import urwerk.io.Streams.given
 import Process.*
 
 object Process:
-  object Out:
-    def unapply(proc: Process): Option[(Source[String], Source[String])] =
-        //Some((proc.sdtOut, proc.errOut))
-        ???
-
   enum Status:
-    val process: Process
+    case Running extends Status
+    case Terminated(exitStatus: Int) extends Status
 
-    case Running(process: Process) extends Status
-    case Terminated(process: Process, exitStatus: Int) extends Status
-
-  private[system] def processOf(proc: JProcess): Process =
+  private[system] def processOf(proc: JProcess): Info =
     val info = proc.info
     val exec = info.command.orElse("")
     val args = info.arguments.orElse(Array.empty).to(Seq)
     val startInstant = info.startInstant.orElse(Instant.now)
     val user = info.user.orElse("")
 
-    Process(exec, args, proc.pid, startInstant, user)
+    Info(exec, args, proc.pid, startInstant, user)
 
-case class Process(executable: String, arguments: Seq[String], pid: Long, startInstant: Instant, user: String)
+  case class Info(executable: String, arguments: Seq[String], pid: Long, startInstant: Instant, user: String)
 
 object Exec:
   def apply(path: Path, args: String*): Exec = Exec(path, args, None, Map())
@@ -67,36 +60,38 @@ case class Exec(path: Path, args: Seq[String], cwd: Option[Path], env: Map[Strin
   def cwd(path: Path): Exec =
     copy(cwd = Some(path))
 
-trait ProcessInterface:
+trait Process:
+  def info: Process.Info
   def output: Source[ByteString]
   def errorOutput: Source[ByteString]
   def status: Source[Status]
 
 extension (exec: Exec)
-  def process(using executor: ExecutionContext): Singleton[ProcessInterface] =
+  def process(using executor: ExecutionContext): Singleton[Process] =
     _process(exec, executor)
 
-  def output(using executor: ExecutionContext): Singleton[ProcessInterface] = ???
+  def output(using executor: ExecutionContext): Singleton[ByteString] = ???
 
-  def errorOutput(using executor: ExecutionContext): Singleton[ProcessInterface] = ???
+  def errorOutput(using executor: ExecutionContext): Singleton[ByteString] = ???
 
-private def _process(executable: Exec, ec: ExecutionContext): Singleton[ProcessInterface] =
+private def _process(executable: Exec, ec: ExecutionContext): Singleton[Process] =
   val cmd = executable.path.toString +: executable.args
   val procBuilder = ProcessBuilder(cmd.asJava)
 
-  def start: Singleton[ProcessInterface] =
+  def start: Singleton[Process] =
     val procTry = Try{
-      val jproc = procBuilder
-      .start
-
-      new ProcessInterface {
-        def output: Source[ByteString] = jproc.getInputStream()
+      val proc = procBuilder
+        .start
+      val info: Info = processOf(proc)
+      new Process {
+        val info = info
+        def output: Source[ByteString] = proc.getInputStream()
           .toSource
           .subscribeOn(ec)
-        def errorOutput: Source[ByteString] = jproc.getErrorStream()
+        def errorOutput: Source[ByteString] = proc.getErrorStream()
           .toSource
           .subscribeOn(ec)
-        def status: Source[Status] = createStatusSource(jproc)
+        def status: Source[Status] = createStatusSource(proc)
       }
     }
 
@@ -105,16 +100,14 @@ private def _process(executable: Exec, ec: ExecutionContext): Singleton[ProcessI
   Singleton.defer(start)
 
 private def createStatusSource(jproc: JProcess): Source[Status] =
-  val proc: Process = processOf(jproc)
-
   Source.create[Status]{sink =>
     if !jproc.isAlive then
-      sink.next(Status.Terminated(proc, jproc.exitValue))
+      sink.next(Status.Terminated(jproc.exitValue))
       sink.complete()
     else
-      sink.next(Status.Running(proc))
+      sink.next(Status.Running)
       while(jproc.isAlive)
         Thread.sleep(10)
-      sink.next(Status.Terminated(proc, jproc.exitValue))
+      sink.next(Status.Terminated(jproc.exitValue))
       sink.complete()
   }

@@ -11,6 +11,8 @@ import urwerk.system.Process.Status.*
 import scala.concurrent.ExecutionContext
 import scala.io.Codec
 import urwerk.system.Process.Status
+import java.nio.file.NoSuchFileException
+import urwerk.system.Exec.NoSuchExecutableException
 
 class ExecTest extends TestBase:
   given ExecutionContext = ExecutionContext.fromExecutor(Executors.newCachedThreadPool)
@@ -45,7 +47,15 @@ class ExecTest extends TestBase:
 
   "exec not existing" in {
     val path = Path("/0815")
-    intercept[IOException]{
+    intercept[NoSuchExecutableException]{
+      Exec(path, "--version").process
+        .block
+    }
+  }
+
+  "exec not executable" in {
+    val path = uniqueFile
+    intercept[NoSuchExecutableException]{
       Exec(path, "--version").process
         .block
     }
@@ -94,11 +104,50 @@ class ExecTest extends TestBase:
     out should be(s"abc${nl}abc${nl}abc${nl}")
   }
 
+  "exec output fail with" in {
+    val out = exec.args("0", "abc", "3", "err", "3").output
+      .mkString.block
+
+    out should be(s"abc${nl}abc${nl}abc${nl}")
+  }
+
+  "exec output executable not exists" in {
+    val path = Path("/0815")
+    intercept[NoSuchExecutableException]{
+      Exec(path, "--version")
+        .output.last.block
+    }
+  }
+
+  "exec output not executable" in {
+    val path = uniqueFile
+    intercept[NoSuchExecutableException]{
+      Exec(path, "--version")
+        .output.last.block
+    }
+  }
+
   "exec error output" in {
     val out = exec.args("0", "abc", "3", "xyz", "3").errorOutput
       .mkString.block
 
     out should be(s"xyz${nl}xyz${nl}xyz${nl}")
+  }
+
+  "exec error output executable not exists" in {
+    val path = Path("/0815")
+    intercept[NoSuchExecutableException]{
+      Exec(path, "--version")
+        .errorOutput.last.block
+    }
+  }
+
+  "exec error output not executable" in {
+    val path = uniqueFile
+    intercept[NoSuchExecutableException]{
+      Exec(path, "--version")
+        .errorOutput.last.block
+    }
   }
 
   val nl = System.lineSeparator

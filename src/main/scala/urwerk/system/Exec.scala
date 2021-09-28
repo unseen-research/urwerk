@@ -26,6 +26,9 @@ import urwerk.io.Streams.given
 import Process.*
 import scala.util.Success
 import scala.util.Failure
+import java.nio.file.NoSuchFileException
+import java.nio.file.Files
+import urwerk.system.Exec.NoSuchExecutableException
 
 object Process:
   enum Status:
@@ -45,6 +48,8 @@ object Process:
 
 object Exec:
   def apply(path: Path, args: String*): Exec = Exec(path, args, None, Map(), false)
+
+  class NoSuchExecutableException(path: Path, message: String) extends NoSuchFileException(message)
 
 case class Exec(path: Path, args: Seq[String], cwd: Option[Path], env: Map[String, String], connectErrorToOutput: Boolean):
   def arg(arg: String): Exec =
@@ -82,12 +87,12 @@ extension (exec: Exec)
 private def outputSource(exec: Exec, ec: ExecutionContext): Source[ByteString] =
   startProc(exec).map(_.getInputStream().toSource) match
     case Success(source) => source
-    case Failure(error) => ???
+    case Failure(error) => Source.error(error)
 
 private def errorOutputSource(exec: Exec, ec: ExecutionContext): Source[ByteString] =
   startProc(exec).map(_.getErrorStream().toSource) match
   case Success(source) => source
-  case Failure(error) => ???
+  case Failure(error) => Source.error(error)
 
 private def processSource(exec: Exec, ec: ExecutionContext): Singleton[Process] =
   def start: Singleton[Process] =
@@ -110,9 +115,16 @@ private def processSource(exec: Exec, ec: ExecutionContext): Singleton[Process] 
   Singleton.defer(start)
 
 private def startProc(exec: Exec) =
-  val cmd = exec.path.toString +: exec.args
-  val procBuilder = ProcessBuilder(cmd.asJava)
   Try{
+    val path = exec.path
+    if !Files.isRegularFile(path) then
+      throw NoSuchExecutableException(path, s"File does not exist: path=$path")
+    else if !Files.isExecutable(path) then
+      throw NoSuchExecutableException(path, s"File is not executable: path=$path")
+
+    val cmd = exec.path.toString +: exec.args
+    val procBuilder = ProcessBuilder(cmd.asJava)
+
     procBuilder
     .redirectErrorStream(exec.connectErrorToOutput)
     .start

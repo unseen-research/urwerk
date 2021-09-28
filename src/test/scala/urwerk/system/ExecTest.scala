@@ -87,7 +87,6 @@ class ExecTest extends TestBase:
     stdOut should be(s"abc${nl}xyz${nl}abc${nl}xyz${nl}abc${nl}xyz${nl}")
   }
 
-
   val nl = System.lineSeparator
 
   val execPath = Path(sys.props("java.home") + "/bin/java").toAbsolutePath

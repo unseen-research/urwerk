@@ -28,7 +28,7 @@ import Process.*
 object Process:
   enum Status:
     case Running extends Status
-    case Terminated(exitStatus: Int) extends Status
+    case Terminated(val code: Int) extends Status
 
   private[system] def processOf(proc: JProcess): Info =
     val info = proc.info

@@ -10,6 +10,7 @@ import urwerk.source.{Source, Singleton}
 import urwerk.system.Process.Status.*
 import scala.concurrent.ExecutionContext
 import scala.io.Codec
+import urwerk.system.Process.Status
 
 class ExecTest extends TestBase:
   given ExecutionContext = ExecutionContext.fromExecutor(Executors.newCachedThreadPool)
@@ -55,9 +56,9 @@ class ExecTest extends TestBase:
       .flatMap(_.status)
       .toSeq.block
 
-    status(0) shouldBe a[Status.Running]
-    val terminated = status(1)
-
+    val Status.Running = status(0)
+    val Status.Terminated(statusCode) = status(1)
+    statusCode should be (42)
   }
 
   "exec process stdout" in {

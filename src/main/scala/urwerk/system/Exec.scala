@@ -50,9 +50,9 @@ object Process:
 object Exec:
   def apply(path: Path, args: String*): Exec = Exec(path, args, None, Map(), false)
 
-  class NoSuchExecutableException(path: Path, message: String) extends NoSuchFileException(message)
+  class NoSuchExecutableException(val path: Path, message: String) extends NoSuchFileException(message)
 
-  class ExecutionException(exitCode: Int) extends RuntimeException(s"Execution failed: exitCode=$exitCode")
+  class ExecutionException(val exitCode: Int) extends RuntimeException(s"Execution failed: exitCode=$exitCode")
 
 case class Exec(path: Path, args: Seq[String], cwd: Option[Path], env: Map[String, String], connectErrorToOutput: Boolean):
   def arg(arg: String): Exec =

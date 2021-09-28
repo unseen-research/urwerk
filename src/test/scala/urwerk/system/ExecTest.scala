@@ -130,10 +130,20 @@ class ExecTest extends TestBase:
   }
   
   "exec output fails with non zero exit code" in {
-    intercept[ExecutionException]{
+    val ex = intercept[ExecutionException]{
       exec.args("77", "abc", "3", "err", "3")
         .output.last.block
     }
+    ex.exitCode should be (77)
+  }
+
+  "exec output error connected to output" in {
+    val ex = intercept[ExecutionException]{
+      exec.connectErrorToOutput(true)
+        .args("77", "abc", "3", "err", "3")
+        .output.last.block
+    }
+    ex.exitCode should be (77)
   }
 
   "exec error output" in {

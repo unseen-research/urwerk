@@ -81,7 +81,7 @@ class ExecTest extends TestBase:
     val stdOut = exec.args("0", "abc", "3", "xyz", "3")
       .connectErrorToOutput(true)
       .process
-      .flatMap(_.output)
+      .flatMap(proc => Source(proc.output, proc.errorOutput).concat)
       .mkString.block
 
     stdOut should be(s"abc${nl}xyz${nl}abc${nl}xyz${nl}abc${nl}xyz${nl}")

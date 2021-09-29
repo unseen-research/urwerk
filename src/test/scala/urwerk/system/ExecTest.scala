@@ -106,13 +106,6 @@ class ExecTest extends TestBase:
     out should be(s"abc${nl}abc${nl}abc${nl}")
   }
 
-  "exec output fail with" in {
-    val out = exec.args("0", "abc", "3", "err", "3").output
-      .mkString.block
-
-    out should be(s"abc${nl}abc${nl}abc${nl}")
-  }
-
   "exec output executable not exists" in {
     val path = Path("/0815")
     intercept[NoSuchExecutableException]{
@@ -137,7 +130,7 @@ class ExecTest extends TestBase:
     ex.exitCode should be (77)
   }
 
-  "exec output error connected to output" in {
+  "exec error output connected to output" in {
     val ex = intercept[ExecutionException]{
       exec.connectErrorToOutput(true)
         .args("77", "abc", "3", "err", "3")

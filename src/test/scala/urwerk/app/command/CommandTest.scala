@@ -15,6 +15,22 @@ class CommandTest extends TestBase:
   val params = Parameters[Seq[String]]
   import params.*
 
+  // "materialize" in {
+  //   val src = Source(
+  //     Optional(),
+  //     Optional.error(IllegalArgumentException("dkfj")),
+  //     Optional(Source("abc", "def")),
+  //     Optional(Source("xyz", "ijk")))
+
+  //   src
+  //     .flatMap(src => src.materialize)
+  //     //.materialize
+  //     .doOnNext(n => println(s"next $n"))
+
+  //     .toSeq.block
+
+  // }
+
   "command" - {
     "match" in {
       val cmd = Command("command", Seq[String]())
@@ -41,8 +57,6 @@ class CommandTest extends TestBase:
         .flatMap((stdOut, errOut) =>  Source(stdOut, errOut))
         .concat.toSeq.block
 
-
-      // //val Success(config) = cmd(Seq("--name2", "55", "--name1", "value1", "command", "--name", "value"))
       result should be (Seq("name2-55", "name1-value1", "cmd-command", "param---name", "param-value"))
     }
   }
@@ -54,7 +68,7 @@ class CommandTest extends TestBase:
   //           .arity(1, 10))
 
   //     val Failure(ex: MissingParameterException) = cmd(Seq("--version"))
-      
+
   //     ex.labelOrName should be ("help")
   //     ex.requiredArity should be (1)
   //     ex.repetition should be (0)
@@ -65,10 +79,10 @@ class CommandTest extends TestBase:
   // "commands" - {
   //   trait Callable:
   //     def apply(): String
-    
+
   //   case class Config(value: String) extends Callable:
   //     def apply() = value
-          
+
   //   val params = Parameters[Config]
   //   import params.*
 
@@ -91,12 +105,12 @@ class CommandTest extends TestBase:
   //   }
 
   //   "resolve failure" in {
-  //     val result = cmds.onError{errors => 
+  //     val result = cmds.onError{errors =>
   //         Config(
   //           errors.map((cmd, error) => cmd.name + ":" + error.getClass().getSimpleName()).mkString("", "&", ""))
   //       }
   //       .resolve(Seq("undefined")).apply()
-      
+
   //     result should be ("version:MissingParameterException&run:MissingParameterException")
   //   }
   // }

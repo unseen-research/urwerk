@@ -2,6 +2,7 @@ package urwerk.app.command
 
 import urwerk.app.command.Parameters.ParameterList
 import urwerk.app.command.Parameters.Position
+import urwerk.app.command.Parameters.UnexpectedParameterException
 import scala.annotation.tailrec
 import scala.util.Try
 import scala.util.Success
@@ -13,7 +14,7 @@ object Command:
   def apply[A](name: String, config: A): Command[A] = Command[A](name, config, Seq(), _ => {Optional.empty}, "")
 
   extension [A](command: Command[A])
-    def resolve(args: Seq[String]): Optional[(Source[String], Source[String])] =
+    def withArgs(args: Seq[String]): Optional[(Source[String], Source[String])] =
       _resolve(command, args)
 
 case class Command[A](name: String,
@@ -38,6 +39,8 @@ private def _resolve[A](command: Command[A], args: Seq[String]): Optional[(Sourc
 @tailrec
 private def _collectParams[A](paramLists: Seq[ParameterList[A]], config: A, args: Seq[String], pos: Position): Try[A] =
   if paramLists.isEmpty then
+    if pos.index < args.size then
+      throw UnexpectedParameterException(pos)
     Success(config)
   else
     val paramList = paramLists.head

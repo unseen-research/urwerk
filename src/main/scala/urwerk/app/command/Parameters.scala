@@ -6,6 +6,7 @@ import scala.util.Try
 import scala.util.Failure
 import urwerk.app.command.Parameters.CollectValueException
 import urwerk.app.command.Parameters.Position
+import urwerk.app.command.Parameters.IllegalValueException
 
 object Parameter:
   trait ValueSpec[A]:
@@ -90,38 +91,44 @@ class Parameter[A, B](val names: Seq[String],
       collectOp: (A, B) => B = collectOp) =
     new Parameter(names, label, arity, default, valueRequired, acceptOp, convertOp, collectOp)
 
-  private[command] def collectValue(config: B, value: String): B =
+  private[command] def collectValue(config: B, value: String, position: Position): B =
     if !acceptOp(value) then
-      throw IllegalArgumentException()
-    val _val = convertOp(value)
-    applyCollectOp(_val, config)
+      throw IllegalValueException(position)
+    try
+      val _val = convertOp(value)
+    catch
+      case ex: Throwable =>
 
-  private[command] def collectDefault(config: B): B =
-    default.map(value => applyCollectOp(value, config))
+    applyCollectOp(_val, config, position)
+
+  private[command] def collectDefault(config: B, position: Position): B =
+    default.map(value => applyCollectOp(value, config, position))
       .getOrElse(config)
 
-  private def applyCollectOp(value: A, config: B): B =
+  private def applyCollectOp(value: A, config: B, position: Position): B =
     Try(
         collectOp(value, config))
-      .recoverWith{case ex: Throwable => Failure(CollectValueException(ex))}
+      .recoverWith{case ex: Throwable => Failure(CollectValueException(ex, position))}
       .get
 
 object Parameters:
 
-  class ParameterException(message: String, cause: Option[Throwable], val position: Option[Position] = None)
+  class ParameterException(message: String, cause: Option[Throwable], val position: Position)
     extends RuntimeException(message, cause.orNull)
 
-  class ArityExceededException(val name: String, val maxArity: Int) extends ParameterException("", None, None)
+  class ArityExceededException(val name: String, val maxArity: Int, position: Position) extends ParameterException("", None, position)
 
+  class IllegalValueException(position: Position) extends ParameterException("", None, position)
+  
   class MissingParameterException(val labelOrName: String, val requiredArity: Int, val repetition: Int, position: Position)
-    extends ParameterException("", None, Some(position))
+    extends ParameterException("", None, position)
 
   class MissingValueException(position: Position)
-    extends ParameterException("", None, Some(position))
+    extends ParameterException("", None, position)
 
-  class CollectValueException(cause: Throwable) extends ParameterException("", Some(cause), None)
+  class CollectValueException(cause: Throwable, position: Position) extends ParameterException("", Some(cause), position)
 
-  class UnexpectedParameterException(position: Position) extends ParameterException("", None, Some(position))
+  class UnexpectedParameterException(position: Position) extends ParameterException("", None, position)
 
   case class Position(val index: Int, val subindex: Int)
 
@@ -153,14 +160,14 @@ object Parameters:
       collectParams(args, pos, positionalParamList, config, paramsMap, paramRepetions)
 
     private def postProcess(config: A, repetitions: Map[ParamKey, (Parameter[?, A], Int)], pos: Position): A =
-      val (_config, _repetitions) = applyDefaults(config, repetitions)
+      val (_config, _repetitions) = applyDefaults(config, repetitions, pos)
       validateArity(_repetitions, pos)
       _config
 
-    private def applyDefaults(config: A, repetitions: Map[ParamKey, (Parameter[?, A], Int)]): (A, Map[ParamKey, (Parameter[?, A], Int)]) =
+    private def applyDefaults(config: A, repetitions: Map[ParamKey, (Parameter[?, A], Int)], position: Position): (A, Map[ParamKey, (Parameter[?, A], Int)]) =
       repetitions.foldLeft((config, repetitions)){case ((config, repetitions), (paramKey, (param, repetition))) =>
         if repetition == 0 && param.default.isDefined then
-          (param.collectDefault(config),
+          (param.collectDefault(config, position),
             repetitions.updated(paramKey, (param, 1)))
         else
           (config, repetitions)
@@ -203,19 +210,19 @@ object Parameters:
               val _config = postProcess(config, repetitions, pos)
               (_config, pos)
             else if arity + 1 >= maxArity then
-              val _config = param.collectValue(config, value)
+              val _config = param.collectValue(config, value, pos)
               val _repetitions = repetitions
                 .updatedWith(ParamKey.Pos(positionalIndex)){case Some((param, arity)) =>
                   Some((param, arity + 1))}
-              val pos = Position(argIndex + 1, 0)
-              collectParams(args, pos, positionalParams.drop(1), _config, paramsMap, _repetitions)
+              val nextPos = Position(argIndex + 1, 0)
+              collectParams(args, nextPos, positionalParams.drop(1), _config, paramsMap, _repetitions)
             else
-              val _config = param.collectValue(config, value)
+              val _config = param.collectValue(config, value, pos)
               val _repetitions = repetitions
                 .updatedWith(ParamKey.Pos(positionalIndex)){case Some((param, arity)) =>
                   Some((param, arity + 1))}
-              val pos = Position(argIndex + 1, 0)
-              collectParams(args, pos, positionalParams, _config, paramsMap, _repetitions)
+              val nextPos = Position(argIndex + 1, 0)
+              collectParams(args, nextPos, positionalParams, _config, paramsMap, _repetitions)
 
           case (name, nextFlagIndex) =>
             paramsMap.get(name) match
@@ -230,14 +237,14 @@ object Parameters:
                   args(argIndex + 1)
                 else ""
 
-                val _config = param.collectValue(config, value)
+                val _config = param.collectValue(config, value, pos)
 
                 val primaryName = param.name
                 val _repetitions = repetitions
                   .updatedWith(ParamKey.Name(primaryName)){case Some((param, arity)) =>
                     val newArity = arity + 1
                     if newArity > param.maxArity then
-                      throw ArityExceededException(name, param.maxArity)
+                      throw ArityExceededException(name, param.maxArity, pos)
                     Some((param, newArity))
                   }
 

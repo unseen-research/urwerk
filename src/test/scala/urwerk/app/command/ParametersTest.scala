@@ -17,16 +17,17 @@ class ParametersTest extends TestBase:
     "collect value" in {
       val value = param[Int]
         .collect{case (value, config) => config.copy(value = value)}
-        .collectValue(Config(0), "-77")
+        .collectValue(Config(0), "-77", Position(4, 5))
 
       value should be (Config(-77))
     }
 
     "illegal value" in {
-      intercept[IllegalArgumentException]{
+      val ex = intercept[IllegalValueException]{
         val p = param[Int]
-        p.collectValue(Config(0), "")
+        p.collectValue(Config(0), "", Position(4, 5))
       }
+      ex.position should be(Position(4, 5))
     }
   }
 
@@ -41,7 +42,7 @@ class ParametersTest extends TestBase:
     "collect value" in {
       val value = param[String]
         .collect{case (value, config) => config.copy(value = value)}
-        .collectValue(Config(""), "string value")
+        .collectValue(Config(""), "string value", Position(4, 5))
 
       value should be (Config("string value"))
     }
@@ -49,7 +50,7 @@ class ParametersTest extends TestBase:
     "illegal value" in {
       intercept[IllegalArgumentException]{
         val p = param[String]
-        p.collectValue(Config(""), "-illegal arg value")
+        p.collectValue(Config(""), "-illegal arg value", Position(4, 5))
       }
     }
   }
@@ -65,7 +66,7 @@ class ParametersTest extends TestBase:
     "collect value" in {
       val value = param[Unit]
         .collect{case (value, config) => config.copy(value = s"Value=$value")}
-        .collectValue(Config(""), "")
+        .collectValue(Config(""), "", Position(4, 5))
 
       value should be (Config("Value=()"))
     }
@@ -123,7 +124,7 @@ class ParametersTest extends TestBase:
         ParameterList(params).collectParams(Seq(),
           Seq("--name1", "--name2"))}
 
-      ex.position should be(Some(Position(1, 0)))
+      ex.position should be(Position(1, 0))
     }
 
     "value parameters" in {
@@ -202,7 +203,7 @@ class ParametersTest extends TestBase:
       ex.labelOrName should be ("STRING_PARAM")
       ex.requiredArity should be (3)
       ex.repetition should be (2)
-      ex.position should be (Some(Position(4, 0)))
+      ex.position should be (Position(4, 0))
     }
 
     "named max arity" in {
@@ -293,7 +294,7 @@ class ParametersTest extends TestBase:
         ParameterList(params)
           .collectParams(Seq(), Seq("-abc"))
       }
-      ex.position should be(Some(Position(0, 2)))
+      ex.position should be(Position(0, 2))
     }
 
     "default values" in {

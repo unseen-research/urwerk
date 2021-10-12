@@ -380,17 +380,17 @@ class SourceTest extends TestBase:
   }
 
   "merge" in {
-    sourceProbe(
-        Source(Source("abc", "def"), Source("123", "456"))
-          .merge)
+    Source(Source("abc", "def"), Source("123", "456"))
+      .merge[String]
+      .toVerifier
       .expectNext("abc", "def", "123", "456")
       .verifyComplete()
   }
 
   "merge delay error with other" in {
-    sourceProbe(
-        Source.error[String](IllegalArgumentException())
-          .mergeDelayError(7, Source("123", "456")))
+    Source.error[String](IllegalArgumentException())
+      .mergeDelayError(7, Source("123", "456"))
+      .toVerifier
       .expectNext("123", "456")
       .expectError(classOf[IllegalArgumentException])
       .verify()
@@ -401,17 +401,17 @@ class SourceTest extends TestBase:
   }
 
   "mkstring with separator" in {
-    singletonProbe(
-      Source(1, 2, 3)
-        .mkString(", "))
+    Source(1, 2, 3)
+      .mkString(", ")
+      .toSingletonVerifier
       .expectNext("1, 2, 3")
       .verifyComplete()
   }
 
   "mkstring with start, separator, end" in {
-    singletonProbe(
-      Source(1, 2, 3)
-        .mkString("> ", ", ", " <"))
+    Source(1, 2, 3)
+      .mkString("> ", ", ", " <")
+      .toSingletonVerifier
       .expectNext("> 1, 2, 3 <")
       .verifyComplete()
   }
@@ -439,13 +439,13 @@ class SourceTest extends TestBase:
     var actualError: Throwable = RuntimeException()
     var actualElement: Any = 0
 
-    sourceProbe(
-        Source(1, 2, 3)
-          .doOnNext(elem => if elem == 2 then throw IllegalArgumentException())
-          .onErrorContinue{(error, elem) =>
-            actualError = error
-            actualElement = elem
-          })
+    Source(1, 2, 3)
+      .doOnNext(elem => if elem == 2 then throw IllegalArgumentException())
+      .onErrorContinue{(error, elem) =>
+        actualError = error
+        actualElement = elem
+      }
+      .toVerifier
       .expectNext(1, 3)
       .verifyComplete()
 
@@ -454,62 +454,61 @@ class SourceTest extends TestBase:
   }
 
   "on error continue pass error" in {
-    sourceProbe(
-        Source(1)
-          .map(_ => throw IllegalArgumentException())
-          .onErrorContinue((error, _) => throw (error)))
+    Source(1)
+      .map(_ => throw IllegalArgumentException())
+      .onErrorContinue((error, _) => throw (error))
+      .toVerifier
       .verifyError(classOf[IllegalArgumentException])
   }
 
   "on error map" in {
-    sourceProbe(
-        Source.error(IllegalArgumentException())
-            .onErrorMap{case error: IllegalArgumentException =>
-              IllegalStateException()})
+    Source.error(IllegalArgumentException())
+      .onErrorMap{case error: IllegalArgumentException =>
+        IllegalStateException()}
+      .toVerifier
       .verifyError(classOf[IllegalStateException])
   }
 
   "on error resume" in {
-    sourceProbe(
-        Source.error[Int](IllegalArgumentException())
-          .onErrorResume(_ => Source(1, 2, 3)))
+    Source.error[Int](IllegalArgumentException())
+        .onErrorResume(_ => Source(1, 2, 3))
+      .toVerifier
       .expectNext(1, 2, 3)
       .verifyComplete()
   }
 
   "push" in {
-    sourceProbe(
-      Source.push[Int]{sink =>
-        sink.next(1)
+    Source.push[Int](
+        _.next(1)
           .next(2)
           .next(3)
-          .complete()
-      })
+          .complete())
+      .toVerifier
       .expectNext(1, 2, 3)
       .verifyComplete()
   }
 
   "reduce" in {
-    sourceProbe(
-      Source("1", "2", "3")
-        .reduce {(acc, elem) => s"$acc $elem"})
-    .expectNext("1 2 3")
-    .verifyComplete()
+    Source("1", "2", "3")
+      .reduce((acc, elem) => s"$acc $elem")
+      .toVerifier
+      .expectNext("1 2 3")
+      .verifyComplete()
   }
 
   "reduce single element" in {
-    sourceProbe(
-        Source("1")
-          .reduce {(acc, elem) => throw new RuntimeException()})
+    Source("1")
+      .reduce((acc, elem) => throw new RuntimeException())
+      .toVerifier
       .expectNext("1")
       .verifyComplete()
   }
 
   "scan" in {
-    sourceProbe(
-        Source(1, 2).scan("0") { (ctx, item) =>
-          s"$ctx $item"
-        })
+    Source(1, 2)
+      .scan("0")((ctx, item) =>
+          s"$ctx $item")
+      .toVerifier
       .expectNext("0", "0 1", "0 1 2")
       .verifyComplete()
   }
@@ -521,7 +520,7 @@ class SourceTest extends TestBase:
 
     start = "0"
 
-    sourceProbe(src)
+    src.toVerifier
       .expectNext("0", "0 1", "0 1 2")
       .verifyComplete()
   }
@@ -613,30 +612,32 @@ class SourceTest extends TestBase:
   }
 
   "take until" in {
-    sourceProbe(Source(0, 1, 2, 3, 4)
-        .takeUntil(_ == 3))
+    Source(0, 1, 2, 3, 4)
+      .takeUntil(_ == 3)
+      .toVerifier
       .expectNext(0, 1, 2, 3)
       .verifyComplete()
   }
 
   "take while" in {
-    sourceProbe(Source(0, 1, 2, 3, 4)
-        .takeWhile(_ < 4))
+    Source(0, 1, 2, 3, 4)
+      .takeWhile(_ < 4)
+      .toVerifier
       .expectNext(0, 1, 2, 3)
       .verifyComplete()
   }
 
   "to sequence" in {
     val seq = Seq(1, 2, 3)
-    singletonProbe(
-      Source.from(seq).toSeq)
+    Source.from(seq).toSeq
+      .toSingletonVerifier
       .expectNext(seq)
       .verifyComplete()
   }
 
   "to sequence for empty source" in {
-    singletonProbe(
-      Source().toSeq)
+    Source().toSeq
+      .toSingletonVerifier
       .expectNext(Seq())
       .verifyComplete()
   }
@@ -648,16 +649,15 @@ class SourceTest extends TestBase:
       else Some(s"state $state", state-1)}
 
     state = 3
-    sourceProbe(src)
+    src.toVerifier
       .expectNext("state 3", "state 2", "state 1", "state 0")
       .verifyComplete()
   }
 
   "unfold with error" in {
-    sourceProbe(
-        Source.unfold(3){state =>
-          throw new UnsupportedOperationException()
-        })
+    Source.unfold(3)(_ =>
+        throw new UnsupportedOperationException())
+      .toVerifier
       .verifyError(classOf[UnsupportedOperationException])
   }
 
@@ -669,7 +669,7 @@ class SourceTest extends TestBase:
       else Some(s"state $state", state-1)}
 
     state = 3
-    sourceProbe(src)
+    src.toVerifier
       .expectNext("state 3", "state 2", "state 1", "state 0")
       .verifyComplete()
 
@@ -678,10 +678,10 @@ class SourceTest extends TestBase:
 
   "unfold with doOnLastState with error" in {
     var finalState = 7
-    sourceProbe(
-        Source.unfold(3, (state: Int) => finalState = state){state =>
-          throw new UnsupportedOperationException()
-        })
+
+    Source.unfold(3, (state: Int) => finalState = state)(state =>
+        throw new UnsupportedOperationException())
+      .toVerifier
       .verifyError(classOf[UnsupportedOperationException])
     finalState should be(3)
   }

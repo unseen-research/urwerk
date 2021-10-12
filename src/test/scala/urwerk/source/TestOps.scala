@@ -23,7 +23,7 @@ object TestOps:
     def toVerifier  = sourceProbe(source)
 
   extension[A](source: Singleton[A])
-    def toSingletonVerifier  = singletonProbe(source)
+    def assertSingleton = source
 
   extension[A](source: Optional[A])
-    def toOptionalVerifier  = optionalProbe(source)
+    def assertOptional = source

@@ -285,54 +285,62 @@ class SourceTest extends TestBase:
 
   "head of empty source throws NoSuchElementException" in {
     Source().head
-      .toSingletonVerifier
+      .assertSingleton
+      .toVerifier
       .expectError(classOf[NoSuchElementException])
       .verify()
   }
 
   "head" in {
     Source(1, 2, 3).head
-      .toSingletonVerifier
+      .assertSingleton
+      .toVerifier
       .expectNext(1)
       .verifyComplete()
   }
 
   "head option of empty source" in {
     Source().headOption
-      .toOptionalVerifier
+      .assertOptional
+      .toVerifier
       .verifyComplete()
   }
 
   "head option" in {
     Source(1, 2, 3).headOption
-      .toOptionalVerifier
+      .assertOptional
+      .toVerifier
       .expectNext(1)
       .verifyComplete()
   }
 
   "last of empty source throws NoSuchElementException" in {
     Source().last
-      .toSingletonVerifier
+      .assertSingleton
+      .toVerifier
       .expectError(classOf[NoSuchElementException])
       .verify()
   }
 
   "last" in {
     Source(1, 2, 3).last
-      .toSingletonVerifier
+      .assertSingleton
+      .toVerifier
       .expectNext(3)
       .verifyComplete()
   }
 
   "last option of empty source" in {
     Source().lastOption
-      .toOptionalVerifier
+      .assertOptional
+      .toVerifier
       .verifyComplete()
   }
 
   "last option" in {
     Source(1, 2, 3).lastOption
-      .toOptionalVerifier
+      .assertOptional
+      .toVerifier
       .expectNext(3)
       .verifyComplete()
   }
@@ -340,7 +348,8 @@ class SourceTest extends TestBase:
   "last option transmit the error" in {
     Source.error(new UnsupportedOperationException())
       .lastOption
-      .toOptionalVerifier
+      .assertOptional
+      .toVerifier
       .expectError(classOf[UnsupportedOperationException])
       .verify()
   }
@@ -403,7 +412,8 @@ class SourceTest extends TestBase:
   "mkstring with separator" in {
     Source(1, 2, 3)
       .mkString(", ")
-      .toSingletonVerifier
+      .assertSingleton
+      .toVerifier
       .expectNext("1, 2, 3")
       .verifyComplete()
   }
@@ -411,7 +421,8 @@ class SourceTest extends TestBase:
   "mkstring with start, separator, end" in {
     Source(1, 2, 3)
       .mkString("> ", ", ", " <")
-      .toSingletonVerifier
+      .assertSingleton
+      .toVerifier
       .expectNext("> 1, 2, 3 <")
       .verifyComplete()
   }
@@ -630,14 +641,16 @@ class SourceTest extends TestBase:
   "to sequence" in {
     val seq = Seq(1, 2, 3)
     Source.from(seq).toSeq
-      .toSingletonVerifier
+      .assertSingleton
+      .toVerifier
       .expectNext(seq)
       .verifyComplete()
   }
 
   "to sequence for empty source" in {
     Source().toSeq
-      .toSingletonVerifier
+      .assertSingleton
+      .toVerifier
       .expectNext(Seq())
       .verifyComplete()
   }

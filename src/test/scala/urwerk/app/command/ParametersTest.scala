@@ -28,6 +28,7 @@ class ParametersTest extends TestBase:
         p.collectValue(Config(0), "", Position(4, 5))
       }
       ex.position should be(Position(4, 5))
+      ex.getCause shouldBe a[NumberFormatException]
     }
   }
 
@@ -48,10 +49,11 @@ class ParametersTest extends TestBase:
     }
 
     "illegal value" in {
-      intercept[IllegalArgumentException]{
+      val ex = intercept[IllegalValueException]{
         val p = param[String]
         p.collectValue(Config(""), "-illegal arg value", Position(4, 5))
       }
+      ex.position should be (Position(4, 5))
     }
   }
 
@@ -325,7 +327,7 @@ class ParametersTest extends TestBase:
         param[String]("name1")((value, config) => throw IllegalStateException("test message"))
       )
 
-      val ex = intercept[CollectValueException] {
+      val ex = intercept[IllegalValueException] {
         ParameterList(params)
           .collectParams(Seq(), Seq("--name1", "value1"))
       }

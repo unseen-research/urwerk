@@ -4,7 +4,6 @@ import scala.annotation.tailrec
 import scala.compiletime.constValue
 import scala.util.Try
 import scala.util.Failure
-import urwerk.app.command.Parameters.CollectValueException
 import urwerk.app.command.Parameters.Position
 import urwerk.app.command.Parameters.IllegalValueException
 
@@ -94,19 +93,21 @@ class Parameter[A, B](val names: Seq[String],
   private[command] def collectValue(config: B, value: String, position: Position): B =
     if !acceptOp(value) then
       throw IllegalValueException(position)
-    val _val = convertOp(value)
-
-    applyCollectOp(_val, config, position)
+    Try(
+        convertOp(value))
+      .recoverWith(ex => Failure(IllegalValueException(ex, position)))
+      .flatMap(value => applyCollectOp(value, config, position))
+      .get
 
   private[command] def collectDefault(config: B, position: Position): B =
-    default.map(value => applyCollectOp(value, config, position))
+    default.map(value =>
+        applyCollectOp(value, config, position).get)
       .getOrElse(config)
 
-  private def applyCollectOp(value: A, config: B, position: Position): B =
+  private def applyCollectOp(value: A, config: B, position: Position): Try[B] =
     Try(
         collectOp(value, config))
-      .recoverWith{case ex: Throwable => Failure(CollectValueException(ex, position))}
-      .get
+      .recoverWith(ex => Failure(IllegalValueException(ex, position)))
 
 object Parameters:
 
@@ -115,7 +116,7 @@ object Parameters:
 
   class ArityExceededException(val name: String, val maxArity: Int, position: Position) extends ParameterException("", None, position)
 
-  class IllegalValueException(cause: Option[Throwable], position: Position) extends ParameterException("", None, position):
+  class IllegalValueException(cause: Option[Throwable], position: Position) extends ParameterException("", cause, position):
     def this(position: Position) = this(None, position)
     def this(cause: Throwable, position: Position) = this(Some(cause), position)
 
@@ -124,8 +125,6 @@ object Parameters:
 
   class MissingValueException(position: Position)
     extends ParameterException("", None, position)
-
-  class CollectValueException(cause: Throwable, position: Position) extends ParameterException("", Some(cause), position)
 
   class UnexpectedParameterException(position: Position) extends ParameterException("", None, position)
 

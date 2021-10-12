@@ -9,13 +9,14 @@ import scala.util.Success
 import scala.util.Failure
 import urwerk.source.Source
 import urwerk.source.Optional
+import urwerk.app.command.Parameters.ParameterException
 
 object Command:
   def apply[A](name: String, config: A): Command[A] = Command[A](name, config, Seq(), _ => {Optional.empty}, "")
 
   extension [A](command: Command[A])
     def withArgs(args: Seq[String]): Optional[(Source[String], Source[String])] =
-      _resolve(command, args)
+      _collectParams(command, args)
 
 case class Command[A](name: String,
     config: A,
@@ -29,10 +30,12 @@ case class Command[A](name: String,
   def apply(op: A => Optional[(Source[String], Source[String])]): Command[A] =
     copy(applyOp = op)
 
-private def _resolve[A](command: Command[A], args: Seq[String]): Optional[(Source[String], Source[String])] =
+private def _collectParams[A](command: Command[A], args: Seq[String]): Optional[(Source[String], Source[String])] =
   _collectParams(command.parameterLists, command.config, args, Position(0, 0)) match
     case Success(config) =>
       command.applyOp(config)
+    case Failure(error: ParameterException) if error.position == Position(0, 0) =>
+      Optional()
     case Failure(error: Throwable) =>
       Optional.error(error)
 

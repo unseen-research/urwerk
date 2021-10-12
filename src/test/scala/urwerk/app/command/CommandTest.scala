@@ -115,6 +115,27 @@ class CommandTest extends TestBase:
 
     result should be (Seq("name2-55", "name1-value1", "cmd-command", "param---name", "param-value"))
   }
+
+  "command does not match" in {
+    val cmd = Command("command", Seq[String]())
+      .params(
+        param[String]("param1"){(value, config) =>
+            config :+ s"param1-$value"}
+          .default("default-value")
+      )
+      .params(
+        param[Int]{(value, config) =>
+            config :+ s"int-param-$value"}
+          .arity(1, 1)
+      )
+      .apply{config =>
+        Optional((Source(config*), Source()))}
+
+    val result = cmd.withArgs(Seq("value1", "value2"))
+       .toSeq.block
+
+    result should be (Seq())
+  }
   //   "not match" in{
   //     val cmd = Command("help", Seq[String]())
   //       .params(

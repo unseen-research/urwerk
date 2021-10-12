@@ -50,7 +50,7 @@ class CommandTest extends TestBase:
           config :+ s"name3:$value"
         })
       .apply{config =>
-        Optional((Source(config*), Source()))}
+        (Source(config*), Source())}
 
     val result = cmd.withArgs(Seq("--name2", "55", "--name1", "value1", "command", "--name3", "77"))
       .flatMap((stdOut, errOut) =>  Source(stdOut, errOut))
@@ -107,7 +107,7 @@ class CommandTest extends TestBase:
           .arity(0, 77)
           .accept(_ => true))
       .apply{config =>
-        Optional((Source(config*), Source()))}
+        (Source(config*), Source())}
 
     val result = cmd.withArgs(Seq("--name2", "55", "--name1", "value1", "command", "--name", "value"))
       .flatMap((stdOut, errOut) =>  Source(stdOut, errOut))
@@ -128,8 +128,6 @@ class CommandTest extends TestBase:
             config :+ s"int-param-$value"}
           .arity(1, 1)
       )
-      .apply{config =>
-        Optional((Source(config*), Source()))}
 
     val result = cmd.withArgs(Seq("value1", "value2"))
        .toSeq.block

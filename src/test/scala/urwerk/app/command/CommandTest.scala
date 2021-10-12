@@ -69,7 +69,7 @@ class CommandTest extends TestBase:
       cmd.withArgs(Seq("--name1", "value1", "--name2", "77", "undefined1", "undefined2"))
         .block
     }
-    ex.position should be (Some(Position(4, 0)))
+    ex.position should be (Position(4, 0))
   }
 
   "command with multiple param lists with undefined trailing flags" in {
@@ -85,7 +85,7 @@ class CommandTest extends TestBase:
       cmd.withArgs(Seq("--name1", "value1", "--name2", "77", "-abcUndefined", ""))
         .block
     }
-    ex.position should be (Some(Position(4, 3)))
+    ex.position should be (Position(4, 3))
   }
 
   "command with multiple param lists and trailing args" in {

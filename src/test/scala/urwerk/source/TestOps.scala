@@ -18,3 +18,12 @@ object TestOps:
 
   def sourceProbe[A](request: Long, source: Source[A]): FirstStep[A] =
     StepVerifier.create(source.toFlux, request)
+
+  extension[A](source: Source[A])
+    def toVerifier  = sourceProbe(source)
+
+  extension[A](source: Singleton[A])
+    def toSingletonVerifier  = singletonProbe(source)
+
+  extension[A](source: Optional[A])
+    def toOptionalVerifier  = optionalProbe(source)

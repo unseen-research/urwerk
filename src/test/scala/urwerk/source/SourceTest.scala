@@ -26,8 +26,8 @@ import java.util.concurrent.CountDownLatch
 
 class SourceTest extends TestBase:
   "apply" in {
-    sourceProbe(
-        Source(0, 8, 15))
+    Source(0, 8, 15)
+      .toVerifier
       .expectNext(0, 8, 15)
       .verifyComplete()
   }
@@ -43,49 +43,47 @@ class SourceTest extends TestBase:
   }
 
   "concat sources" in {
-    sourceProbe(
-        Source(Source("abc", "def"), Source("123", "456"))
-          .concat)
+    Source(Source("abc", "def"), Source("123", "456"))
+      .concat[String]
+      .toVerifier
       .expectNext("abc", "def", "123", "456")
       .verifyComplete()
   }
 
   "concat sources delay error" in {
-    sourceProbe(
-        Source(Source.error(IllegalArgumentException()), Source("abc", "def"), Source("123", "456"))
-          .concatDelayError)
+    Source(Source.error(IllegalArgumentException()), Source("abc", "def"), Source("123", "456"))
+      .concatDelayError
+      .toVerifier
       .expectNext("abc", "def", "123", "456")
       .expectError(classOf[IllegalArgumentException])
       .verify()
   }
 
   "concat other source" in {
-    sourceProbe(
-        Source("abc", "def")
-          .concat(Source("123", "456")))
+    Source("abc", "def")
+      .concat(Source("123", "456"))
+      .toVerifier
       .expectNext("abc", "def", "123", "456")
       .verifyComplete()
   }
 
   "create" in {
-    sourceProbe(
-        Source.create[Int]{ sink =>
-          sink.next(1)
-            .next(2)
-            .next(3)
-            .complete()
-        })
+    Source.create[Int](
+        _.next(1)
+          .next(2)
+          .next(3)
+          .complete())
+      .toVerifier
       .expectNext(1, 2, 3)
       .verifyComplete()
   }
 
   "create with error" in {
-    sourceProbe(
-        Source.create[Int]{sink =>
-          sink.next(1)
-            .next(2)
-            .error(new IllegalArgumentException("message"))
-        })
+    Source.create[Int](
+        _.next(1)
+          .next(2)
+          .error(new IllegalArgumentException("message")))
+      .toVerifier
       .expectNext(1, 2)
       .expectError(classOf[IllegalArgumentException])
       .verify()
@@ -93,12 +91,11 @@ class SourceTest extends TestBase:
 
   "create with back pressure strategy" in {
     //TODO test the backpressure strategy
-    sourceProbe(
-        Source.create[Int](BackPressureStrategy.Error){sink =>
-          sink.next(1)
-            .next(2)
-            .error(new IllegalArgumentException("message"))
-        })
+    Source.create[Int](BackPressureStrategy.Error)(
+        _.next(1)
+          .next(2)
+          .error(new IllegalArgumentException("message")))
+      .toVerifier
       .expectNext(1, 2)
       .expectError(classOf[IllegalArgumentException])
       .verify()
@@ -141,15 +138,15 @@ class SourceTest extends TestBase:
     val source = Source.defer(
       sources.next)
 
-    sourceProbe(source)
+    source.toVerifier
       .expectNext(1, 2, 3)
       .verifyComplete()
 
-    sourceProbe(source)
+    source.toVerifier
       .expectError(classOf[IllegalArgumentException])
       .verify()
 
-    sourceProbe(source)
+    source.toVerifier
       .expectNext(4, 5, 6)
       .verifyComplete()
   }
@@ -162,18 +159,18 @@ class SourceTest extends TestBase:
     val source = Source.deferError(
       errors.next)
 
-    sourceProbe(source)
+    source.toVerifier
       .expectError(classOf[IllegalArgumentException])
       .verify()
 
-    sourceProbe(source)
+    source.toVerifier
       .expectError(classOf[IllegalStateException])
       .verify()
   }
 
   "distinct" in {
-    sourceProbe(
-        Source(true, false, true, false, true, false).distinct)
+    Source(true, false, true, false, true, false).distinct
+      .toVerifier
       .expectNext(true, false)
       .verifyComplete()
   }
@@ -209,72 +206,70 @@ class SourceTest extends TestBase:
   }
 
   "empty" in {
-    sourceProbe(
-        Source.empty)
+    Source.empty
+      .toVerifier
       .verifyComplete()
   }
 
   "error" in {
-    sourceProbe(
-        Source.error(new IllegalArgumentException()))
+    Source.error(new IllegalArgumentException())
+      .toVerifier
       .expectError(classOf[IllegalArgumentException])
       .verify()
   }
 
   "filter" in {
-    sourceProbe(
-      Source(1, 2, 3, 4)
-        .filter(_ % 2 == 0))
+    Source(1, 2, 3, 4)
+      .filter(_ % 2 == 0)
+      .toVerifier
       .expectNext(2, 4)
       .verifyComplete()
   }
 
   "filter not" in {
-    sourceProbe(
-      Source(1, 2, 3, 4)
-        .filterNot(_ % 2 == 0))
+    Source(1, 2, 3, 4)
+      .filterNot(_ % 2 == 0)
+      .toVerifier
       .expectNext(1, 3)
       .verifyComplete()
   }
 
   "flatMap" in {
-    sourceProbe(
-        Source(1, 2, 3)
-          .flatMap(item => Source(s"a:$item", s"b:$item")))
+    Source(1, 2, 3)
+      .flatMap(item => Source(s"a:$item", s"b:$item"))
+      .toVerifier
       .expectNext("a:1", "b:1", "a:2", "b:2", "a:3", "b:3")
       .verifyComplete()
   }
 
   "flatMap with concurrency" in {
-    sourceProbe(
-        Source(1, 2, 3).flatMap(2){item =>
-          Source(s"first $item", s"second $item")
-        })
+    Source(1, 2, 3)
+      .flatMap(2)(item =>
+        Source(s"first $item", s"second $item"))
+      .toVerifier
       .expectNext("first 1", "second 1", "first 2", "second 2", "first 3", "second 3")
       .verifyComplete()
   }
 
   "flat map with concurrency and prefetch" in {
-    sourceProbe(
-        Source(1, 2, 3).flatMap(2, 2) {item =>
-          Source(s"first $item", s"second $item")
-        })
+    Source(1, 2, 3).flatMap(2, 2)(item =>
+        Source(s"first $item", s"second $item"))
+      .toVerifier
       .expectNext("first 1", "second 1", "first 2", "second 2", "first 3", "second 3")
       .verifyComplete()
   }
 
   "fold" in {
-    sourceProbe(
-        Source(1, 2).fold("0"){(ctx, item) =>
-          s"$ctx $item"
-        })
+    Source(1, 2).fold("0")((ctx, item) =>
+        s"$ctx $item")
+      .toVerifier
       .expectNext("0 1 2")
       .verifyComplete()
   }
 
   "from iterable" in {
-    sourceProbe(
-        Source.from(Seq(1, 2, 3)))
+    Source.from(Seq(1, 2, 3))
+      .toVerifier
       .expectNext(1, 2, 3)
       .verifyComplete()
   }
@@ -282,70 +277,70 @@ class SourceTest extends TestBase:
   "from publisher" in {
     val publisher: Flow.Publisher[Int] = Source(1, 2, 3).toPublisher
 
-    sourceProbe(
-        Source.from(publisher))
+    Source.from(publisher)
+      .toVerifier
       .expectNext(1, 2, 3)
       .verifyComplete()
   }
 
   "head of empty source throws NoSuchElementException" in {
-    singletonProbe(
-        Source().head)
+    Source().head
+      .toSingletonVerifier
       .expectError(classOf[NoSuchElementException])
       .verify()
   }
 
   "head" in {
-    singletonProbe(
-        Source(1, 2, 3).head)
+    Source(1, 2, 3).head
+      .toSingletonVerifier
       .expectNext(1)
       .verifyComplete()
   }
 
   "head option of empty source" in {
-    optionalProbe(
-        Source().headOption)
+    Source().headOption
+      .toOptionalVerifier
       .verifyComplete()
   }
 
   "head option" in {
-    optionalProbe(
-        Source(1, 2, 3).headOption)
+    Source(1, 2, 3).headOption
+      .toOptionalVerifier
       .expectNext(1)
       .verifyComplete()
   }
 
   "last of empty source throws NoSuchElementException" in {
-    singletonProbe(
-        Source().last)
+    Source().last
+      .toSingletonVerifier
       .expectError(classOf[NoSuchElementException])
       .verify()
   }
 
   "last" in {
-    singletonProbe(
-        Source(1, 2, 3).last)
+    Source(1, 2, 3).last
+      .toSingletonVerifier
       .expectNext(3)
       .verifyComplete()
   }
 
   "last option of empty source" in {
-    optionalProbe(
-        Source().lastOption)
+    Source().lastOption
+      .toOptionalVerifier
       .verifyComplete()
   }
 
   "last option" in {
-    optionalProbe(
-        Source(1, 2, 3).lastOption)
+    Source(1, 2, 3).lastOption
+      .toOptionalVerifier
       .expectNext(3)
       .verifyComplete()
   }
 
   "last option transmit the error" in {
-    optionalProbe(
-        Source.error(new UnsupportedOperationException())
-          .lastOption)
+    Source.error(new UnsupportedOperationException())
+      .lastOption
+      .toOptionalVerifier
       .expectError(classOf[UnsupportedOperationException])
       .verify()
   }

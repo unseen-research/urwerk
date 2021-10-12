@@ -94,10 +94,7 @@ class Parameter[A, B](val names: Seq[String],
   private[command] def collectValue(config: B, value: String, position: Position): B =
     if !acceptOp(value) then
       throw IllegalValueException(position)
-    try
-      val _val = convertOp(value)
-    catch
-      case ex: Throwable =>
+    val _val = convertOp(value)
 
     applyCollectOp(_val, config, position)
 
@@ -118,8 +115,10 @@ object Parameters:
 
   class ArityExceededException(val name: String, val maxArity: Int, position: Position) extends ParameterException("", None, position)
 
-  class IllegalValueException(position: Position) extends ParameterException("", None, position)
-  
+  class IllegalValueException(cause: Option[Throwable], position: Position) extends ParameterException("", None, position):
+    def this(position: Position) = this(None, position)
+    def this(cause: Throwable, position: Position) = this(Some(cause), position)
+
   class MissingParameterException(val labelOrName: String, val requiredArity: Int, val repetition: Int, position: Position)
     extends ParameterException("", None, position)
 

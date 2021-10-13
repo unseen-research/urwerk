@@ -1,6 +1,7 @@
 package urwerk.system
 
 object TestMain:
+
   def main(args: Array[String]): Unit =
     main(args.to(Seq))
 

@@ -10,6 +10,7 @@ import urwerk.app.command.Parameters.Position
 import urwerk.source.Source
 import urwerk.source.Optional
 import urwerk.app.command.Parameters.UnexpectedParameterException
+import Command.toCommand
 
 class CommandTest extends TestBase:
 
@@ -52,7 +53,7 @@ class CommandTest extends TestBase:
       .apply{config =>
         (Source(config*), Source())}
 
-    val result = cmd.withArgs(Seq("--name2", "55", "--name1", "value1", "command", "--name3", "77"))
+    val result = cmd.toCommand(Seq("--name2", "55", "--name1", "value1", "command", "--name3", "77"))
       .flatMap((stdOut, errOut) =>  Source(stdOut, errOut))
       .concat.toSeq.block
 
@@ -66,7 +67,7 @@ class CommandTest extends TestBase:
       .params(
         param[Int]("name2"))
     val ex = intercept[UnexpectedParameterException]{
-      cmd.withArgs(Seq("--name1", "value1", "--name2", "77", "undefined1", "undefined2"))
+      cmd.toCommand(Seq("--name1", "value1", "--name2", "77", "undefined1", "undefined2"))
         .block
     }
     ex.position should be (Position(4, 0))
@@ -82,7 +83,7 @@ class CommandTest extends TestBase:
         param[Unit]("b"),
         param[Unit]("c"))
     val ex = intercept[UnexpectedParameterException]{
-      cmd.withArgs(Seq("--name1", "value1", "--name2", "77", "-abcUndefined", ""))
+      cmd.toCommand(Seq("--name1", "value1", "--name2", "77", "-abcUndefined", ""))
         .block
     }
     ex.position should be (Position(4, 3))
@@ -109,7 +110,7 @@ class CommandTest extends TestBase:
       .apply{config =>
         (Source(config*), Source())}
 
-    val result = cmd.withArgs(Seq("--name2", "55", "--name1", "value1", "command", "--name", "value"))
+    val result = cmd.toCommand(Seq("--name2", "55", "--name1", "value1", "command", "--name", "value"))
       .flatMap((stdOut, errOut) =>  Source(stdOut, errOut))
       .concat.toSeq.block
 
@@ -129,7 +130,7 @@ class CommandTest extends TestBase:
           .arity(1, 1)
       )
 
-    val result = cmd.withArgs(Seq("value1", "value2"))
+    val result = cmd.toCommand(Seq("value1", "value2"))
        .toSeq.block
 
     result should be (Seq())

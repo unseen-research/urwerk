@@ -121,7 +121,7 @@ class ExecTest extends TestBase:
         .output.last.block
     }
   }
-  
+
   "exec output fails with non zero exit code" in {
     val ex = intercept[ExecutionException]{
       exec.args("77", "abc", "3", "err", "3")

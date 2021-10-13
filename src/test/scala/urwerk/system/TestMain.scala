@@ -4,7 +4,7 @@ object TestMain:
   def main(args: Array[String]): Unit =
     main(args.to(Seq))
 
-  def main(args: Seq[String]): Unit =
+  private def main(args: Seq[String]): Unit =
     try
       val exitCode = args.applyOrElse(0, _ => "0").toInt
       val stdOutLine = args.applyOrElse(1, _ => "")
@@ -27,4 +27,3 @@ object TestMain:
       case e: Throwable =>
         println(s"ERROR $e")
         sys.exit(-111)
-

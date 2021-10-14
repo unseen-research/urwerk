@@ -21,8 +21,7 @@ object Command:
           _collectParams(spec, args)
       }
 
-trait Command:
-  def apply(args: Seq[String]): Optional[(Source[String], Source[String])]
+type Command = Seq[String] => Optional[(Source[String], Source[String])]
 
 case class CommandSpec[A](name: String,
     config: A,
@@ -33,8 +32,8 @@ case class CommandSpec[A](name: String,
   def params(param: Parameter[?, A], params: Parameter[?, A]*): CommandSpec[A] =
     copy(parameterLists = parameterLists :+ ParameterList(param +: params))
 
-  def apply(op: A => (Source[String], Source[String])): CommandSpec[A] =
-    copy(applyOp = op)
+  def onApply(apply: A => (Source[String], Source[String])): CommandSpec[A] =
+    copy(applyOp = apply)
 
 private def _collectParams[A](command: CommandSpec[A], args: Seq[String]): Optional[(Source[String], Source[String])] =
   _collectParams(command.parameterLists, command.config, args, Position(0, 0)) match

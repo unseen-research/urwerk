@@ -36,21 +36,22 @@ class CommandTest extends TestBase:
   "command with multiple param lists" in {
     val cmd = Command("command", Seq[String]())
       .params(
-        param[String]("name1"){(value, config) =>
-          config :+ s"name1:$value"
-        },
-        param[Int]("name2"){(value, config) =>
-          config :+ s"name2:$value"
-        })
+        param[String]("name1")
+          .onApply((value, config) =>
+            config :+ s"name1:$value"),
+        param[Int]("name2")
+          .onApply((value, config) =>
+            config :+ s"name2:$value"))
       .params(
-        param[String]((value, config) =>
+        param[String]
+          .onApply((value, config) =>
             config :+ s"cmd:$value")
           .accept(_ == "command"))
       .params(
-        param[Int]("name3"){(value, config) =>
-          config :+ s"name3:$value"
-        })
-      .apply{config =>
+        param[Int]("name3")
+          .onApply((value, config) =>
+            config :+ s"name3:$value"))
+      .onApply{config =>
         (Source(config*), Source())}
 
     val result = cmd.toCommand(Seq("--name2", "55", "--name1", "value1", "command", "--name3", "77"))
@@ -92,22 +93,24 @@ class CommandTest extends TestBase:
   "command with multiple param lists and trailing args" in {
     val cmd = Command("command", Seq[String]())
       .params(
-        param[String]("name1"){(value, config) =>
-          config :+ s"name1-$value"
-        },
-        param[Int]("name2"){(value, config) =>
-          config :+ s"name2-$value"
-        })
+        param[String]("name1")
+          .onApply((value, config) =>
+          config :+ s"name1-$value"),
+        param[Int]("name2")
+          .onApply((value, config) =>
+            config :+ s"name2-$value"))
       .params(
-        param[String]((value, config) =>
+        param[String]
+          .onApply((value, config) =>
             config :+ s"cmd-$value")
           .accept(_ == "command"))
       .params(
-        param[String]{(value, config) =>
-            config :+ s"param-$value"}
+        param[String]
+          .onApply((value, config) =>
+            config :+ s"param-$value")
           .arity(0, 77)
           .accept(_ => true))
-      .apply{config =>
+      .onApply{config =>
         (Source(config*), Source())}
 
     val result = cmd.toCommand(Seq("--name2", "55", "--name1", "value1", "command", "--name", "value"))
@@ -120,13 +123,15 @@ class CommandTest extends TestBase:
   "command does not match" in {
     val cmd = Command("command", Seq[String]())
       .params(
-        param[String]("param1"){(value, config) =>
-            config :+ s"param1-$value"}
+        param[String]("param1")
+          .onApply((value, config) =>
+            config :+ s"param1-$value")
           .default("default-value")
       )
       .params(
-        param[Int]{(value, config) =>
-            config :+ s"int-param-$value"}
+        param[Int]
+          .onApply((value, config) =>
+            config :+ s"int-param-$value")
           .arity(1, 1)
       )
 

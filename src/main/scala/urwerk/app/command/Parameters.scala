@@ -56,7 +56,10 @@ class Parameter[A, B](val names: Seq[String],
   def collect(op: (A, B) => B): Parameter[A, B] =
     copy(collectOp = op)
 
-  def apply(op: (A, B) => B): Parameter[A, B] =
+  // def apply(op: (A, B) => B): Parameter[A, B] =
+  //   collect(op)
+
+  def onApply(op: (A, B) => B): Parameter[A, B] =
     collect(op)
 
   def accept(op: String => Boolean): Parameter[A, B] =

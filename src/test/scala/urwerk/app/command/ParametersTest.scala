@@ -264,13 +264,16 @@ class ParametersTest extends TestBase:
 
     "flags without value" in {
       val params = Seq(
-        param[Unit]("a", "A")((value, config) =>
+        param[Unit]("a", "A")
+          .onApply((value, config) =>
             config :+ "a-" + value)
           .arity(0, 77),
-        param[Unit]("b", "B")((value, config) =>
+        param[Unit]("b", "B")
+          .onApply((value, config) =>
             config :+ "b-" + value)
           .arity(0, 77),
-        param[String]("c", "C")((value, config) =>
+        param[String]("c", "C")
+          .onApply((value, config) =>
             config :+ "c-" + value)
           .arity(0, 77)
       )
@@ -284,11 +287,14 @@ class ParametersTest extends TestBase:
 
     "flags with required but missing value" in {
       val params = Seq(
-        param[Unit]("a")((value, config) =>
+        param[Unit]("a")
+          .onApply((value, config) =>
             config :+ "a-" + value),
-        param[Unit]("b", "B")((value, config) =>
+        param[Unit]("b", "B")
+          .onApply((value, config) =>
             config :+ "b-" + value),
-        param[String]("c", "C")((value, config) =>
+        param[String]("c", "C")
+          .onApply((value, config) =>
             config :+ "c-" + value)
       )
 
@@ -324,7 +330,8 @@ class ParametersTest extends TestBase:
 
     "fail when exception is thrown while collect value" in {
       val params = Seq(
-        param[String]("name1")((value, config) => throw IllegalStateException("test message"))
+        param[String]("name1")
+          .onApply((value, config) => throw IllegalStateException("test message"))
       )
 
       val ex = intercept[IllegalValueException] {

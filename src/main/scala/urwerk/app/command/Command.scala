@@ -17,7 +17,7 @@ object Command:
   def apply[A](name: String, config: A): CommandSpec[A] = CommandSpec[A](name, config, Seq(), _ => (Source(), Source()), "")
 
   extension [A](spec: CommandSpec[A])
-    def toCommand: Command = (args: Seq[String]) =>
+    def create: Command = (args: Seq[String]) =>
       _collectParams(spec, args)
 
 case class CommandSpec[A](name: String,

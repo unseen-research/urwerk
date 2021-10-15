@@ -44,7 +44,7 @@ private abstract class FluxSourceOps[+A](val flux: Flux[_ <: A]):
         flux.asInstanceOf[Flux[Source[B]]]
           .map(_.toFlux)))
 
-  def concat[A1 >: A](other: Source[A1]): Source[A1] = 
+  def concat[A1 >: A](other: Source[A1]): Source[A1] =
     FluxSource.wrap(
       flux.asInstanceOf[Flux[A1]]
         .concatWith(other.toFlux))
@@ -92,7 +92,7 @@ private abstract class FluxSourceOps[+A](val flux: Flux[_ <: A]):
       concurrency,
       prefetch))
 
-  def fold[B](start: B)(op: (B, A) => B): urwerk.source.Singleton[B] =
+  def foldLeft[B](start: B)(op: (B, A) => B): urwerk.source.Singleton[B] =
     FluxSingleton.wrap(
       flux.reduce(start,
         op(_, _)).flux)
@@ -144,7 +144,7 @@ private abstract class FluxSourceOps[+A](val flux: Flux[_ <: A]):
       Flux.mergeDelayError(prefetch, flux, unwrap(that)))
 
   def mkString(start: String, sep: String, end: String): Singleton[String] =
-    fold(StringBuilder(start))((builder, elem) =>
+    foldLeft(StringBuilder(start))((builder, elem) =>
         builder.append(elem.toString)
           .append(sep))
       .map(_.dropRight(sep.size)

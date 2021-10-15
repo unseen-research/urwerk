@@ -259,11 +259,19 @@ class SourceTest extends TestBase:
       .verifyComplete()
   }
 
-  "fold" in {
-    Source(1, 2).fold("0")((ctx, item) =>
+  "fold left" in {
+    Source(1, 2).foldLeft("0")((ctx, item) =>
         s"$ctx $item")
       .toVerifier
       .expectNext("0 1 2")
+      .verifyComplete()
+  }
+
+  "fold left for empty source" in {
+    Source().foldLeft("0")((ctx, item) =>
+        throw IllegalStateException())
+      .toVerifier
+      .expectNext("0")
       .verifyComplete()
   }
 

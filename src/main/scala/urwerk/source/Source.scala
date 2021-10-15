@@ -50,7 +50,7 @@ trait Source[+A]:
 
   def flatMap[B](concurrency: Int, prefetch: Int)(op: A => Source[B]): Source[B]
 
-  def fold[B](start: B)(op: (B, A) => B): Singleton[B]
+  def foldLeft[B](start: B)(op: (B, A) => B): Singleton[B]
 
   def head: Singleton[A]
 

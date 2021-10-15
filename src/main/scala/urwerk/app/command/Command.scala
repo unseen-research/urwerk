@@ -16,6 +16,7 @@ type CommandCreation = Seq[String] => Optional[(Source[String], Source[String])]
 object Command:
   def apply[A](name: String, config: A): CommandSpec[A] = CommandSpec[A](name, config, Seq(), _ => (Source(), Source()), "")
 
+object CommandSpec:
   extension [A](spec: CommandSpec[A])
     def create: CommandCreation = (args: Seq[String]) =>
       _collectParams(spec, args)

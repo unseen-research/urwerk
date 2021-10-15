@@ -11,13 +11,13 @@ import urwerk.source.Source
 import urwerk.source.Optional
 import urwerk.app.command.Parameters.ParameterException
 
-type Command = Seq[String] => Optional[(Source[String], Source[String])]
+type CommandCreation = Seq[String] => Optional[(Source[String], Source[String])]
 
 object Command:
   def apply[A](name: String, config: A): CommandSpec[A] = CommandSpec[A](name, config, Seq(), _ => (Source(), Source()), "")
 
   extension [A](spec: CommandSpec[A])
-    def create: Command = (args: Seq[String]) =>
+    def create: CommandCreation = (args: Seq[String]) =>
       _collectParams(spec, args)
 
 case class CommandSpec[A](name: String,

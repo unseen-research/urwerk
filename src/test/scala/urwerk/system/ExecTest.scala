@@ -81,6 +81,14 @@ class ExecTest extends TestBase:
     out should be(s"abc${nl}abc${nl}abc${nl}")
   }
 
+  "exec joint output" in {
+    val out = exec.args("0", "abc", "3", "xyz", "3")
+      .jointOutput
+      .mkString.block
+
+    out should be(s"abc${nl}xyz${nl}abc${nl}xyz${nl}abc${nl}xyz${nl}")
+  }
+
   "exec process error output" in {
     val out = exec.args("0", "abc", "3", "xyz", "3").process
       .flatMap(_.errorOutput)

@@ -2,6 +2,7 @@ package urwerk.app
 
 import urwerk.test.TestBase
 import urwerk.source.Source
+import urwerk.io.ByteString
 import urwerk.io.file.Path
 import urwerk.source.Singleton
 import java.time.Instant
@@ -11,6 +12,10 @@ import scala.concurrent.ExecutionContext
 import java.util.concurrent.Executors
 import urwerk.app.command.Command
 import urwerk.app.command.Parameters
+import urwerk.io
+
+val out = Source[ByteString]()
+val err = Source[ByteString]()
 
 class AppTest extends TestBase:
   given ExecutionContext = ExecutionContext.fromExecutor(Executors.newCachedThreadPool)
@@ -40,4 +45,4 @@ val anyCmd = Command("command", Seq[String]())
   .onApply{config =>
     (Source(config*), Source())}
 
-object TestApp extends App(Seq(anyCmd.create))
+//object TestApp extends App(Seq(anyCmd.create))

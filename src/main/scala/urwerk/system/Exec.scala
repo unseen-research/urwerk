@@ -21,7 +21,7 @@ import urwerk.source.Singleton
 import urwerk.source.Sink
 import urwerk.source.Source
 import urwerk.io.ByteString
-import urwerk.io.Streams.given
+import urwerk.io.Streams.*
 
 import Process.*
 import scala.util.Success

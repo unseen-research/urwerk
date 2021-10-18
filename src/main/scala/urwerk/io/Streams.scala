@@ -9,13 +9,16 @@ import scala.annotation.tailrec
 
 import urwerk.source.Source
 import urwerk.source.Sink
+import java.io.OutputStream
 
 object Streams:
   val DefaultBufferSize: Int = 4096 * 2
 
-  given StreamOps = new StreamOps{}
+  extension [A <: OutputStream](outputStream: A)
+    def write(bytes: ByteString): A =
+      outputStream.write(bytes.array, bytes.offset, bytes.length)
+      outputStream
 
-trait StreamOps:
   extension (inputStream: InputStream)
     def toSource: Source[ByteString] =
       toSource(Streams.DefaultBufferSize)

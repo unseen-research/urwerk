@@ -42,7 +42,7 @@ object ByteString extends SpecificIterableFactory[Byte, ByteString] {
   }
 
   def from(string: String, encoding: Charset): ByteString = {
-    ByteString(string.getBytes)
+    ByteString(string.getBytes(encoding))
   }
 
   def from(buffer: ByteBuffer): ByteString = {

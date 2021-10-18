@@ -5,7 +5,8 @@ import java.io.ByteArrayInputStream
 import scala.util.Random
 
 import urwerk.test.TestBase
-import urwerk.io.Streams.given
+import urwerk.io.Streams.*
+import java.io.ByteArrayOutputStream
 
 class StreamsTest extends TestBase:
   "input stream to source" in {
@@ -31,4 +32,14 @@ class StreamsTest extends TestBase:
       .toSource(1).toSeq.block
 
     actualByteStrings should be (givenByteStrings)
+  }
+
+  "write byte string to output stream" in {
+    val bytes = ByteString.from("greetings mortal, are you ready to die?")
+
+    val out = new ByteArrayOutputStream()
+      .write(ByteString.from("greetings mortal"))
+      .write(ByteString.from(", are you ready to die?"))
+
+    String(out.toByteArray) should be ("greetings mortal, are you ready to die?")
   }

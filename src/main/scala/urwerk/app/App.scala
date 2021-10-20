@@ -1,22 +1,33 @@
 package urwerk.app
 
+import urwerk.source.Optional
 import urwerk.source.Source
 import urwerk.io.ByteString
 import urwerk.io.Streams.*
 
-type Main = Source[ByteString] => (Source[ByteString], Source[ByteString])
+type Main = Source[ByteString] => Optional[(Source[ByteString], Source[ByteString])]
 
 trait App(mainFn: Main):
   def main(args: Array[String]): Unit =
-    val (outSrc, errSrc) = mainFn(Source())
+    val xx =  mainFn(Source())
+    //   .flatMap{case (stdOut, errOut) =>
+    //     Source(
+    //         stdOut.doOnNext(bytes =>
+    //           System.out.write(bytes)),
+    //         errOut.doOnNext(bytes =>
+    //           System.err.write(bytes)))
+    //       .concatDelayError
+    //       .lastOption
+    //       .block
+    //   }
 
-    Source(
-        outSrc.doOnNext(bytes =>
-          System.out.write(bytes)),
-        errSrc.doOnNext(bytes =>
-          System.err.write(bytes)))
-      .concatDelayError
-      .lastOption.block
+
+    // Source(
+    //
+    //     errSrc.doOnNext(bytes =>
+    //       System.err.write(bytes)))
+    //   .concatDelayError
+    //   .lastOption.block
 
     // val outSrc: Source[ByteString] = Source.empty
     //   .doOnNext(bytes => out.writeBytes(bytes))

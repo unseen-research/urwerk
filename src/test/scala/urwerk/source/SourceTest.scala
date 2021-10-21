@@ -496,6 +496,21 @@ class SourceTest extends TestBase:
       .verifyComplete()
   }
 
+  "publish on" in {
+    val ec = ExecutionContext.fromExecutor(Executors.newSingleThreadExecutor)
+    ec.execute(()=> Thread.currentThread.setName("publishOnThread"))
+
+    val result = Source("elem")
+      .map(elem=>
+        s"$elem:${Thread.currentThread.getId}")
+      .publishOn(ec)
+      .map(elem=>
+        s"$elem:${Thread.currentThread.getName}")
+      .last.block
+
+    result should be (s"elem:${Thread.currentThread.getId}:publishOnThread")
+  }
+
   "push" in {
     Source.push[Int](
         _.next(1)

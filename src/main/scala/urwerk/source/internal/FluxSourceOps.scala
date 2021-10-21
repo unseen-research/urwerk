@@ -173,6 +173,10 @@ private abstract class FluxSourceOps[+A](val flux: Flux[_ <: A]):
       flux.asInstanceOf[Flux[A1]]
               .onErrorResume{(e) => unwrap(op(e).asInstanceOf[Source[A1]])})
 
+  def publishOn(ec: ExecutionContext): S[A] =
+    wrap(
+      flux.publishOn(Schedulers.fromExecutor(ec.toExecutor)))
+
   def reduce[A1 >: A](op: (A1, A) => A1): Optional[A1] =
     def reduceOp[B1 <: A]: BiFunction[B1, B1, B1] = (v1, v2) =>
       op(v1, v2).asInstanceOf[B1]

@@ -84,6 +84,8 @@ trait Source[+A]:
 
   def onErrorResume[B >: A](op: Throwable => Source[B]): Source[B]
 
+  def publishOn(ec: ExecutionContext): Source[A]
+
   def reduce[B >: A](op: (B, A) => B): Optional[B]
 
   def scan[B](start: B)(op: (B, A) => B): Source[B]

@@ -13,6 +13,7 @@ import java.util.concurrent.Executors
 import urwerk.app.command.Command
 import urwerk.app.command.Parameters
 import urwerk.io
+import scala.util.Random
 
 val out = Source[ByteString]()
 val err = Source[ByteString]()
@@ -36,13 +37,10 @@ val javaExec = Exec(execPath)
 val params = Parameters[Seq[String]]
 import params.*
 
-val anyCmd = Command("command", Seq[String]())
-  .params(
-    param[String]("any-param")
-      .onApply((value, config) =>
-        config :+ value)
-  )
-  .onApply{config =>
-    (Source(config*), Source())}
+def mainSrc(in: Source[ByteString]) =
+  Source(Right("abc"), Left("ABC"), Right("def"), Left("DEF"))
+    .map(_.map(ByteString.from)
+      .left
+      .map(ByteString.from))
 
-//object TestApp extends App(Seq(anyCmd.create))
+object TestApp extends App(mainSrc)

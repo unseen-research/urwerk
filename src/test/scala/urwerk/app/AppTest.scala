@@ -15,13 +15,8 @@ import urwerk.app.command.Parameters
 import urwerk.io
 import scala.util.Random
 import urwerk.app.App.ExitStatus
-import org.slf4j.LoggerFactory
 
-
-
-//.setProperty(LoggerFactory.STATIC_LOGGER_BINDER_CLASS_PROPERTY, "org.slf4j.MyBinding");
 class AppTest extends TestBase:
-  sys.props.put("reactor.logging.fallback", "jdk")
 
   given ExecutionContext = ExecutionContext.fromExecutor(Executors.newCachedThreadPool)
 

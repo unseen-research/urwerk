@@ -1,4 +1,4 @@
-val DottyVersion = "3.0.2"
+val DottyVersion = "3.1.0"
 val ReactorVersion = "3.4.9"
 
 lazy val root = project
@@ -27,6 +27,9 @@ lazy val root = project
       "com.novocode" % "junit-interface" % "0.11" % "test",
       "junit" % "junit" % "4.13" % "test",
 
-      "com.github.tomakehurst" % "wiremock-jre8" % "2.27.2" % "test"
+      "com.github.tomakehurst" % "wiremock-jre8" % "2.27.2" % "test",
+ 
+      "com.outr" %% "scribe" % "3.6.2",
+      "com.outr" %% "scribe-slf4j" % "3.6.2"
     )
   )

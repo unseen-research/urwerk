@@ -14,6 +14,7 @@ import urwerk.test.TestBase
 
 import urwerk.system.Exec
 import urwerk.system.Process.Status.Terminated
+import java.util.concurrent.Flow
 
 class AppTest extends TestBase:
 

@@ -1,8 +1,5 @@
 package urwerk.app.command
 
-import scala.util.Success
-import scala.util.Failure
-
 import urwerk.test.TestBase
 import urwerk.app.command.Parameters.ParameterException
 import urwerk.app.command.Parameters.MissingParameterException
@@ -10,28 +7,13 @@ import urwerk.app.command.Parameters.Position
 import urwerk.source.Source
 import urwerk.source.Optional
 import urwerk.app.command.Parameters.UnexpectedParameterException
+
 import Command.*
 
 class CommandTest extends TestBase:
 
   val params = Parameters[Seq[String]]
   import params.*
-
-  // "materialize" in {
-  //   val src = Source(
-  //     Optional(),
-  //     Optional.error(IllegalArgumentException("dkfj")),
-  //     Optional(Source("abc", "def")),
-  //     Optional(Source("xyz", "ijk")))
-
-  //   src
-  //     .flatMap(src => src.materialize)
-  //     //.materialize
-  //     .doOnNext(n => println(s"next $n"))
-
-  //     .toSeq.block
-
-  // }
 
   "command with multiple param lists" in {
     val cmd = Command("command", Seq[String]())
@@ -51,12 +33,15 @@ class CommandTest extends TestBase:
         param[Int]("name3")
           .onApply((value, config) =>
             config :+ s"name3:$value"))
-      .onApply{config =>
-        (Source(config*), Source())}
+      .onApply(config =>
+        Source.from(config).map(Right(_)))
 
     val result = cmd.create(Seq("--name2", "55", "--name1", "value1", "command", "--name3", "77"))
-      .flatMap((stdOut, errOut) =>  Source(stdOut, errOut))
-      .concat.toSeq.block
+      .flatMap(src => src)
+      .flatMap{
+        case Right(elem) =>  Source(elem)
+        case _ => ???}
+      .toSeq.block
 
     result should be (Seq("name2:55", "name1:value1", "cmd:command", "name3:77"))
   }
@@ -110,12 +95,15 @@ class CommandTest extends TestBase:
             config :+ s"param-$value")
           .arity(0, 77)
           .accept(_ => true))
-      .onApply{config =>
-        (Source(config*), Source())}
+      .onApply(config =>
+        Source.from(config).map(Right(_)))
 
     val result = cmd.create(Seq("--name2", "55", "--name1", "value1", "command", "--name", "value"))
-      .flatMap((stdOut, errOut) =>  Source(stdOut, errOut))
-      .concat.toSeq.block
+      .flatMap(src => src)
+      .flatMap{
+        case Right(elem) =>  Source(elem)
+        case _ => ???}
+      .toSeq.block
 
     result should be (Seq("name2-55", "name1-value1", "cmd-command", "param---name", "param-value"))
   }
@@ -140,57 +128,3 @@ class CommandTest extends TestBase:
 
     result should be (Seq())
   }
-  //   "not match" in{
-  //     val cmd = Command("help", Seq[String]())
-  //       .params(
-  //         param[Unit]("help", "h")((value, config) =>
-  //             config :+ s"help-$value")
-  //           .arity(1, 10))
-
-  //     val Failure(ex: MissingParameterException) = cmd(Seq("--version"))
-
-  //     ex.labelOrName should be ("help")
-  //     ex.requiredArity should be (1)
-  //     ex.repetition should be (0)
-  //     ex.position should be (Some(Position(0, 0)))
-  //   }
-  // }
-
-  // "commands" - {
-  //   trait Callable:
-  //     def apply(): String
-
-  //   case class Config(value: String) extends Callable:
-  //     def apply() = value
-
-  //   val params = Parameters[Config]
-  //   import params.*
-
-  //   val cmds = Commands(
-  //     Command("version", Config(""))
-  //       .params(
-  //         param[Unit]("version", "v")
-  //           .arity(1, 1)),
-  //     Command("run", Config(""))
-  //       .params(
-  //         param[String]{(value, config) =>
-  //             config.copy(value + " invoked")}
-  //           .accept(_ == "run")
-  //           .arity(1, 1)
-  //         ))
-
-  //   "resolve command" in {
-  //     val result = cmds.resolve(Seq("run")).apply()
-  //     result should be ("run invoked")
-  //   }
-
-  //   "resolve failure" in {
-  //     val result = cmds.onError{errors =>
-  //         Config(
-  //           errors.map((cmd, error) => cmd.name + ":" + error.getClass().getSimpleName()).mkString("", "&", ""))
-  //       }
-  //       .resolve(Seq("undefined")).apply()
-
-  //     result should be ("version:MissingParameterException&run:MissingParameterException")
-  //   }
-  // }

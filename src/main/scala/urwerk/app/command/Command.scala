@@ -11,10 +11,10 @@ import urwerk.source.Source
 import urwerk.source.Optional
 import urwerk.app.command.Parameters.ParameterException
 
-type CommandCreation = Seq[String] => Optional[(Source[String], Source[String])]
+type CommandCreation = Seq[String] => Optional[Source[Either[String, String]]]
 
 object Command:
-  def apply[A](name: String, config: A): CommandSpec[A] = CommandSpec[A](name, config, Seq(), _ => (Source(), Source()), "")
+  def apply[A](name: String, config: A): CommandSpec[A] = CommandSpec[A](name, config, Seq(), _ => Source(), "")
 
 object CommandSpec:
   extension [A](spec: CommandSpec[A])
@@ -24,16 +24,16 @@ object CommandSpec:
 case class CommandSpec[A](name: String,
     config: A,
     parameterLists: Seq[ParameterList[A]],
-    applyOp: A => (Source[String], Source[String]),
+    applyOp: A => Source[Either[String, String]],
     description: String):
 
   def params(param: Parameter[?, A], params: Parameter[?, A]*): CommandSpec[A] =
     copy(parameterLists = parameterLists :+ ParameterList(param +: params))
 
-  def onApply(apply: A => (Source[String], Source[String])): CommandSpec[A] =
+  def onApply(apply: A => Source[Either[String, String]]): CommandSpec[A] =
     copy(applyOp = apply)
 
-private def _collectParams[A](command: CommandSpec[A], args: Seq[String]): Optional[(Source[String], Source[String])] =
+private def _collectParams[A](command: CommandSpec[A], args: Seq[String]): Optional[Source[Either[String, String]]] =
   _collectParams(command.parameterLists, command.config, args, Position(0, 0)) match
     case Success(config) =>
       Optional(command.applyOp(config))

@@ -213,15 +213,21 @@ object Parameters:
             else if arity + 1 >= maxArity then
               val _config = param.collectValue(config, value, pos)
               val _repetitions = repetitions
-                .updatedWith(ParamKey.Pos(positionalIndex)){case Some((param, arity)) =>
-                  Some((param, arity + 1))}
+                .updatedWith(ParamKey.Pos(positionalIndex)){
+                  case Some((param, arity)) =>
+                    Some((param, arity + 1))
+                  case None =>
+                    ???
+                }
               val nextPos = Position(argIndex + 1, 0)
               collectParams(args, nextPos, positionalParams.drop(1), _config, paramsMap, _repetitions)
             else
               val _config = param.collectValue(config, value, pos)
               val _repetitions = repetitions
-                .updatedWith(ParamKey.Pos(positionalIndex)){case Some((param, arity)) =>
-                  Some((param, arity + 1))}
+                .updatedWith(ParamKey.Pos(positionalIndex)){
+                  case Some((param, arity)) =>
+                    Some((param, arity + 1))
+                  case None => ???}
               val nextPos = Position(argIndex + 1, 0)
               collectParams(args, nextPos, positionalParams, _config, paramsMap, _repetitions)
 
@@ -242,11 +248,13 @@ object Parameters:
 
                 val primaryName = param.name
                 val _repetitions = repetitions
-                  .updatedWith(ParamKey.Name(primaryName)){case Some((param, arity)) =>
-                    val newArity = arity + 1
-                    if newArity > param.maxArity then
-                      throw ArityExceededException(name, param.maxArity, pos)
-                    Some((param, newArity))
+                  .updatedWith(ParamKey.Name(primaryName)){
+                    case Some((param, arity)) =>
+                      val newArity = arity + 1
+                      if newArity > param.maxArity then
+                        throw ArityExceededException(name, param.maxArity, pos)
+                      Some((param, newArity))
+                    case None => ???
                   }
 
                 val nextArgIndex = if nextFlagIndex > 0 then argIndex

@@ -29,7 +29,7 @@ class App(mainFn: Main):
     val src = mainFn(ArraySeq.unsafeWrapArray(args))
       .doOnNext{
         case Left(out) =>
-          System.out.write(out)
+          System.err.write(out)
         case Right(out)=>
           System.out.write(out)
       }

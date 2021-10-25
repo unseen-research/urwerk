@@ -27,9 +27,19 @@ class AppTest extends TestBase:
         status should be(77)
   }
 
-  "run" in {
+  "run evaluate output" in {
+    val output = javaExec.args("arg1", "arg2").output.mkString.block
+    output should be (s"Out: arg1,Out: arg2,")
+  }
+
+  "run evaluate error output" in {
+    val output = javaExec.args("arg1", "arg2").errorOutput.mkString.block
+    output should be (s"Err: arg1,Err: arg2,")
+  }
+
+  "run evaluate joint output" in {
     val output = javaExec.args("arg1", "arg2").jointOutput.mkString.block
-    output should be (s"Out: arg1Err: arg1Out: arg2Err: arg2")
+    output should be (s"Out: arg1,Err: arg1,Out: arg2,Err: arg2,")
   }
 
 val nl = System.lineSeparator
@@ -44,7 +54,7 @@ val params = Parameters[Seq[String]]
 import params.*
 
 def mainSrc(args: Seq[String]) =
-  Source.from(args.flatMap(arg => Seq(Right(s"Out: $arg"), Left(s"Err: $arg"))))
+  Source.from(args.flatMap(arg => Seq(Right(s"Out: $arg,"), Left(s"Err: $arg,"))))
     .map(_.map(ByteString.from)
       .left
       .map(ByteString.from))

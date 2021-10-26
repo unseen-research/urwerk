@@ -1,6 +1,9 @@
 package urwerk.system
 
 import java.io.InputStream
+
+import java.nio.file.NoSuchFileException
+import java.nio.file.Files
 import java.nio.channels.Channels
 import java.time.Instant
 import java.lang.Process as JProcess
@@ -12,8 +15,9 @@ import scala.concurrent.duration.Duration
 import scala.jdk.CollectionConverters.given
 import scala.jdk.FutureConverters.given
 import scala.jdk.OptionConverters.given
-import scala.concurrent.Promise
 import scala.util.Try
+import scala.util.Success
+import scala.util.Failure
 import scala.concurrent.ExecutionContext
 
 import urwerk.io.file.Path
@@ -22,16 +26,18 @@ import urwerk.source.Sink
 import urwerk.source.Source
 import urwerk.io.ByteString
 import urwerk.io.Streams.*
-
-import Process.*
-import scala.util.Success
-import scala.util.Failure
-import java.nio.file.NoSuchFileException
-import java.nio.file.Files
 import urwerk.system.Exec.NoSuchExecutableException
 import urwerk.system.Exec.ExecutionException
 
-object Process:
+import Process.*
+import Exec.Factory
+
+object Process extends Factory[Process]:
+
+  type S[_] = Singleton[Process]
+
+  def fromProcess(process: Singleton[Process]): Singleton[Process] = process
+
   enum Status:
     case Running extends Status
     case Terminated(val code: Int) extends Status
@@ -54,9 +60,18 @@ object Exec:
 
   class ExecutionException(val exitCode: Int) extends RuntimeException(s"Execution failed: exitCode=$exitCode")
 
+  trait Factory[A]:
+    type S[_]
+
+    def fromProcess(process: Singleton[Process]): S[A]
+
   extension (exec: Exec)
-    def process(using executor: ExecutionContext): Singleton[Process] =
+    def toProcess(using executor: ExecutionContext): Singleton[Process] =
       processSource(exec, executor)
+
+    def to[A](factory: Factory[A])(using executor: ExecutionContext): factory.S[A] =
+      val proc = processSource(exec, executor)
+      factory.fromProcess(toProcess)
 
     def jointOutput(using executor: ExecutionContext): Source[ByteString] =
       outputSource(exec.connectErrorToOutput(true),

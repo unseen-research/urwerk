@@ -48,9 +48,10 @@ class ExecTest extends TestBase:
   }
 
   "exec not existing" in {
+    Seq("").to(Set)
     val path = Path("/0815")
     intercept[NoSuchExecutableException]{
-      Exec(path, "--version").process
+      Exec(path, "--version").toProcess
         .block
     }
   }
@@ -58,13 +59,23 @@ class ExecTest extends TestBase:
   "exec not executable" in {
     val path = uniqueFile
     intercept[NoSuchExecutableException]{
-      Exec(path, "--version").process
+      Exec(path, "--version").toProcess
         .block
     }
   }
 
   "exec process status" in {
-    val status = exec.arg("42").process
+    val status = exec.arg("42").toProcess
+      .flatMap(_.status)
+      .toSeq.block
+
+    val Status.Running = status(0)
+    val Status.Terminated(statusCode) = status(1)
+    statusCode should be (42)
+  }
+
+  "exec with process factory" in {
+    val status = exec.arg("42").to(Process)
       .flatMap(_.status)
       .toSeq.block
 
@@ -74,7 +85,7 @@ class ExecTest extends TestBase:
   }
 
   "exec process stdout" in {
-    val out = exec.args("0", "abc", "3", "err", "3").process
+    val out = exec.args("0", "abc", "3", "err", "3").toProcess
       .flatMap(_.output)
       .mkString.block
 
@@ -90,7 +101,7 @@ class ExecTest extends TestBase:
   }
 
   "exec process error output" in {
-    val out = exec.args("0", "abc", "3", "xyz", "3").process
+    val out = exec.args("0", "abc", "3", "xyz", "3").toProcess
       .flatMap(_.errorOutput)
       .mkString.block
 
@@ -100,7 +111,7 @@ class ExecTest extends TestBase:
   "exec process connect error to output" in {
     val out = exec.args("0", "abc", "3", "xyz", "3")
       .connectErrorToOutput(true)
-      .process
+      .toProcess
       .flatMap(proc => Source(proc.output, proc.errorOutput).concat)
       .mkString.block
 

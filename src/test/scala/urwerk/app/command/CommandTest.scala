@@ -37,7 +37,7 @@ class CommandTest extends TestBase:
         Source.from(config).map(Right(_)))
 
     val result = cmd.create(Seq("--name2", "55", "--name1", "value1", "command", "--name3", "77"))
-      .flatMap(src => src)
+      .concat
       .flatMap{
         case Right(elem) =>  Source(elem)
         case _ => ???}
@@ -99,7 +99,7 @@ class CommandTest extends TestBase:
         Source.from(config).map(Right(_)))
 
     val result = cmd.create(Seq("--name2", "55", "--name1", "value1", "command", "--name", "value"))
-      .flatMap(src => src)
+      .concat
       .flatMap{
         case Right(elem) =>  Source(elem)
         case _ => ???}

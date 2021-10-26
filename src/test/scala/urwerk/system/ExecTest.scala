@@ -11,6 +11,10 @@ import scala.io.Codec
 import urwerk.test.*
 import urwerk.io.file.Path
 import urwerk.source.{Source, Singleton}
+import urwerk.system.Process.Output
+import urwerk.system.Process.ErrOutput
+import urwerk.system.Process.JointOutput
+import urwerk.system.Process.StdOutput
 import urwerk.system.Process.Status.*
 import urwerk.system.Process.Status
 import urwerk.system.Exec.NoSuchExecutableException
@@ -48,7 +52,6 @@ class ExecTest extends TestBase:
   }
 
   "exec not existing" in {
-    Seq("").to(Set)
     val path = Path("/0815")
     intercept[NoSuchExecutableException]{
       Exec(path, "--version").toProcess
@@ -84,20 +87,12 @@ class ExecTest extends TestBase:
     statusCode should be (42)
   }
 
-  "exec process stdout" in {
+  "exec process std out" in {
     val out = exec.args("0", "abc", "3", "err", "3").toProcess
       .flatMap(_.output)
       .mkString.block
 
     out should be(s"abc${nl}abc${nl}abc${nl}")
-  }
-
-  "exec joint output" in {
-    val out = exec.args("0", "abc", "3", "xyz", "3")
-      .jointOutput
-      .mkString.block
-
-    out should be(s"abc${nl}xyz${nl}abc${nl}xyz${nl}abc${nl}xyz${nl}")
   }
 
   "exec process error output" in {
@@ -118,8 +113,50 @@ class ExecTest extends TestBase:
     out should be(s"abc${nl}xyz${nl}abc${nl}xyz${nl}abc${nl}xyz${nl}")
   }
 
-  "exec output" in {
-    val out = exec.args("0", "abc", "3", "err", "3").output
+  "exec to output" in {
+    import urwerk.io.ByteString
+    val out = exec.args("0", "abc", "3", "xyz", "3")
+      .to(Output)
+      .foldLeft(("", "")){
+        case ((left, right), Right(bytes)) =>
+          (left, right + bytes)
+        case ((left, right), Left(bytes)) =>
+          (left + bytes, right)
+      }
+      .block
+
+    out should be(
+      (s"xyz${nl}xyz${nl}xyz${nl}", s"abc${nl}abc${nl}abc${nl}")
+    )
+  }
+
+  "exec to output with error code" in {
+    import urwerk.io.ByteString
+    val out = exec.args("7", "abc", "3", "xyz", "3")
+      .to(Output)
+      .foldLeft(("", "")){
+        case ((left, right), Right(bytes)) =>
+          (left, right + bytes)
+        case ((left, right), Left(bytes)) =>
+          (left + bytes, right)
+      }
+      .block
+
+    out should be(
+      (s"xyz${nl}xyz${nl}xyz${nl}", s"abc${nl}abc${nl}abc${nl}")
+    )
+  }
+
+  "exec to joint output" in {
+    val out = exec.args("0", "abc", "3", "xyz", "3")
+      .to(JointOutput)
+      .mkString.block
+
+    out should be(s"abc${nl}xyz${nl}abc${nl}xyz${nl}abc${nl}xyz${nl}")
+  }
+
+  "exec to std output" in {
+    val out = exec.args("0", "abc", "3", "err", "3").to(StdOutput)
       .mkString.block
 
     out should be(s"abc${nl}abc${nl}abc${nl}")

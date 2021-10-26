@@ -34,9 +34,42 @@ import Exec.Factory
 
 object Process extends Factory[Process]:
 
+  object Output extends Factory[Either[ByteString, ByteString]]:
+    type S[_] = Source[Either[ByteString, ByteString]]
+    def fromExec(exec: Exec)(using executor: ExecutionContext): Source[Either[ByteString, ByteString]] =
+      exec.connectErrorToOutput(false)
+      .toProcess.flatMap{proc =>
+        val err = proc.errorOutput
+          .map(Left(_))
+
+        val status = proc.status
+          .filter(_ => false)
+          .map[Either[ByteString, ByteString]](_ => ???)
+
+        proc.output.map(Right(_))
+          .mergeDelayError(32, err)
+          .mergeDelayError(32, status)
+      }
+
+  trait OutputFactory extends Factory[ByteString]:
+    type S[_] = Source[ByteString]
+
+  object JointOutput extends OutputFactory:
+    def fromExec(exec: Exec)(using executor: ExecutionContext): Source[ByteString] =
+      outputSource(exec.connectErrorToOutput(true), executor)
+
+  object StdOutput extends OutputFactory:
+    def fromExec(exec: Exec)(using executor: ExecutionContext): Source[ByteString] =
+      outputSource(exec.connectErrorToOutput(false), executor)
+
+  object ErrOutput extends OutputFactory:
+    def fromExec(exec: Exec)(using executor: ExecutionContext): Source[ByteString] =
+      errorOutputSource(exec.connectErrorToOutput(false), executor)
+
   type S[_] = Singleton[Process]
 
-  def fromProcess(process: Singleton[Process]): Singleton[Process] = process
+  def fromExec(exec: Exec)(using executor: ExecutionContext): Singleton[Process] =
+    exec.toProcess
 
   enum Status:
     case Running extends Status
@@ -63,15 +96,14 @@ object Exec:
   trait Factory[A]:
     type S[_]
 
-    def fromProcess(process: Singleton[Process]): S[A]
+    def fromExec(exec: Exec)(using executor: ExecutionContext): S[A]
 
   extension (exec: Exec)
     def toProcess(using executor: ExecutionContext): Singleton[Process] =
       processSource(exec, executor)
 
     def to[A](factory: Factory[A])(using executor: ExecutionContext): factory.S[A] =
-      val proc = processSource(exec, executor)
-      factory.fromProcess(toProcess)
+      factory.fromExec(exec)
 
     def jointOutput(using executor: ExecutionContext): Source[ByteString] =
       outputSource(exec.connectErrorToOutput(true),

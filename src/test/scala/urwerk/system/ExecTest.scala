@@ -77,16 +77,6 @@ class ExecTest extends TestBase:
     statusCode should be (42)
   }
 
-  "exec with process factory" in {
-    val status = exec.arg("42").to(Process)
-      .flatMap(_.status)
-      .toSeq.block
-
-    val Status.Running = status(0)
-    val Status.Terminated(statusCode) = status(1)
-    statusCode should be (42)
-  }
-
   "exec process std out" in {
     val out = exec.args("0", "abc", "3", "err", "3").toProcess
       .flatMap(_.output)
@@ -111,6 +101,16 @@ class ExecTest extends TestBase:
       .mkString.block
 
     out should be(s"abc${nl}xyz${nl}abc${nl}xyz${nl}abc${nl}xyz${nl}")
+  }
+
+  "exec to process" in {
+    val status = exec.arg("42").to(Process)
+      .flatMap(_.status)
+      .toSeq.block
+
+    val Status.Running = status(0)
+    val Status.Terminated(statusCode) = status(1)
+    statusCode should be (42)
   }
 
   "exec to output" in {
@@ -140,7 +140,7 @@ class ExecTest extends TestBase:
         case ((left, right), Left(bytes)) =>
           (left + bytes, right)
       }
-      .block
+      onErrorResume{case e => Source()}.block
 
     out should be(
       (s"xyz${nl}xyz${nl}xyz${nl}", s"abc${nl}abc${nl}abc${nl}")

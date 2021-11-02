@@ -6,13 +6,13 @@ import urwerk.source.Source
 class ParameterDefTest extends TestBase:
 
   "params" in {
-    case class Configx(values: Seq[String])
+    case class Config(values: Seq[String])
 
-    val run = Params[Configx]
+    val run = Params[Config].param[Int]
       .param[Int]
-      .param[String]
+      //.param[Int]
       //  .onApply((config, value) => config)
-      .cmd("run")
+      //.cmd("run")
       //.param[String]
-      .onApply(x=> Source())
+      //.onApply(x=> Source())
   }

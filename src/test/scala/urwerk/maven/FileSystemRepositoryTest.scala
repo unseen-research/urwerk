@@ -13,6 +13,7 @@ import java.nio.file.Files
 import scala.util.Random
 import scala.language.implicitConversions
 
+class FileSystemRepositoryTest
 // class FileSystemRepositoryTest extends TestBase:
 
 //   "metadata xml" in {

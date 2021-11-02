@@ -140,7 +140,7 @@ class ExecTest extends TestBase:
         case ((left, right), Left(bytes)) =>
           (left + bytes, right)
       }
-      onErrorResume{case e => Source()}.block
+      //onErrorResume{case e => Source()}.block
 
     out should be(
       (s"xyz${nl}xyz${nl}xyz${nl}", s"abc${nl}abc${nl}abc${nl}")

@@ -8,6 +8,7 @@ import urwerk.io.file.given
 import urwerk.io.file
 import urwerk.source.{Optional, Singleton, Source}
 
+class FileSystemRepository
 //class FileSystemRepository(val path: file.Path) extends Repository:
 
 

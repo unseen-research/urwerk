@@ -33,51 +33,61 @@ class UrwerkApp extends Callable[Int]:
 //         @Option(names = "-c", required = true) int c;
 //     }
 
-class RunOptions:
-
-  @Option(names = Array("--module"))
+class ModuleSpec:
+  @Option(names = Array("--module"), required = true)
   var module: String = "default mod"
 
-  @Option(names = Array("--version"))
+  @Option(names = Array("--version"), required = true)
   var version: String = "default-ver"
 
-  @Parameters(index = "0", arity = "0..*")
-  var args: java.util.List[String] = java.util.ArrayList()
+@Command(name = "run", mixinStandardHelpOptions = true, version = Array("1.0.x"))
+class Run extends Callable[Int]:
+  @ArgGroup(exclusive = false, multiplicity = "0-1")
+  var modSpec: ModuleSpec = ModuleSpec()
 
-class RunOptions2:
-  @Parameters(index = "0", arity = "1")
-  var module: java.util.List[String] = java.util.ArrayList()
+  @Parameters(index = "0", arity = "0-1")
+  var module: String = ""
 
   @Parameters(index = "1", arity = "0..*")
   var args: java.util.List[String] = java.util.ArrayList()
 
-@Command(name = "run", mixinStandardHelpOptions = true, version = Array("1.0.x"))
-class Run extends Callable[Int]:
-
-    @ArgGroup(exclusive = true)
-    var options: RunOptions = RunOptions()
-
-    @ArgGroup(exclusive = true)
-    var options2: RunOptions2 = RunOptions2()
-
     def call(): Int =
-      println(s"VARIANTE1 ${options.module} ${options.version} ${options.args}")
-
-      println(s"VARIANTE2 ${options2.module}  ${options2.args}")
+      println(s"RESULT ${modSpec.module} ${modSpec.version} ${module} ${args}")
 
       789
 
 class MainTest extends TestBase:
 
-  "run 1" in {
+  "run help" in {
     val res = new CommandLine(UrwerkApp())
-      .setStopAtPositional(true)
-      .setStopAtUnmatched(true)
       .addSubcommand(Run())
-      .execute("--global", "444", "run", "--module", "the module", "--version", "3.3.4", "arg0")
+      .setStopAtPositional(true)
+      .execute("run", "abc", "--module")
     println(s"RES $res")
 
   }
+
+
+  "run 1" in {
+    val res = new CommandLine(UrwerkApp())
+      .addSubcommand(Run())
+      .setStopAtPositional(true)
+      .setStopAtUnmatched(true)
+      .execute("--global", "786", "run", "--module", "the module", "--version", "3.3.4", "dfdf", "dkfjdla")
+    println(s"RES $res")
+
+  }
+
+  "run 2" in {
+    val res = new CommandLine(UrwerkApp())
+      .addSubcommand(Run())
+      .setStopAtPositional(true)
+      .setStopAtUnmatched(true)
+      .execute("--global", "786", "run", "dfdf", "dkfjdla")
+    println(s"RES $res")
+
+  }
+
 
   // "run 2" in {
   //   val res = new CommandLine(UrwerkApp())

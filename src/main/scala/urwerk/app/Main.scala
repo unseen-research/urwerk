@@ -1,5 +1,3 @@
 package urwerk.app
 
-class Main {
-  
-}
+class Mainer

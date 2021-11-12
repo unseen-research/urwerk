@@ -23,16 +23,6 @@ class UrwerkApp extends Callable[Int]:
       println(s"Global $global")
       47
 
-
-// @ArgGroup(exclusive = false)
-//     Dependent dependent;
-
-//     static class Dependent {
-//         @Option(names = "-a", required = true) int a;
-//         @Option(names = "-b", required = true) int b;
-//         @Option(names = "-c", required = true) int c;
-//     }
-
 class ModuleSpec:
   @Option(names = Array("--module"), required = true)
   var module: String = "default mod"

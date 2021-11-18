@@ -9,7 +9,7 @@ import urwerk.io.Streams.*
 import urwerk.app.App.ExitStatus
 
 
-type Main = Seq[String] => Source[Either[ByteString, ByteString]]
+type MainFn = Seq[String] => Source[Either[ByteString, ByteString]]
 
 object App:
   object ExitStatus:
@@ -24,7 +24,7 @@ object App:
 
   trait ExitStatus(val exitStatus: Int)
 
-class App(mainFn: Main):
+class App(mainFn: MainFn):
   def main(args: Array[String]): Unit =
     val src = mainFn(ArraySeq.unsafeWrapArray(args))
       .doOnNext{

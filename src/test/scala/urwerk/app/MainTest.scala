@@ -1,90 +1,62 @@
 package urwerk.app
 
-import urwerk.test.TestBase
+import java.util.concurrent.Callable
+import java.util.concurrent.Executors
+
 import picocli.CommandLine
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
 import picocli.CommandLine.Parameters
-import java.util.concurrent.Callable
 import picocli.CommandLine.ScopeType
 import picocli.CommandLine.ArgGroup
 
-@Command(name = "app", mixinStandardHelpOptions = true, version = Array("1.0.x"))
-class UrwerkApp extends Callable[Int]:
+import scala.concurrent.ExecutionContext
 
-    //@Option(names = Array("--global"))
-    var global: Int = 0
+import urwerk.io.file.Path
+import urwerk.test.TestBase
+import urwerk.system.Exec
 
-    @Option(names = Array("--global"), scope = ScopeType.INHERIT) // option is shared with subcommands
-    def setGlobal(value: Int) =
-        println(s"SET GLOBAL $value")
+@Command(name = "Tets App", mixinStandardHelpOptions = true, version = Array("1.0.x"))
+class MainCommmand extends Callable[Int]:
+  @Option(names = Array("--global"), scope = ScopeType.INHERIT) // option is shared with subcommands
+  var global: Int = 0
 
-    def call(): Int =
-      println(s"Global $global")
-      47
+  def call(): Int =
+    7
 
-class ModuleSpec:
-  @Option(names = Array("--module"), required = true)
-  var module: String = "default mod"
-
-  @Option(names = Array("--version"), required = true)
-  var version: String = "default-ver"
-
-@Command(name = "run", mixinStandardHelpOptions = true, version = Array("1.0.x"))
-class Run extends Callable[Int]:
-  @ArgGroup(exclusive = false, multiplicity = "0-1")
-  var modSpec: ModuleSpec = ModuleSpec()
-
-  @Parameters(index = "0", arity = "0-1")
+@Command(name = "run", mixinStandardHelpOptions = true)
+class Run(exitStatus: Int = 0) extends Callable[Int]:
+  @Option(names = Array("module"))
   var module: String = ""
 
-  @Parameters(index = "1", arity = "0..*")
-  var args: java.util.List[String] = java.util.ArrayList()
+  def call(): Int =
+    exitStatus
+end Run
 
-    def call(): Int =
-      println(s"RESULT ${modSpec.module} ${modSpec.version} ${module} ${args}")
+@Command(name = "install", mixinStandardHelpOptions = true)
+class Install(exitStatus: Int = 0) extends Callable[Int]:
+  @Option(names = Array("module"))
+  var module: String = ""
 
-      789
+  def call(): Int =
+    exitStatus
 
 class MainTest extends TestBase:
 
-  "run help" in {
-    val res = new CommandLine(UrwerkApp())
-      .addSubcommand(Run())
-      .setStopAtPositional(true)
-      .execute("run", "abc", "--module")
-    println(s"RES $res")
+  "ph" in {
+    Main(MainCommmand(), Run(), Install()).main(Array("--help"))
+  }
+  "print help" in {
+    val help = App.arg("--help").jointOutput.mkString.block
 
+    println(s"============================")
+    println(help)
   }
 
+given ExecutionContext = ExecutionContext.fromExecutor(Executors.newCachedThreadPool)
 
-  "run 1" in {
-    val res = new CommandLine(UrwerkApp())
-      .addSubcommand(Run())
-      .setStopAtPositional(true)
-      .setStopAtUnmatched(true)
-      .execute("--global", "786", "run", "--module", "the module", "--version", "3.3.4", "dfdf", "dkfjdla")
-    println(s"RES $res")
+val execPath = Path(sys.props("java.home") + "/bin/java").toAbsolutePath
 
-  }
-
-  "run 2" in {
-    val res = new CommandLine(UrwerkApp())
-      .addSubcommand(Run())
-      .setStopAtPositional(true)
-      .setStopAtUnmatched(true)
-      .execute("--global", "786", "run", "dfdf", "dkfjdla")
-    println(s"RES $res")
-
-  }
-
-
-  // "run 2" in {
-  //   val res = new CommandLine(UrwerkApp())
-  //     .setStopAtPositional(true)
-  //     .setStopAtUnmatched(true)
-  //     .addSubcommand(Run())
-  //     .execute("--global", "444", "run", "ur.urwerk.module:1.2.3", "--arg1", "the module")
-  //   println(s"RES $res")
-
-  // }
+val App = Exec(execPath)
+  .param("--class-path", sys.props("java.class.path"))
+  .arg("urwerk.app.Main")

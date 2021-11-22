@@ -13,5 +13,6 @@ class Main(mainCommand: AnyRef, subcommands: AnyRef*):
 
     val status = commandLine.execute(args*)
     if status != 0 then
-      sys.exit(status)
+      exit(status)
 
+  def exit(status: Int): Unit = sys.exit(status)

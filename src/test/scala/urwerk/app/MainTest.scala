@@ -18,9 +18,10 @@ import urwerk.system.Exec
 import java.io.ByteArrayOutputStream
 import java.io.OutputStream
 import java.io.PrintStream
+import urwerk.source.Source
 
 @Command(name = "Tets App", mixinStandardHelpOptions = true, version = Array("1.0.x"))
-class MainCommmand extends Callable[Int]:
+class TestMainCommmand extends Callable[Int]:
   @Option(names = Array("--global"), scope = ScopeType.INHERIT) // option is shared with subcommands
   var global: Int = 0
 
@@ -45,25 +46,21 @@ class Install(exitStatus: Int = 0) extends Callable[Int]:
     exitStatus
 
 class MainTest extends TestBase:
-  "ph" in {
+  "print help 2" in {
     var exitStatus = -1
     val outCapture: OutputStream = ByteArrayOutputStream()
     val errCapture = ByteArrayOutputStream()
-    val main = new Main(MainCommmand(), Run(), Install()){
-        override def exit(status: Int) = exitStatus = status}
-
     withOutput(outCapture){
-      println("xyz")
-      main.main(Array("--help"))
+      _main(status => {})(TestMainCommmand(), Run(), Install())(Array("--help"))
     }
 
-    println("==============================")
+    println("==============================2")
     println(outCapture.toString)
     println("==============================")
 
   }
   "print help" in {
-    val help = App.arg("--help").jointOutput.mkString.block
+    val help = App.arg("--help").jointOutput.onErrorResume(e=>Source()).mkString.block
 
     println(s"============================")
     println(help)
@@ -77,11 +74,24 @@ val App = Exec(execPath)
   .param("--class-path", sys.props("java.class.path"))
   .arg("urwerk.app.Main")
 
-
 def withOutput[T](out: OutputStream)(thunk: => T): T =
-  val savedOut = System.out
+  val sysOut = System.out
   System.setOut(PrintStream(out))
+
   try
-    thunk
+    Console.withOut(out){
+      thunk
+    }
   finally
-    System.setOut(savedOut)
+    System.setOut(sysOut)
+
+def withErrorOutput[T](out: OutputStream)(thunk: => T): T =
+  val sysOut = System.err
+  System.setErr(PrintStream(out))
+
+  try
+    Console.withOut(out){
+      thunk
+    }
+  finally
+    System.setErr(sysOut)

@@ -36,7 +36,7 @@ object Main:
   def main(args: Array[String]): Unit =
     mainOp(args)
 
-def mainOp(using app: Main.Application, commands: Seq[Main.Command])(args: Array[String])(using exitOp: ExitOp): Unit =
+def mainOp(args: Array[String])(using app: Main.Application, commands: Seq[Main.Command], exitOp: ExitOp): Unit =
   val commandLine = commands.foldLeft(CommandLine(app)){(commandLine, subcommand) =>
       commandLine.addSubcommand(subcommand)}
     .setStopAtPositional(true)

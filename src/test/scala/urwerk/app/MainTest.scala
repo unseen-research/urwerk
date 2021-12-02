@@ -59,7 +59,7 @@ class MainTest extends TestBase:
     val outCapture: OutputStream = ByteArrayOutputStream()
     val errCapture = ByteArrayOutputStream()
     withOutput(outCapture){
-      mainOp(using TestMainCommand(), Seq())(Array("--help"))
+      mainOp(Array("--help"))(using TestMainCommand(), Seq())
     }
 
     println("==============================2")

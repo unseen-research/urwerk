@@ -21,7 +21,7 @@ import java.io.PrintStream
 import urwerk.source.Source
 
 @Command(name = "Tets App", mixinStandardHelpOptions = true, version = Array("1.0.x"))
-class TestMainCommmand extends Callable[Int]:
+class TestMainCommand extends Callable[Int], Main.Application:
   @Option(names = Array("--global"), scope = ScopeType.INHERIT) // option is shared with subcommands
   var global: Int = 0
 
@@ -45,9 +45,12 @@ class Install(exitStatus: Int = 0) extends Callable[Int]:
   def call(): Int =
     exitStatus
 
-given Commands with
-  def mainCommand = TestMainCommmand()
-  def subcommands = Seq()
+//given Seq[Main.Command] = Seq()
+
+//given Main.Application = TestMainCommand()
+
+given ExitOp with
+  def apply(status: Int): Unit = ()
 
 
 class MainTest extends TestBase:
@@ -56,7 +59,7 @@ class MainTest extends TestBase:
     val outCapture: OutputStream = ByteArrayOutputStream()
     val errCapture = ByteArrayOutputStream()
     withOutput(outCapture){
-      mainOp(Array("--help"))
+      mainOp(using TestMainCommand(), Seq())(Array("--help"))
     }
 
     println("==============================2")

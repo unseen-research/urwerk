@@ -45,13 +45,18 @@ class Install(exitStatus: Int = 0) extends Callable[Int]:
   def call(): Int =
     exitStatus
 
+given Commands with
+  def mainCommand = TestMainCommmand()
+  def subcommands = Seq()
+
+
 class MainTest extends TestBase:
   "print help 2" in {
     var exitStatus = -1
     val outCapture: OutputStream = ByteArrayOutputStream()
     val errCapture = ByteArrayOutputStream()
     withOutput(outCapture){
-      _main(status => {})(TestMainCommmand(), Run(), Install())(Array("--help"))
+      mainOp(Array("--help"))
     }
 
     println("==============================2")

@@ -22,7 +22,7 @@ trait Commands:
   def subcommands: Seq[AnyRef]
 
 @Command(name = "Tets App", mixinStandardHelpOptions = true, version = Array("1.0.x"))
-class MainCommmand extends Callable[Int]:
+class MainCommand extends Callable[Int]:
   @Option(names = Array("--global"), scope = ScopeType.INHERIT) // option is shared with subcommands
   var global: Int = 0
 

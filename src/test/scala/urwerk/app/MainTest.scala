@@ -25,6 +25,8 @@ class TestMainCommand extends Callable[Int], Main.Application:
   @Option(names = Array("--global"), scope = ScopeType.INHERIT) // option is shared with subcommands
   var global: Int = 0
 
+  override def toString = "test"
+
   def call(): Int =
     7
 
@@ -47,19 +49,44 @@ class Install(exitStatus: Int = 0) extends Callable[Int]:
 
 //given Seq[Main.Command] = Seq()
 
-//given Main.Application = TestMainCommand()
+
 
 given ExitOp with
   def apply(status: Int): Unit = ()
 
-
 class MainTest extends TestBase:
+
+  case class Conf(a: String, b: Int)
+
+  case class Param[A](name: String)
+  class Cmd[A](name: String):
+    def apply(name: String): Cmd[A] = ???
+
+    def context(params: Param[A]*): Cmd[A] = ???
+
+    def params(params: Param[A]*): Cmd[A] = ???
+    def x = ""
+
+  "ccc" in {
+    Cmd[Conf]("run")
+      .context(
+        Param("y"), Param("z"))
+      .params(
+        Param("y"), Param("z"))
+  }
+
+  "summon" in {
+    given Main.Application = TestMainCommand()
+    val x = summon[Main.Application]
+    x.toString should be ("test")
+  }
+
   "print help 2" in {
     var exitStatus = -1
     val outCapture: OutputStream = ByteArrayOutputStream()
     val errCapture = ByteArrayOutputStream()
     withOutput(outCapture){
-      mainOp(Array("--help"))(using TestMainCommand(), Seq())
+      mainOp(Array("--help"))
     }
 
     println("==============================2")

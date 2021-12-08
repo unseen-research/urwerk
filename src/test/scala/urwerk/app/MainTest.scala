@@ -19,6 +19,8 @@ import java.io.ByteArrayOutputStream
 import java.io.OutputStream
 import java.io.PrintStream
 import urwerk.source.Source
+import scala.runtime.TupleXXL
+import scala.runtime.LazyRef
 
 @Command(name = "Tets App", mixinStandardHelpOptions = true, version = Array("1.0.x"))
 class TestMainCommand extends Callable[Int], Main.Application:
@@ -58,22 +60,60 @@ class MainTest extends TestBase:
 
   case class Conf(a: String, b: Int)
 
-  case class Param[A](name: String)
+  object PostConditions:
+    opaque type WrappedResult[T] = T
+
+    def result[T](using r: WrappedResult[T]): T = r
+
+    extension [T](x: T)
+      def ensuring(condition: WrappedResult[T] ?=> Boolean): T =
+        assert(condition(using x))
+        x
+  end PostConditions
+  import PostConditions.{ensuring, result}
+
+  val s = List(1, 2, 3).sum.ensuring(result == 6)
+
+
+  object Params
+    //def param[A, B](): Param[A, B] = Param("")
+
+  case class Param[A](name: String):
+    def apply[B](using Cmd.GetConf[B])(op: (B, A) => B) = ???
+
+  object Cmd:
+    type GetConf[A] = () => A
+
   class Cmd[A](name: String):
+
+
     def apply(name: String): Cmd[A] = ???
 
-    def context(params: Param[A]*): Cmd[A] = ???
+    def context(params: Cmd.GetConf[A] ?=> Param[_]*): Cmd[A] = ???
 
-    def params(params: Param[A]*): Cmd[A] = ???
+    def params[P](params: Param[A]*): Cmd[A] = ???
     def x = ""
+
+
+  "lazy" in {
+    val l = LazyRef[String]()
+    l.initialize("a")
+    println(l.value)
+
+    l.initialize("B")
+    println(l.value)
+
+  }
 
   "ccc" in {
     Cmd[Conf]("run")
       .context(
-        Param("y"), Param("z"))
+        Param[String]("y").apply((a, b) => a), Param("z"), Param[String]("y").apply((a, b) => a))
       .params(
         Param("y"), Param("z"))
   }
+
+
 
   "summon" in {
     given Main.Application = TestMainCommand()

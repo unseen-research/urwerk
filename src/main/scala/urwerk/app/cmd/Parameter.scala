@@ -3,6 +3,7 @@ package urwerk.app.cmd
 object Parameter:
   type ConfigProvider[A] = () => A
 
+  //class EitherMonad[T] extends Monad[[E] =>> Either[T, E]]
   def apply[A](): Parameter[A] = new Parameter(None, (x: A) => ???)
 
 class Parameter[A](val default: Option[A], private val applyOp: A => _):

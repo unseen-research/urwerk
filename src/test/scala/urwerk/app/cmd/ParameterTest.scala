@@ -1,41 +1,28 @@
 package urwerk.app.cmd
 
 import urwerk.test.TestBase
+import scala.annotation.meta.param
+
+object ParameterTest:
+  opaque type WrappedResult[T] = T
+
+  def wrap[A](value: A): WrappedResult[A] = value
 
 class ParameterTest extends TestBase:
 
-  import Parameter.*
+  import ParameterTest.*
 
-  "type" in {
-    //class EitherMonad[T] extends Monad[[E] =>> Either[T, E]]
-    //def apply[A](): Parameter[A] = new Parameter(None, (x: A) => ???)
+  val result: Either[String,Int] = Right(5) //Either is the Parameter pendent to be created
 
-    // trait P[A, B]
+  trait Monad[A[* <: Either[?, ?]]]:                        //some factory to create param eventually
+    def onApply[B <: Either[?, ?]](f: B => Unit): A[B] = ???
 
-    // type C
-    // def create[C]: P[C, ?] = ???
+  object EitherMonad:                       //incomplete builder called Param
+    def apply[A]: EitherMonad[A] = ???
 
+  class EitherMonad[T] extends Monad[[E] =>> Either[T, E]]
 
-  //   def a(x: Int): String = ""
+  val xx = EitherMonad[String]
 
-  //   Int => String
+  val xs: Either[String, Int] = EitherMonad[String].onApply(x => ())
 
-  //   type T[X] = R
-
-  // type T = [X] =>> R
-
-
-  }
-
-  "default value" in {
-    val param = Parameter[String]().default("some value")
-
-    param.default.get should be("some value")
-  }
-
-  "on apply" in {
-    case class Config(value: String)
-    given ConfigProvider[Config] = () => Config("")
-
-    Parameter[String]().onApply((config: Config, value) => config.copy(value = "test" + value)).apply("any value")
-  }

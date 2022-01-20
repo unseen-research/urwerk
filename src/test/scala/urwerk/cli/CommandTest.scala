@@ -5,27 +5,27 @@ import urwerk.test.TestBase
 class CommandTest extends TestBase:
   
   object Opt:
-    type TL = [X] =>> Opt[X, ?]
+    //type TL = [X] =>> Opt[X, ?]
 
 
     class Wrapper[A]: 
-      type X = TL[A]
+      type X = A
 
       def get: X = ???
 
 
-    def apply[A]: Opt[A, ?] = new Opt()
+    def apply[A](using w: Opt.Wrapper[?]): Opt[A, w.X] = ???
 
 
-    def create[A]()(using w: Opt.Wrapper[A]): w.X = ???
+    def create[A](using w: Opt.Wrapper[?]): Opt[A, w.X] = ???
 
   class Opt[A, B](val v: B):
     def this() = this(???)
 
-    def step1[B1 >: B]: Opt[A, B1] = new Opt(v)
-    def step2[B1 >: B]: Opt[A, B1] = new Opt(v)
+    def step1: Opt[A, B] = new Opt[A, B]()
+    def step2: Opt[A, B] = ??? //new Opt(v)
 
-    def configure[B1](fn: (A, B1) => B1): Opt[A, B1] = new Opt[A, B1]
+    def configure(fn: (A, B) => B): Opt[A, B] = new Opt[A, B]
      
     
   class Cmd[B]:
@@ -37,21 +37,37 @@ class CommandTest extends TestBase:
 
           fn(using w)
       }
-
-    
-  "overlord" in {
-
-    given w: Opt.Wrapper[Int]()
-
-    val op: Opt[String, Int] = Opt.create[String]
-
-  }
+   
 
   "overload" in {
 
     class Config()
 
-    Cmd[Config].option(Opt[String].create)
+    Cmd[Config].option(x ?=>
+      Opt.create[String](using x))
 
-    Cmd[Config].options(Opt[String].configure((a, b)=>b), Opt[Int].configure((a, b)=>b))
+
+    Cmd[Config].option(
+      Opt.create[String])
+
+    Cmd[Config].options(
+      Opt.create[String].configure((a, b)=>b), 
+      Opt.create[Int].step1.step2.configure((a: Int, b)=>b).step1.step2)
+  }
+
+
+  "apply" in {
+
+    class Config()
+
+    Cmd[Config].option(x ?=>
+      Opt[String](using x))
+
+
+    Cmd[Config].option(
+      Opt[String])
+
+    Cmd[Config].options(
+      Opt[String].configure((a, b)=>b), 
+      Opt[Int].step1.step2.configure((a: Int, b: Config)=>b).step1.step2)
   }

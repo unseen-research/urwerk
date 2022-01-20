@@ -5,24 +5,25 @@ import urwerk.test.TestBase
 class CommandTest extends TestBase:
   
   object Opt:
-    type TL = [X] =>> Map[X, String]
+    type TL = [X] =>> Opt[X, ?]
 
-    val tl: TL[Int] = Map[Int, String]()
 
-    class Wrapper[T]: 
-      type X = T
+    class Wrapper[A]: 
+      type X = TL[A]
+
       def get: X = ???
 
 
     def apply[A]: Opt[A, ?] = new Opt()
 
 
-    def create[A](using w: Opt.Wrapper[?]): Opt[A, w.X] = ???
+    def create[A]()(using w: Opt.Wrapper[A]): w.X = ???
 
-  class Opt[+A, +B]():
+  class Opt[A, B](val v: B):
+    def this() = this(???)
 
-    def step1(): Opt[A, B] = this
-    def step2(): Opt[A, B] = this
+    def step1[B1 >: B]: Opt[A, B1] = new Opt(v)
+    def step2[B1 >: B]: Opt[A, B1] = new Opt(v)
 
     def configure[B1](fn: (A, B1) => B1): Opt[A, B1] = new Opt[A, B1]
      
@@ -50,7 +51,7 @@ class CommandTest extends TestBase:
 
     class Config()
 
-    Cmd[Config].option(Opt[String].configure((a, b)=>b))
+    Cmd[Config].option(Opt[String].create)
 
     Cmd[Config].options(Opt[String].configure((a, b)=>b), Opt[Int].configure((a, b)=>b))
   }

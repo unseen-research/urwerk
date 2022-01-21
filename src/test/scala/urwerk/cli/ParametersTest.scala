@@ -1,7 +1,11 @@
-package urwerk.app.command
+package urwerk.cli
 
 import urwerk.test.TestBase
-import Parameters.*
+import urwerk.cli.Parameters.IllegalValueException
+import urwerk.cli.Parameters.Position
+import urwerk.cli.Parameters.MissingValueException
+import urwerk.cli.Parameters.MissingParameterException
+import urwerk.cli.Parameters.ArityExceededException
 
 class ParametersTest extends TestBase:
   case class Config[A](value: A)

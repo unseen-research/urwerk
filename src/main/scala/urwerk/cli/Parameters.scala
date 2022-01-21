@@ -1,11 +1,11 @@
-package urwerk.app.command
+package urwerk.cli
 
 import scala.annotation.tailrec
 import scala.compiletime.constValue
 import scala.util.Try
 import scala.util.Failure
-import urwerk.app.command.Parameters.Position
-import urwerk.app.command.Parameters.IllegalValueException
+import urwerk.cli.Parameters.Position
+import urwerk.cli.Parameters.IllegalValueException
 
 object Parameter:
   trait ValueSpec[A]:
@@ -93,7 +93,7 @@ class Parameter[A, B](val names: Seq[String],
       collectOp: (A, B) => B = collectOp) =
     new Parameter(names, label, arity, default, valueRequired, acceptOp, convertOp, collectOp)
 
-  private[command] def collectValue(config: B, value: String, position: Position): B =
+  private[cli] def collectValue(config: B, value: String, position: Position): B =
     if !acceptOp(value) then
       throw IllegalValueException(position)
     Try(
@@ -102,7 +102,7 @@ class Parameter[A, B](val names: Seq[String],
       .flatMap(value => applyCollectOp(value, config, position))
       .get
 
-  private[command] def collectDefault(config: B, position: Position): B =
+  private[cli] def collectDefault(config: B, position: Position): B =
     default.map(value =>
         applyCollectOp(value, config, position).get)
       .getOrElse(config)
@@ -252,7 +252,7 @@ object Parameters:
                     case Some((param, arity)) =>
                       val newArity = arity + 1
                       if newArity > param.maxArity then
-                        throw ArityExceededException(name, param.maxArity, pos)
+                        throw new ArityExceededException(name, param.maxArity, pos)
                       Some((param, newArity))
                     case None => ???
                   }

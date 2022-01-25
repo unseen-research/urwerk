@@ -2,8 +2,36 @@ package urwerk.cli
 
 import urwerk.test.TestBase
 
+// Commmand[Config].settings(
+//   ParameterList(name="options", id="opts")(
+//     Param[String]("option", "o")(
+//       action(config, value => config.copy(value = value)),
+//       usage("")
+///   ),
+//     Param[String],
+//     Param[Boolean])
+
+//   ParameterList("command")(
+//     Param["run"]),
+
+//   ParameterList(args)(
+//     Param[String].arity(Max))
+
+//   usage("this is the run command"),
+
+//   action{config => 
+//     println("done")
+//     -1
+//   }
+// )
+
 class CommandTest extends TestBase:
   
+  "command" in {
+    
+  }
+
+
   object Opt:
     //type TL = [X] =>> Opt[X, ?]
 

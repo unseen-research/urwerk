@@ -25,12 +25,25 @@ import urwerk.test.TestBase
 //   }
 // )
 
+case class Config(value: String = "")
+
 class CommandTest extends TestBase:
   
-  "command" in {
-    
+  "execute with apply returning int" in {
+    val cmd = Command(Config("7")).apply{config => 
+      config.value.toInt
+    }
+
+    cmd.execute() should be (7)
   }
 
+  "execute with apply returning unit" in {
+    val cmd = Command(Config("7")).apply{config => 
+      "something"
+    }
+
+    cmd.execute() should be (0)
+  }
 
   object Opt:
     //type TL = [X] =>> Opt[X, ?]

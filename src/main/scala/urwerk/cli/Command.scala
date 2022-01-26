@@ -1,8 +1,6 @@
 package urwerk.cli
 
 import urwerk.cli.Parameter.ConfigProvider
-import urwerk.cli.Parameters.Position
-import urwerk.cli.Parameters.ParameterList
 
 case class Command[C](config: C, parameterLists: Seq[ParameterList[C]], applyOp: C => Int | Any):
   def apply(op: C => Int| Any): Command[C] = copy(applyOp = op)

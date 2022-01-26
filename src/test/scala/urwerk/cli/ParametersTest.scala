@@ -1,18 +1,15 @@
 package urwerk.cli
 
+import urwerk.cli.Parameter.param
+import urwerk.cli.Parameter.ConfigProvider
 import urwerk.test.TestBase
-import urwerk.cli.Parameters.IllegalValueException
-import urwerk.cli.Parameters.Position
-import urwerk.cli.Parameters.MissingValueException
-import urwerk.cli.Parameters.MissingParameterException
-import urwerk.cli.Parameters.ArityExceededException
 
 class ParametersTest extends TestBase:
   case class Config[A](value: A)
 
   "int parameter" - {
-    val params = Parameters[Config[Int]]
-    import params.*
+    given ConfigProvider[Config[Int]] with 
+      def get = Config(7)
 
     "requires value" in {
       param[Int].valueRequired should be (true)
@@ -37,8 +34,8 @@ class ParametersTest extends TestBase:
   }
 
   "string parameter" - {
-    val params = Parameters[Config[String]]()
-    import params.*
+    given ConfigProvider[Config[String]] with 
+      def get = Config("")
 
     "requires value" in {
       param[String].valueRequired should be (true)
@@ -62,8 +59,8 @@ class ParametersTest extends TestBase:
   }
 
   "boolean parameter" - {
-    val params = Parameters[Config[String]]
-    import params.*
+    given ConfigProvider[Config[String]] with 
+      def get = Config("")
 
     "not require value" in {
       param[Boolean].valueRequired should be (false)
@@ -78,11 +75,10 @@ class ParametersTest extends TestBase:
     }
   }
 
-  import Parameters.ParameterList
-
   "parameter list" - {
-    val params = Parameters[Seq[String]]
-    import params.*
+
+    given ConfigProvider[Seq[String]] with 
+      def get = Seq()
 
     "name value parameters" in {
       val params = Seq(

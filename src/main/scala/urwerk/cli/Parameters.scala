@@ -49,7 +49,7 @@ object Parameter:
       if lowerValue.isEmpty then true
       else if lowerValue == "true" then true
       else false
-      
+
     def defaultLabel: String = "UNIT"
 
 import Parameter.ValueSpec
@@ -79,7 +79,7 @@ class Parameter[V, C](val names: Seq[String],
   // def apply(op: (A, B) => B): Parameter[A, B] =
   //   collect(op)
 
-  def onApply(op: (V, C) => C): Parameter[V, C] =
+  def apply(op: (V, C) => C): Parameter[V, C] =
     collect(op)
 
   def accept(op: String => Boolean): Parameter[V, C] =

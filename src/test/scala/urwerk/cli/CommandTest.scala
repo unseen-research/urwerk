@@ -25,9 +25,11 @@ class CommandTest extends TestBase:
 
   "execute with parameter" in {
     val cmd = Command(Config("7")).parameterList(
-        param[String]("param", "p")
-          .onApply((value, config) => Config(value)))
+          param[String]("param", "p"){(value, config) => 
+            Config(value)
+        })
       .apply(config => config.value.toInt)
     
     cmd.execute("--param", "8") should be (8)
   }
+

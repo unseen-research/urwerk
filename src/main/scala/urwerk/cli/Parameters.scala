@@ -8,6 +8,20 @@ import urwerk.cli.Parameters.Position
 import urwerk.cli.Parameters.IllegalValueException
 
 object Parameter:
+
+  def configOf[C](config: C): ConfigProvider[C] = new ConfigProvider:
+      def get = config
+
+  trait ConfigProvider[C]: 
+      type CC = C
+      def get: CC
+
+  def param[V](using valueSpec: ValueSpec[V], config: ConfigProvider[?]): Parameter[V, config.CC] = 
+    new Parameter(Seq(), valueSpec.defaultLabel, (0, 1), None, valueSpec, {(_, config) => config})
+
+  def param[V](using valueSpec: ValueSpec[V], config: ConfigProvider[?])(name: String, names: String*): Parameter[V, config.CC] = 
+    new Parameter(name +: names, valueSpec.defaultLabel, (0, 1), None, valueSpec, {(_, config) => config})
+
   trait ValueSpec[A]:
     def requireValue: Boolean
     def accept(value: String): Boolean

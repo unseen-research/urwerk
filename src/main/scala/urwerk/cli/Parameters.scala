@@ -40,10 +40,16 @@ object Parameter:
     def convert(value: String): Int = value.toInt
     def defaultLabel: String = "INT"
 
-  given ValueSpec[Unit] with
+  given ValueSpec[Boolean] with
     val requireValue = false
     def accept(value: String): Boolean = value.isEmpty
-    def convert(value: String): Unit = ()
+    def convert(value: String): Boolean = 
+      val lowerValue = value.toLowerCase
+
+      if lowerValue.isEmpty then true
+      else if lowerValue == "true" then true
+      else false
+      
     def defaultLabel: String = "UNIT"
 
 import Parameter.ValueSpec

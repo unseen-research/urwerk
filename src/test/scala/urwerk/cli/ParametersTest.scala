@@ -61,20 +61,20 @@ class ParametersTest extends TestBase:
     }
   }
 
-  "unit parameter" - {
+  "boolean parameter" - {
     val params = Parameters[Config[String]]
     import params.*
 
     "not require value" in {
-      param[Unit].valueRequired should be (false)
+      param[Boolean].valueRequired should be (false)
     }
 
     "collect value" in {
-      val value = param[Unit]
+      val value = param[Boolean]
         .collect{case (value, config) => config.copy(value = s"Value=$value")}
         .collectValue(Config(""), "", Position(4, 5))
 
-      value should be (Config("Value=()"))
+      value should be (Config("Value=true"))
     }
   }
 
@@ -104,10 +104,10 @@ class ParametersTest extends TestBase:
 
     "name parameters" in {
       val params = Seq(
-        param[Unit]("name2")
+        param[Boolean]("name2")
           .collect((value, config) =>
             config :+ "name2-" + value),
-        param[Unit]("name1")
+        param[Boolean]("name1")
           .collect((value, config) =>
             config :+ "name1-" + value)
       )
@@ -117,12 +117,12 @@ class ParametersTest extends TestBase:
           Seq("--name1", "--name2", "value2", "--name3", "value3"))
 
       pos should be (Position(2, 0))
-      config should be (Seq("name1-()", "name2-()"))
+      config should be (Seq("name1-true", "name2-true"))
     }
 
     "name parameter with required but missing value" in {
       val params = Seq(
-        param[Unit]("name1"),
+        param[Boolean]("name1"),
         param[String]("name2")
       )
 
@@ -268,11 +268,11 @@ class ParametersTest extends TestBase:
 
     "flags without value" in {
       val params = Seq(
-        param[Unit]("a", "A")
+        param[Boolean]("a", "A")
           .onApply((value, config) =>
             config :+ "a-" + value)
           .arity(0, 77),
-        param[Unit]("b", "B")
+        param[Boolean]("b", "B")
           .onApply((value, config) =>
             config :+ "b-" + value)
           .arity(0, 77),
@@ -286,15 +286,15 @@ class ParametersTest extends TestBase:
         .collectParams(Seq(), Seq("-aAbBc", "valueC", "tail"))
 
       pos should be (Position(2, 0))
-      config should be (Seq("a-()", "a-()", "b-()", "b-()", "c-valueC"))
+      config should be (Seq("a-true", "a-true", "b-true", "b-true", "c-valueC"))
     }
 
     "flags with required but missing value" in {
       val params = Seq(
-        param[Unit]("a")
+        param[Boolean]("a")
           .onApply((value, config) =>
             config :+ "a-" + value),
-        param[Unit]("b", "B")
+        param[Boolean]("b", "B")
           .onApply((value, config) =>
             config :+ "b-" + value),
         param[String]("c", "C")
@@ -311,8 +311,8 @@ class ParametersTest extends TestBase:
 
     "default values" in {
       val params = Seq(
-        param[Unit]("name-a", "a", "A")
-          .default(())
+        param[Boolean]("name-a", "a", "A")
+          .default(false)
           .collect((value, config) =>
             config :+ "a-" + value),
         param[Int]
@@ -329,7 +329,7 @@ class ParametersTest extends TestBase:
         .collectParams(Seq(), Seq())
 
       pos should be (Position(0, 0))
-      config.toSet should be (Set("a-()", "b-42", "c-default-value"))
+      config.toSet should be (Set("a-false", "b-42", "c-default-value"))
     }
 
     "fail when exception is thrown while collect value" in {

@@ -34,66 +34,66 @@ object Parameter:
 
 import Parameter.ValueSpec
 
-class Parameter[A, B](val names: Seq[String],
+class Parameter[V, C](val names: Seq[String],
     val label: String,
     val arity: (Int, Int),
-    val default: Option[A],
+    val default: Option[V],
     val valueRequired: Boolean,
     val acceptOp: String => Boolean,
-    val convertOp: String => A,
-    val collectOp: (A, B) => B):
+    val convertOp: String => V,
+    val collectOp: (V, C) => C):
 
   def this(names: Seq[String],
       label: String,
       arity: (Int, Int),
-      default: Option[A],
-      valueSpec: ValueSpec[A],
-      collectOp: (A, B) => B) =
+      default: Option[V],
+      valueSpec: ValueSpec[V],
+      collectOp: (V, C) => C) =
     this(names, label, arity, default, valueSpec.requireValue, valueSpec.accept, valueSpec.convert, collectOp)
 
-  def default(value: A): Parameter[A, B] = copy(default = Some(value))
+  def default(value: V): Parameter[V, C] = copy(default = Some(value))
 
-  def collect(op: (A, B) => B): Parameter[A, B] =
+  def collect(op: (V, C) => C): Parameter[V, C] =
     copy(collectOp = op)
 
   // def apply(op: (A, B) => B): Parameter[A, B] =
   //   collect(op)
 
-  def onApply(op: (A, B) => B): Parameter[A, B] =
+  def onApply(op: (V, C) => C): Parameter[V, C] =
     collect(op)
 
-  def accept(op: String => Boolean): Parameter[A, B] =
+  def accept(op: String => Boolean): Parameter[V, C] =
     copy(acceptOp = op)
 
-  def arity(minArity: Int, maxArity: Int): Parameter[A, B] =
+  def arity(minArity: Int, maxArity: Int): Parameter[V, C] =
     copy(arity = (minArity, maxArity))
 
   def minArity: Int = arity._1
 
   def maxArity: Int = arity._2
 
-  def label(label: String): Parameter[A, B] =
+  def label(label: String): Parameter[V, C] =
     copy(label = label)
 
   def name: String = names.headOption.getOrElse("")
 
-  def name(name: String): Parameter[A, B] =
+  def name(name: String): Parameter[V, C] =
     copy(names = name +: names.drop(1))
 
-  def names(name: String, names: String*): Parameter[A, B] =
+  def names(name: String, names: String*): Parameter[V, C] =
     copy(names = name +: names)
 
   private def copy(names: Seq[String] = names,
       label: String = label,
       arity: (Int, Int) = arity,
-      default: Option[A] = default,
+      default: Option[V] = default,
       valueRequired: Boolean = valueRequired,
       acceptOp: String => Boolean = acceptOp,
-      convertOp: String => A = convertOp,
-      collectOp: (A, B) => B = collectOp) =
+      convertOp: String => V = convertOp,
+      collectOp: (V, C) => C = collectOp) =
     new Parameter(names, label, arity, default, valueRequired, acceptOp, convertOp, collectOp)
 
-  private[cli] def collectValue(config: B, value: String, position: Position): B =
+  private[cli] def collectValue(config: C, value: String, position: Position): C =
     if !acceptOp(value) then
       throw IllegalValueException(position)
     Try(
@@ -102,12 +102,12 @@ class Parameter[A, B](val names: Seq[String],
       .flatMap(value => applyCollectOp(value, config, position))
       .get
 
-  private[cli] def collectDefault(config: B, position: Position): B =
+  private[cli] def collectDefault(config: C, position: Position): C =
     default.map(value =>
         applyCollectOp(value, config, position).get)
       .getOrElse(config)
 
-  private def applyCollectOp(value: A, config: B, position: Position): Try[B] =
+  private def applyCollectOp(value: V, config: C, position: Position): Try[C] =
     Try(
         collectOp(value, config))
       .recoverWith(ex => Failure(IllegalValueException(ex, position)))

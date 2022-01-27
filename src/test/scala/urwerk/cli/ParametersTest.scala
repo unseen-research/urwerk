@@ -75,6 +75,13 @@ class ParametersTest extends TestBase:
     }
   }
 
+  "seq parameter" in {
+    given ConfigProvider[Config[String]] with 
+      def get = Config("")
+
+    param[Seq[String]].valueRequired should be (false)
+  }
+
   "parameter list" - {
 
     given ConfigProvider[Seq[String]] with 

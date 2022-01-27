@@ -51,6 +51,13 @@ object Parameter:
 
     def defaultLabel: String = "UNIT"
 
+  given [T](using ValueSpec[T]): ValueSpec[Seq[T]] with
+    val requireValue = false
+    def accept(value: String): Boolean = value.isEmpty
+    def convert(value: String): Seq[T] = ???
+    def defaultLabel: String = "SEQ"
+
+
 import Parameter.ValueSpec
 
 class Parameter[V, C](val names: Seq[String],

@@ -41,7 +41,6 @@ object Parameter:
     def isValue(value: String): Boolean = 
       !value.startsWith("--")
       //value.nonEmpty && value.toDoubleOption.isDefined
-
     def defaultValue: Option[Int] = None
     def convert(value: String): Int = value.toInt
     def defaultLabel: String = "INT"
@@ -66,7 +65,7 @@ object Parameter:
     def isValue(value: String): Boolean = value.isEmpty
     
     def defaultValue: Option[Seq[T]] = None
-    
+
     def convert(value: String): Seq[T] = ???
     def defaultLabel: String = s"SEQUENCE[${valueSpec.defaultLabel}]"
 
@@ -77,26 +76,27 @@ class Parameter[V, C](val names: Seq[String],
     val label: String,
     val arity: (Int, Int),
     val default: Option[V],
-    val valueRequired: Boolean,
-    val isValueOp: String => Boolean,
-    val convertOp: String => V,
+    // val valueRequired: Boolean,
+    // val isValueOp: String => Boolean,
+    // val convertOp: String => V,
+    val valueSpec: ValueSpec[V],
     val applyOp: (V, C) => C):
 
-  def this(names: Seq[String],
-      label: String,
-      arity: (Int, Int),
-      default: Option[V],
-      valueSpec: ValueSpec[V],
-      applyOp: (V, C) => C) =
-    this(names, label, arity, default, valueSpec.requireValue, valueSpec.isValue, valueSpec.convert, applyOp)
+  // def this(names: Seq[String],
+  //     label: String,
+  //     arity: (Int, Int),
+  //     default: Option[V],
+  //     valueSpec: ValueSpec[V],
+  //     applyOp: (V, C) => C) =
+  //   this(names, label, arity, default, valueSpec.requireValue, valueSpec.isValue, valueSpec.convert, applyOp)
 
   def default(value: V): Parameter[V, C] = copy(default = Some(value))
 
   def apply(op: (V, C) => C): Parameter[V, C] =
     copy(applyOp = op)
 
-  def accept(op: String => Boolean): Parameter[V, C] =
-    copy(isValueOp = op)
+  // def accept(op: String => Boolean): Parameter[V, C] =
+  //   copy(isValueOp = op)
 
   def arity(minArity: Int, maxArity: Int): Parameter[V, C] =
     copy(arity = (minArity, maxArity))
@@ -120,17 +120,18 @@ class Parameter[V, C](val names: Seq[String],
       label: String = label,
       arity: (Int, Int) = arity,
       default: Option[V] = default,
-      valueRequired: Boolean = valueRequired,
-      isValueOp: String => Boolean = isValueOp,
-      convertOp: String => V = convertOp,
+      // valueRequired: Boolean = valueRequired,
+      // isValueOp: String => Boolean = isValueOp,
+      // convertOp: String => V = convertOp,
+      valueSpec: ValueSpec[V] = valueSpec,
       applyOp: (V, C) => C = applyOp) =
-    new Parameter(names, label, arity, default, valueRequired, isValueOp, convertOp, applyOp)
+    new Parameter(names, label, arity, default, valueSpec, applyOp)
 
   private[cli] def collectValue(config: C, value: String, position: Position): C =
-    if !isValueOp(value) then
+    if !valueSpec.isValue(value) then
       throw IllegalValueException(position)
     Try(
-        convertOp(value))
+        valueSpec.convert(value))
       .recoverWith(ex => Failure(IllegalValueException(ex, position)))
       .flatMap(value => applyCollectOp(value, config, position))
       .get
@@ -238,7 +239,7 @@ class ParameterList[A](params: Seq[Parameter[?, A]]):
 
           val (_, arity) = repetitions(ParamKey.Pos(positionalIndex))
 
-          if !param.isValueOp(value) then
+          if !param.valueSpec.isValue(value) then
             val _config = postProcess(config, repetitions, pos)
             (_config, pos)
           else if arity + 1 >= maxArity then
@@ -265,7 +266,7 @@ class ParameterList[A](params: Seq[Parameter[?, A]]):
         case (name, nextFlagIndex) =>
           paramsMap.get(name) match
             case Some(param) =>
-              val valueRequired = param.valueRequired
+              val valueRequired = param.valueSpec.requireValue
               val value = if valueRequired then
                 if name.size == 1
                     && flagIndex + 2 < arg.size then

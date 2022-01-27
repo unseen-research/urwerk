@@ -161,26 +161,38 @@ class MissingValueException(position: Position)
 
 class UnexpectedParameterException(position: Position) extends ParameterException("", None, position)
 
-case class Position(val index: Int, val subindex: Int)
+case class Position(val argIndex: Int, val flagIndex: Int)
 
 object ParameterList:
   enum ParamKey:
     case Name(name: String)
     case Pos(pos: Int)
 
+  private enum Arg:
+    case NameArg(name: String, nextPos: Position)
+    //case FlagArg(name: String, nextPos: Position)
+    case ValueArg(value: String, nextPos: Position)
+    case UndefinedArg(nextPos: Position)
 
-  private enum ArgType:
-    case NameArg(name: String)
-    case FlagArg(name: String, flagIndex: Int)
-    case ValueArg(value: String)
-
-class ParameterList[A](params: Seq[Parameter[?, A]]):
+class ParameterList[A](config: A, params: Seq[Parameter[?, A]]):
   import ParameterList.*
-  import ParameterList.ArgType.*
+  import ParameterList.Arg.*
 
-  def collectParams(config: A, args: Seq[String]): (A, Position) =
-    collectParams(config, args, positionalParameters, namedParameters(params), Map(), Position(0, 0), 0)
-   
+  def this(config: A) = this(config, Seq())
+
+  def parameter(param: Parameter.ConfigProvider[A] ?=> Parameter[?, A]): ParameterList[A] = 
+    val configProvider =  Parameter.configOf(config)
+    val resolvedParam = param(using configProvider)
+    ParameterList(config, params :+ resolvedParam)
+
+  def collectParams(args: Seq[String]): (A, Position) =
+    val (collectedParams, pos) = collectParams(args, positionalParameters, namedParameters(params), Map(), Position(0, 0), 0)
+    val updatedConfig = collectedParams.values.foldLeft(config){case (config, (param, values)) =>
+      val value = param.valueSpec.convertSeq(values)
+      param.applyOp(value, config)
+    }
+    (updatedConfig, pos)
+
 
   // private def postProcess(config: A, repetitions: Map[ParamKey, (Parameter[?, A], Int)], pos: Position): A =
   //   val (_config, _repetitions) = applyDefaults(config, repetitions, pos)
@@ -206,87 +218,90 @@ class ParameterList[A](params: Seq[Parameter[?, A]]):
 
   @tailrec
   private def collectParams(
-      config: A,
       args: Seq[String],
       positionalParams: Seq[Parameter[?, A]],
       namedParms: Map[String, Parameter[?, A]],
       actualParamms: Map[ParamKey, (Parameter[?, A], Seq[String])],
-      argPos: Position,
-      positionalIndex: Int): (A, Position) =
+      pos: Position,
+      positionalIndex: Int): (Map[ParamKey, (Parameter[?, A], Seq[String])], Position) =
     
-    val Position(argIndex, flagIndex) = argPos
-    if argIndex >= args.size then
+    //val Position(argIndex, flagIndex) = argPos
+    if pos.argIndex >= args.size then
       //val _config = postProcess(config, repetitions, pos)
-      (config, argPos)
+      (actualParamms, pos)
     else
-      val arg = args(argIndex)
-      argType(namedParms, arg, flagIndex) match
-        case ValueArg(_) if positionalParams.size <= positionalIndex =>
+      //val arg = args(argIndex)
+      nextArg(namedParms, args, pos) match
+        case ValueArg(_, nextPos) if positionalParams.size <= positionalIndex =>
           //val _config = postProcess(config, repetitions, pos)
-          (config, Position(argIndex, flagIndex))
-        case ValueArg(value) =>
+          (actualParamms, nextPos)
+        case ValueArg(value, nextPos) =>
           val param = positionalParams(positionalIndex)
           val valSpec = param.valueSpec
           if !valSpec.isValue(value) then
-            (config, argPos)
+            (actualParamms, pos)
           else
-            collectParams(config, args, positionalParams, namedParms, ??? , Position())
-            
+            val updatedParams = actualParamms.updatedWith(ParamKey.Pos(positionalIndex)){
+              case Some((param, values)) =>
+                Some((param, values :+ value))
+              case None => 
+                Some((param, Seq(value)))
+            }
+            collectParams(args, positionalParams, namedParms, updatedParams , nextPos, positionalIndex+1)
+        case NameArg(name, nextPos) =>
+          val param = namedParms(name)
+          val prevPos = nextPos
+          nextArg(namedParms, args, nextPos) match
+            case NameArg(name, _) =>
+              val value = ""
+              if !param.valueSpec.isValue(value) then
+                throw IllegalValueException(nextPos)
 
+              val updatedParams = actualParamms.updatedWith(ParamKey.Name(name)){
+                case Some((param, values)) =>
+                  Some((param, values))
+                case None => 
+                  Some((param, Seq(value)))
+              }
+              collectParams(args, positionalParams, namedParms, updatedParams , nextPos, positionalIndex)
+            case ValueArg(value, nextPos) =>
+              if !param.valueSpec.isValue(value) then
+                throw IllegalValueException(prevPos)
 
+              val updatedParams = actualParamms.updatedWith(ParamKey.Name(name)){
+                case Some((param, values)) =>
+                  Some((param, values))
+                case None => 
+                  Some((param, Seq(value)))
+              }
+              collectParams(args, positionalParams, namedParms, updatedParams , nextPos, positionalIndex)
+            case UndefinedArg(nextPos) =>  ???     
+        case UndefinedArg(nextPos) =>
+          (actualParamms, nextPos)    
+  
+  private def nextArg(params: Map[String, Parameter[?, A]], args: Seq[String], pos: Position): Arg =
+    val Position(argIndex, flagIndex) = pos
+    val arg = args(argIndex)
 
-            val _config = param.collectValue(config, value, pos)
-            val _repetitions = repetitions
-              .updatedWith(ParamKey.Pos(positionalIndex)){
-                case Some((param, arity)) =>
-                  Some((param, arity + 1))
-                case None => ???}
-            val nextPos = Position(argIndex + 1, 0)
-            collectParams(args, nextPos, positionalParams, _config, paramsMap, _repetitions)
-
-        case (name, nextFlagIndex) =>
-          paramsMap.get(name) match
-            case Some(param) =>
-              val valueRequired = param.valueSpec.requireValue
-              val value = if valueRequired then
-                if name.size == 1
-                    && flagIndex + 2 < arg.size then
-                  throw new MissingValueException(pos)
-                if argIndex +1 >= args.size then
-                  throw MissingValueException(pos)
-                args(argIndex + 1)
-              else ""
-
-              val _config = param.collectValue(config, value, pos)
-
-              val primaryName = param.name
-              val _repetitions = repetitions
-                .updatedWith(ParamKey.Name(primaryName)){
-                  case Some((param, arity)) =>
-                    val newArity = arity + 1
-                    // if newArity > param.maxArity then
-                    //   throw new ArityExceededException(name, param.maxArity, pos)
-                    Some((param, newArity))
-                  case None => ???
-                }
-
-              val nextArgIndex = if nextFlagIndex > 0 then argIndex
-              else if value.nonEmpty then argIndex + 2
-              else argIndex + 1
-              val _pos = Position(nextArgIndex, nextFlagIndex)
-              collectParams(args, _pos, positionalParams, _config, paramsMap, _repetitions)
-            case None =>
-              val _config = postProcess(config, repetitions, pos)
-              (_config, Position(argIndex, flagIndex))
-
-  private def argType(paramsMap: Map[String, Parameter[?, A]], arg: String, flagIndex: Int): ArgType =
     if arg.startsWith("--") then
-      NameArg(arg)
+      params.get(arg.stripPrefix("--")) match
+        case Some(param) => 
+          NameArg(param.name, Position(argIndex+1, 0))
+        case None => UndefinedArg(pos)
+
+    else if arg.startsWith("-") && arg.size > 1 && arg.size <= flagIndex+2 then
+      nextArg(params, args, Position(argIndex+1, 0))
+
     else if arg.startsWith("-") && arg.size > 1 then
-      val nextFlagIndex = if flagIndex + 2 >= arg.size then 0 else flagIndex + 1
-      FlagArg(arg(flagIndex+1).toString, nextFlagIndex)
+      val name = arg(flagIndex+1).toString
+      val nextPos = if flagIndex+2 >= arg.size then Position(argIndex+1, 0) else Position(argIndex, flagIndex+1)
+      params.get(name) match
+        case Some(param) => 
+          NameArg(param.name, nextPos)
+        case None => UndefinedArg(pos)
+
     else 
-      ValueArg(arg)
+      ValueArg(arg, Position(argIndex+1, 0))
 
   private def positionalParameters = params.filter(_.names.isEmpty)
 

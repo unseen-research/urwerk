@@ -35,7 +35,9 @@ object Parameter:
 
   given ValueSpec[Int] with
     val requireValue = true
-    def accept(value: String): Boolean = !value.startsWith("--")
+    def accept(value: String): Boolean = 
+      !value.startsWith("--")
+      //value.nonEmpty && value.toDoubleOption.isDefined
     def convert(value: String): Int = value.toInt
     def defaultLabel: String = "INT"
 

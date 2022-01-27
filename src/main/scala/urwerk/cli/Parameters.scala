@@ -67,7 +67,7 @@ class Parameter[V, C](val names: Seq[String],
     val arity: (Int, Int),
     val default: Option[V],
     val valueRequired: Boolean,
-    val acceptOp: String => Boolean,
+    val isValueOp: String => Boolean,
     val convertOp: String => V,
     val applyOp: (V, C) => C):
 
@@ -76,8 +76,8 @@ class Parameter[V, C](val names: Seq[String],
       arity: (Int, Int),
       default: Option[V],
       valueSpec: ValueSpec[V],
-      collectOp: (V, C) => C) =
-    this(names, label, arity, default, valueSpec.requireValue, valueSpec.isValue, valueSpec.convert, collectOp)
+      applyOp: (V, C) => C) =
+    this(names, label, arity, default, valueSpec.requireValue, valueSpec.isValue, valueSpec.convert, applyOp)
 
   def default(value: V): Parameter[V, C] = copy(default = Some(value))
 
@@ -85,7 +85,7 @@ class Parameter[V, C](val names: Seq[String],
     copy(applyOp = op)
 
   def accept(op: String => Boolean): Parameter[V, C] =
-    copy(acceptOp = op)
+    copy(isValueOp = op)
 
   def arity(minArity: Int, maxArity: Int): Parameter[V, C] =
     copy(arity = (minArity, maxArity))
@@ -110,13 +110,13 @@ class Parameter[V, C](val names: Seq[String],
       arity: (Int, Int) = arity,
       default: Option[V] = default,
       valueRequired: Boolean = valueRequired,
-      acceptOp: String => Boolean = acceptOp,
+      isValueOp: String => Boolean = isValueOp,
       convertOp: String => V = convertOp,
       applyOp: (V, C) => C = applyOp) =
-    new Parameter(names, label, arity, default, valueRequired, acceptOp, convertOp, applyOp)
+    new Parameter(names, label, arity, default, valueRequired, isValueOp, convertOp, applyOp)
 
   private[cli] def collectValue(config: C, value: String, position: Position): C =
-    if !acceptOp(value) then
+    if !isValueOp(value) then
       throw IllegalValueException(position)
     Try(
         convertOp(value))
@@ -227,7 +227,7 @@ class ParameterList[A](params: Seq[Parameter[?, A]]):
 
           val (_, arity) = repetitions(ParamKey.Pos(positionalIndex))
 
-          if !param.acceptOp(value) then
+          if !param.isValueOp(value) then
             val _config = postProcess(config, repetitions, pos)
             (_config, pos)
           else if arity + 1 >= maxArity then

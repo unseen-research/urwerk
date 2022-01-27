@@ -17,7 +17,7 @@ class ParametersTest extends TestBase:
 
     "collect value" in {
       val value = param[Int]
-        .collect{case (value, config) => config.copy(value = value)}
+        .apply{case (value, config) => config.copy(value = value)}
         .collectValue(Config(0), "-77", Position(4, 5))
 
       value should be (Config(-77))
@@ -43,7 +43,7 @@ class ParametersTest extends TestBase:
 
     "collect value" in {
       val value = param[String]
-        .collect{case (value, config) => config.copy(value = value)}
+        .apply{case (value, config) => config.copy(value = value)}
         .collectValue(Config(""), "string value", Position(4, 5))
 
       value should be (Config("string value"))
@@ -68,7 +68,7 @@ class ParametersTest extends TestBase:
 
     "collect value" in {
       val value = param[Boolean]
-        .collect{case (value, config) => config.copy(value = s"Value=$value")}
+        .apply{case (value, config) => config.copy(value = s"Value=$value")}
         .collectValue(Config(""), "", Position(4, 5))
 
       value should be (Config("Value=true"))
@@ -90,10 +90,10 @@ class ParametersTest extends TestBase:
     "name value parameters" in {
       val params = Seq(
         param[String]("name2")
-          .collect((value, config) =>
+          .apply((value, config) =>
             config :+ "name2-" + value),
         param[Int]("name1")
-          .collect((value, config) =>
+          .apply((value, config) =>
             config :+ "name1-" + value)
       )
 
@@ -108,10 +108,10 @@ class ParametersTest extends TestBase:
     "name parameters" in {
       val params = Seq(
         param[Boolean]("name2")
-          .collect((value, config) =>
+          .apply((value, config) =>
             config :+ "name2-" + value),
         param[Boolean]("name1")
-          .collect((value, config) =>
+          .apply((value, config) =>
             config :+ "name1-" + value)
       )
 
@@ -139,13 +139,13 @@ class ParametersTest extends TestBase:
     "value parameters" in {
       val params = Seq(
         param[Int]
-          .collect((value, config) =>
+          .apply((value, config) =>
             config :+ "pos1-" + value),
         param[String]
-          .collect((value, config) =>
+          .apply((value, config) =>
             config :+ "pos2-" + value),
         param[String]
-          .collect((value, config) =>
+          .apply((value, config) =>
             config :+ "pos3-" + value)
       )
 
@@ -161,7 +161,7 @@ class ParametersTest extends TestBase:
         param[String]
           .accept(_ => true)
           .arity(0, Int.MaxValue)
-          .collect((value, config) =>
+          .apply((value, config) =>
             config :+ value)
       )
 
@@ -176,15 +176,15 @@ class ParametersTest extends TestBase:
       val params = Seq(
         param[String]
           .arity(0, 2)
-          .collect((value, config) =>
+          .apply((value, config) =>
             config :+ "a-" + value),
         param[String]
           .arity(0, 1)
-          .collect((value, config) =>
+          .apply((value, config) =>
             config :+ "b-" + value),
         param[String]
           .arity(0, 2)
-          .collect((value, config) =>
+          .apply((value, config) =>
             config :+ "c-" + value)
       )
 
@@ -198,11 +198,11 @@ class ParametersTest extends TestBase:
     "positional min arity missed" in {
       val params = Seq(
         param[String]("name1")
-          .collect((value, config) => config),
+          .apply((value, config) => config),
         param[String]
           .arity(3, 4)
           .label("STRING_PARAM")
-          .collect((value, config) => config :+ "b-" + value)
+          .apply((value, config) => config :+ "b-" + value)
       )
 
       val ex = intercept[MissingParameterException] {
@@ -219,15 +219,15 @@ class ParametersTest extends TestBase:
       val params = Seq(
         param[String]("name-a")
           .arity(0, 2)
-          .collect((value, config) =>
+          .apply((value, config) =>
             config :+ "a-" + value),
         param[String]("name-b")
           .arity(0, 1)
-          .collect((value, config) =>
+          .apply((value, config) =>
             config :+ "b-" + value),
         param[String]("name-c")
           .arity(0, 2)
-          .collect((value, config) =>
+          .apply((value, config) =>
             config :+ "c-" + value)
       )
 
@@ -241,7 +241,7 @@ class ParametersTest extends TestBase:
     "named min arity missed" in {
       val params = Seq(
         param[String]("name1")
-          .collect((value, config) => config)
+          .apply((value, config) => config)
           .arity(3, 4),
       )
 
@@ -257,7 +257,7 @@ class ParametersTest extends TestBase:
     "named max arity exceeded" in {
       val params = Seq(
         param[String]("any-name")
-          .collect((value, config) => config)
+          .apply((value, config) => config)
           .arity(0, 2),
       )
 
@@ -316,15 +316,15 @@ class ParametersTest extends TestBase:
       val params = Seq(
         param[Boolean]("name-a", "a", "A")
           .default(false)
-          .collect((value, config) =>
+          .apply((value, config) =>
             config :+ "a-" + value),
         param[Int]
           .default(42)
-          .collect((value, config) =>
+          .apply((value, config) =>
             config :+ "b-" + value),
         param[String]("name-c", "c", "C")
           .default("default-value")
-          .collect((value, config) =>
+          .apply((value, config) =>
             config :+ "c-" + value)
       )
 

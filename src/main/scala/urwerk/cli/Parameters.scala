@@ -69,7 +69,7 @@ class Parameter[V, C](val names: Seq[String],
     val valueRequired: Boolean,
     val acceptOp: String => Boolean,
     val convertOp: String => V,
-    val collectOp: (V, C) => C):
+    val applyOp: (V, C) => C):
 
   def this(names: Seq[String],
       label: String,
@@ -81,14 +81,8 @@ class Parameter[V, C](val names: Seq[String],
 
   def default(value: V): Parameter[V, C] = copy(default = Some(value))
 
-  def collect(op: (V, C) => C): Parameter[V, C] =
-    copy(collectOp = op)
-
-  // def apply(op: (A, B) => B): Parameter[A, B] =
-  //   collect(op)
-
   def apply(op: (V, C) => C): Parameter[V, C] =
-    collect(op)
+    copy(applyOp = op)
 
   def accept(op: String => Boolean): Parameter[V, C] =
     copy(acceptOp = op)
@@ -118,8 +112,8 @@ class Parameter[V, C](val names: Seq[String],
       valueRequired: Boolean = valueRequired,
       acceptOp: String => Boolean = acceptOp,
       convertOp: String => V = convertOp,
-      collectOp: (V, C) => C = collectOp) =
-    new Parameter(names, label, arity, default, valueRequired, acceptOp, convertOp, collectOp)
+      applyOp: (V, C) => C = applyOp) =
+    new Parameter(names, label, arity, default, valueRequired, acceptOp, convertOp, applyOp)
 
   private[cli] def collectValue(config: C, value: String, position: Position): C =
     if !acceptOp(value) then
@@ -137,7 +131,7 @@ class Parameter[V, C](val names: Seq[String],
 
   private def applyCollectOp(value: V, config: C, position: Position): Try[C] =
     Try(
-        collectOp(value, config))
+        applyOp(value, config))
       .recoverWith(ex => Failure(IllegalValueException(ex, position)))
 
 class ParameterException(message: String, cause: Option[Throwable], val position: Position)

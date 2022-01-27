@@ -23,19 +23,19 @@ object Parameter:
   trait ValueSpec[V]:
     type VV = V
     def requireValue: Boolean
-    def accept(value: String): Boolean
+    def isValue(value: String): Boolean
     def convert(value: String): V
     def defaultLabel: String
 
   given ValueSpec[String] with
     val requireValue = true
-    def accept(value: String): Boolean = !value.startsWith("-")
+    def isValue(value: String): Boolean = !value.startsWith("-")
     def convert(value: String): String = value
     def defaultLabel: String = "STRING"
 
   given ValueSpec[Int] with
     val requireValue = true
-    def accept(value: String): Boolean = 
+    def isValue(value: String): Boolean = 
       !value.startsWith("--")
       //value.nonEmpty && value.toDoubleOption.isDefined
     def convert(value: String): Int = value.toInt
@@ -43,7 +43,7 @@ object Parameter:
 
   given ValueSpec[Boolean] with
     val requireValue = false
-    def accept(value: String): Boolean = value.isEmpty
+    def isValue(value: String): Boolean = value.isEmpty
     def convert(value: String): Boolean = 
       val lowerValue = value.toLowerCase
 
@@ -55,7 +55,7 @@ object Parameter:
 
   given [T](using ValueSpec[T]): ValueSpec[Seq[T]] with
     val requireValue = false
-    def accept(value: String): Boolean = value.isEmpty
+    def isValue(value: String): Boolean = value.isEmpty
     def convert(value: String): Seq[T] = ???
     def defaultLabel: String = "SEQ"
 
@@ -77,7 +77,7 @@ class Parameter[V, C](val names: Seq[String],
       default: Option[V],
       valueSpec: ValueSpec[V],
       collectOp: (V, C) => C) =
-    this(names, label, arity, default, valueSpec.requireValue, valueSpec.accept, valueSpec.convert, collectOp)
+    this(names, label, arity, default, valueSpec.requireValue, valueSpec.isValue, valueSpec.convert, collectOp)
 
   def default(value: V): Parameter[V, C] = copy(default = Some(value))
 

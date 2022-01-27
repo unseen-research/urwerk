@@ -24,12 +24,15 @@ object Parameter:
     type VV = V
     def requireValue: Boolean
     def isValue(value: String): Boolean
+    def defaultValue: Option[V]    
     def convert(value: String): V
     def defaultLabel: String
 
   given ValueSpec[String] with
     val requireValue = true
     def isValue(value: String): Boolean = !value.startsWith("-")
+
+    def defaultValue: Option[String] = None
     def convert(value: String): String = value
     def defaultLabel: String = "STRING"
 
@@ -38,12 +41,17 @@ object Parameter:
     def isValue(value: String): Boolean = 
       !value.startsWith("--")
       //value.nonEmpty && value.toDoubleOption.isDefined
+
+    def defaultValue: Option[Int] = None
     def convert(value: String): Int = value.toInt
     def defaultLabel: String = "INT"
 
   given ValueSpec[Boolean] with
     val requireValue = false
     def isValue(value: String): Boolean = value.isEmpty
+
+    def defaultValue: Option[Boolean] = Some(true)
+
     def convert(value: String): Boolean = 
       val lowerValue = value.toLowerCase
 
@@ -56,6 +64,9 @@ object Parameter:
   given [T](using valueSpec: ValueSpec[T]): ValueSpec[Seq[T]] with
     val requireValue = false
     def isValue(value: String): Boolean = value.isEmpty
+    
+    def defaultValue: Option[Seq[T]] = None
+    
     def convert(value: String): Seq[T] = ???
     def defaultLabel: String = s"SEQUENCE[${valueSpec.defaultLabel}]"
 

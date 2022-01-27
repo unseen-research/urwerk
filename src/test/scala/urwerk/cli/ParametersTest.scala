@@ -172,117 +172,117 @@ class ParametersTest extends TestBase:
     //   config should be (Seq("11", "value2", "--name", "value3"))
     // }
 
-    "positional max arity" in {
-      val params = Seq(
-        param[String]
-          .arity(0, 2)
-          .apply((value, config) =>
-            config :+ "a-" + value),
-        param[String]
-          .arity(0, 1)
-          .apply((value, config) =>
-            config :+ "b-" + value),
-        param[String]
-          .arity(0, 2)
-          .apply((value, config) =>
-            config :+ "c-" + value)
-      )
+    // "positional max arity" in {
+    //   val params = Seq(
+    //     param[String]
+    //       .arity(0, 2)
+    //       .apply((value, config) =>
+    //         config :+ "a-" + value),
+    //     param[String]
+    //       .arity(0, 1)
+    //       .apply((value, config) =>
+    //         config :+ "b-" + value),
+    //     param[String]
+    //       .arity(0, 2)
+    //       .apply((value, config) =>
+    //         config :+ "c-" + value)
+    //   )
 
-      val (config, pos) = ParameterList(params)
-        .collectParams(Seq(), Seq("value1", "value2", "value3", "value4", "value5", "value6"))
+    //   val (config, pos) = ParameterList(params)
+    //     .collectParams(Seq(), Seq("value1", "value2", "value3", "value4", "value5", "value6"))
 
-      pos should be (Position(5, 0))
-      config should be (Seq("a-value1", "a-value2", "b-value3", "c-value4", "c-value5"))
-    }
+    //   pos should be (Position(5, 0))
+    //   config should be (Seq("a-value1", "a-value2", "b-value3", "c-value4", "c-value5"))
+    // }
 
-    "positional min arity missed" in {
-      val params = Seq(
-        param[String]("name1")
-          .apply((value, config) => config),
-        param[String]
-          .arity(3, 4)
-          .label("STRING_PARAM")
-          .apply((value, config) => config :+ "b-" + value)
-      )
+    // "positional min arity missed" in {
+    //   val params = Seq(
+    //     param[String]("name1")
+    //       .apply((value, config) => config),
+    //     param[String]
+    //       .arity(3, 4)
+    //       .label("STRING_PARAM")
+    //       .apply((value, config) => config :+ "b-" + value)
+    //   )
 
-      val ex = intercept[MissingParameterException] {
-        ParameterList(params)
-          .collectParams(Seq(), Seq("--name1", "value1", "value2", "value3"))
-      }
-      ex.labelOrName should be ("STRING_PARAM")
-      ex.requiredArity should be (3)
-      ex.repetition should be (2)
-      ex.position should be (Position(4, 0))
-    }
+    //   val ex = intercept[MissingParameterException] {
+    //     ParameterList(params)
+    //       .collectParams(Seq(), Seq("--name1", "value1", "value2", "value3"))
+    //   }
+    //   ex.labelOrName should be ("STRING_PARAM")
+    //   ex.requiredArity should be (3)
+    //   ex.repetition should be (2)
+    //   ex.position should be (Position(4, 0))
+    // }
 
-    "named max arity" in {
-      val params = Seq(
-        param[String]("name-a")
-          .arity(0, 2)
-          .apply((value, config) =>
-            config :+ "a-" + value),
-        param[String]("name-b")
-          .arity(0, 1)
-          .apply((value, config) =>
-            config :+ "b-" + value),
-        param[String]("name-c")
-          .arity(0, 2)
-          .apply((value, config) =>
-            config :+ "c-" + value)
-      )
+    // "named max arity" in {
+    //   val params = Seq(
+    //     param[String]("name-a")
+    //       .arity(0, 2)
+    //       .apply((value, config) =>
+    //         config :+ "a-" + value),
+    //     param[String]("name-b")
+    //       .arity(0, 1)
+    //       .apply((value, config) =>
+    //         config :+ "b-" + value),
+    //     param[String]("name-c")
+    //       .arity(0, 2)
+    //       .apply((value, config) =>
+    //         config :+ "c-" + value)
+    //   )
 
-      val (config, pos) = ParameterList(params)
-        .collectParams(Seq(), Seq("--name-c", "value1", "--name-a", "value2", "--name-b", "value3", "--name-a", "value4", "value5"))
+    //   val (config, pos) = ParameterList(params)
+    //     .collectParams(Seq(), Seq("--name-c", "value1", "--name-a", "value2", "--name-b", "value3", "--name-a", "value4", "value5"))
 
-      pos should be (Position(8, 0))
-      config should be (Seq("c-value1", "a-value2", "b-value3", "a-value4"))
-    }
+    //   pos should be (Position(8, 0))
+    //   config should be (Seq("c-value1", "a-value2", "b-value3", "a-value4"))
+    // }
 
-    "named min arity missed" in {
-      val params = Seq(
-        param[String]("name1")
-          .apply((value, config) => config)
-          .arity(3, 4),
-      )
+    // "named min arity missed" in {
+    //   val params = Seq(
+    //     param[String]("name1")
+    //       .apply((value, config) => config)
+    //       .arity(3, 4),
+    //   )
 
-      val ex = intercept[MissingParameterException] {
-        ParameterList(params)
-          .collectParams(Seq(), Seq("--name1", "value1", "--name1", "value2", "value3"))
-      }
-      ex.labelOrName should be ("name1")
-      ex.requiredArity should be (3)
-      ex.repetition should be (2)
-    }
+    //   val ex = intercept[MissingParameterException] {
+    //     ParameterList(params)
+    //       .collectParams(Seq(), Seq("--name1", "value1", "--name1", "value2", "value3"))
+    //   }
+    //   ex.labelOrName should be ("name1")
+    //   ex.requiredArity should be (3)
+    //   ex.repetition should be (2)
+    // }
 
-    "named max arity exceeded" in {
-      val params = Seq(
-        param[String]("any-name")
-          .apply((value, config) => config)
-          .arity(0, 2),
-      )
+    // "named max arity exceeded" in {
+    //   val params = Seq(
+    //     param[String]("any-name")
+    //       .apply((value, config) => config)
+    //       .arity(0, 2),
+    //   )
 
-      val ex = intercept[ArityExceededException] {
-        ParameterList(params)
-          .collectParams(Seq(), Seq("--any-name", "value1", "--any-name", "value2", "--any-name", "value3"))
-      }
-      ex.name should be ("any-name")
-      ex.maxArity should be (2)
-    }
+    //   val ex = intercept[ArityExceededException] {
+    //     ParameterList(params)
+    //       .collectParams(Seq(), Seq("--any-name", "value1", "--any-name", "value2", "--any-name", "value3"))
+    //   }
+    //   ex.name should be ("any-name")
+    //   ex.maxArity should be (2)
+    // }
 
     "flags without value" in {
       val params = Seq(
         param[Boolean]("a", "A")
           .apply((value, config) =>
-            config :+ "a-" + value)
-          .arity(0, 77),
+            config :+ "a-" + value),
+          //.arity(0, 77),
         param[Boolean]("b", "B")
           .apply((value, config) =>
-            config :+ "b-" + value)
-          .arity(0, 77),
+            config :+ "b-" + value),
+          //.arity(0, 77),
         param[String]("c", "C")
           .apply((value, config) =>
             config :+ "c-" + value)
-          .arity(0, 77)
+//          .arity(0, 77)
       )
 
       val (config, pos) = ParameterList(params)

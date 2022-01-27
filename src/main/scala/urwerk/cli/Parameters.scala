@@ -15,10 +15,10 @@ object Parameter:
       def get: CC
 
   def param[V](using valueSpec: ValueSpec[V], config: ConfigProvider[?]): Parameter[V, config.CC] = 
-    new Parameter(Seq(), valueSpec.defaultLabel, (0, 1), None, valueSpec, {(_, config) => config})
+    new Parameter(Seq(), valueSpec.defaultLabel, None, valueSpec, {(_, config) => config})
 
   def param[V](using valueSpec: ValueSpec[V], config: ConfigProvider[?])(name: String, names: String*): Parameter[V, config.CC] = 
-    new Parameter(name +: names, valueSpec.defaultLabel, (0, 1), None, valueSpec, {(_, config) => config})
+    new Parameter(name +: names, valueSpec.defaultLabel, None, valueSpec, {(_, config) => config})
 
   trait ValueSpec[V]:
     type VV = V
@@ -74,7 +74,7 @@ import Parameter.ValueSpec
 
 class Parameter[V, C](val names: Seq[String],
     val label: String,
-    val arity: (Int, Int),
+//    val arity: (Int, Int),
     val default: Option[V],
     // val valueRequired: Boolean,
     // val isValueOp: String => Boolean,
@@ -98,12 +98,12 @@ class Parameter[V, C](val names: Seq[String],
   // def accept(op: String => Boolean): Parameter[V, C] =
   //   copy(isValueOp = op)
 
-  def arity(minArity: Int, maxArity: Int): Parameter[V, C] =
-    copy(arity = (minArity, maxArity))
+  // def arity(minArity: Int, maxArity: Int): Parameter[V, C] =
+  //   copy(arity = (minArity, maxArity))
 
-  def minArity: Int = arity._1
+  // def minArity: Int = arity._1
 
-  def maxArity: Int = arity._2
+  // def maxArity: Int = arity._2
 
   def label(label: String): Parameter[V, C] =
     copy(label = label)
@@ -118,14 +118,14 @@ class Parameter[V, C](val names: Seq[String],
 
   private def copy(names: Seq[String] = names,
       label: String = label,
-      arity: (Int, Int) = arity,
+      //arity: (Int, Int) = arity,
       default: Option[V] = default,
       // valueRequired: Boolean = valueRequired,
       // isValueOp: String => Boolean = isValueOp,
       // convertOp: String => V = convertOp,
       valueSpec: ValueSpec[V] = valueSpec,
       applyOp: (V, C) => C = applyOp) =
-    new Parameter(names, label, arity, default, valueSpec, applyOp)
+    new Parameter(names, label, default, valueSpec, applyOp)
 
   private[cli] def collectValue(config: C, value: String, position: Position): C =
     if !valueSpec.isValue(value) then
@@ -194,7 +194,7 @@ class ParameterList[A](params: Seq[Parameter[?, A]]):
 
   private def postProcess(config: A, repetitions: Map[ParamKey, (Parameter[?, A], Int)], pos: Position): A =
     val (_config, _repetitions) = applyDefaults(config, repetitions, pos)
-    validateArity(_repetitions, pos)
+    //validateArity(_repetitions, pos)
     _config
 
   private def applyDefaults(config: A, repetitions: Map[ParamKey, (Parameter[?, A], Int)], position: Position): (A, Map[ParamKey, (Parameter[?, A], Int)]) =
@@ -206,13 +206,13 @@ class ParameterList[A](params: Seq[Parameter[?, A]]):
         (config, repetitions)
     }
 
-  private def validateArity(repetitions: Map[ParamKey, (Parameter[?, A], Int)], pos: Position) =
-    repetitions.values.foreach{case (param, repetition) =>
-      val requiredArity = param.minArity
-      val labelOrName = if param.name.nonEmpty then param.name else param.label
-      if repetition < requiredArity then
-        throw MissingParameterException(labelOrName, requiredArity = requiredArity, repetition = repetition, pos)
-    }
+  // private def validateArity(repetitions: Map[ParamKey, (Parameter[?, A], Int)], pos: Position) =
+  //   repetitions.values.foreach{case (param, repetition) =>
+  //     val requiredArity = param.minArity
+  //     val labelOrName = if param.name.nonEmpty then param.name else param.label
+  //     if repetition < requiredArity then
+  //       throw MissingParameterException(labelOrName, requiredArity = requiredArity, repetition = repetition, pos)
+  //   }
 
   @tailrec
   private def collectParams(args: Seq[String],
@@ -235,24 +235,24 @@ class ParameterList[A](params: Seq[Parameter[?, A]]):
           val value = arg
           val positionalIndex = positionalParamList.size - positionalParams.size
           val param = positionalParams.head
-          val (minArity, maxArity) = param.arity
+          // val (minArity, maxArity) = param.arity
 
           val (_, arity) = repetitions(ParamKey.Pos(positionalIndex))
 
           if !param.valueSpec.isValue(value) then
             val _config = postProcess(config, repetitions, pos)
             (_config, pos)
-          else if arity + 1 >= maxArity then
-            val _config = param.collectValue(config, value, pos)
-            val _repetitions = repetitions
-              .updatedWith(ParamKey.Pos(positionalIndex)){
-                case Some((param, arity)) =>
-                  Some((param, arity + 1))
-                case None =>
-                  ???
-              }
-            val nextPos = Position(argIndex + 1, 0)
-            collectParams(args, nextPos, positionalParams.drop(1), _config, paramsMap, _repetitions)
+          // else if arity + 1 >= maxArity then
+          //   val _config = param.collectValue(config, value, pos)
+          //   val _repetitions = repetitions
+          //     .updatedWith(ParamKey.Pos(positionalIndex)){
+          //       case Some((param, arity)) =>
+          //         Some((param, arity + 1))
+          //       case None =>
+          //         ???
+          //     }
+          //   val nextPos = Position(argIndex + 1, 0)
+          //   collectParams(args, nextPos, positionalParams.drop(1), _config, paramsMap, _repetitions)
           else
             val _config = param.collectValue(config, value, pos)
             val _repetitions = repetitions
@@ -283,8 +283,8 @@ class ParameterList[A](params: Seq[Parameter[?, A]]):
                 .updatedWith(ParamKey.Name(primaryName)){
                   case Some((param, arity)) =>
                     val newArity = arity + 1
-                    if newArity > param.maxArity then
-                      throw new ArityExceededException(name, param.maxArity, pos)
+                    // if newArity > param.maxArity then
+                    //   throw new ArityExceededException(name, param.maxArity, pos)
                     Some((param, newArity))
                   case None => ???
                 }

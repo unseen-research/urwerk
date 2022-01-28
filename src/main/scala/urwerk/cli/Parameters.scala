@@ -202,33 +202,14 @@ class ParameterList[A](val params: Seq[Parameter[?, A]]):
             }
             collectParams(args, positionalParams, namedParms, updatedParams , nextPos, positionalIndex+1)
       case Named(name, value, nextPos) =>
-        val param = namedParms(name)
-        val prevPos = nextPos
-        nextArg(namedParms, positionalParams, args, nextPos) match
-          case Named(name, value, _) =>
-            val value = ""
-            if !param.valueSpec.isValue(value) then
-              throw IllegalValueException(nextPos)
-
-            val updatedParams = actualParamms.updatedWith(ParamKey.Name(name)){
-              case Some((param, values)) =>
-                Some((param, values))
-              case None => 
-                Some((param, Seq(value)))
-            }
-            collectParams(args, positionalParams, namedParms, updatedParams , nextPos, positionalIndex)
-          case Value(value, nextPos) =>
-            if !param.valueSpec.isValue(value) then
-              throw IllegalValueException(prevPos)
-
-            val updatedParams = actualParamms.updatedWith(ParamKey.Name(name)){
-              case Some((param, values)) =>
-                Some((param, values))
-              case None => 
-                Some((param, Seq(value)))
-            }
-            collectParams(args, positionalParams, namedParms, updatedParams , nextPos, positionalIndex)
-          case End(nextPos) =>  ???     
+        val updatedParams = actualParamms.updatedWith(ParamKey.Name(name)){
+          case Some((param, values)) =>
+            Some((param, values))
+          case None => 
+            val param = namedParms(name)
+            Some((param, Seq(value)))
+        }
+        collectParams(args, positionalParams, namedParms, updatedParams , nextPos, positionalIndex)  
       
       case Separator(nextPos) =>
         collectParams(args, positionalParams, namedParms, actualParamms , nextPos, positionalIndex)

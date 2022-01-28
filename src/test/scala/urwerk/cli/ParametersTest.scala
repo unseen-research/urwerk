@@ -29,7 +29,7 @@ class ParametersTest extends TestBase:
 
   "collect named param" - {
     val params = ParameterList[Seq[String]]{
-        param[String]("param", "alias")
+        param[String]("param", "alias", "p")
           .apply{case (value, config) => config :+ value}} 
 
     "with primary name followed by nothing" in {
@@ -50,6 +50,10 @@ class ParametersTest extends TestBase:
 
     "with alias name" in {
       params.collect(Seq(), Seq("--alias", "any-value", "--other")) should be ((Seq("any-value"), Position(2, 0)))
+    }
+
+    "with short name" in {
+      params.collect(Seq(), Seq("-p", "any-value", "--other")) should be ((Seq("any-value"), Position(2, 0)))
     }
 
     "with -- prefixed value which is not defined param name" in {

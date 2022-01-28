@@ -123,6 +123,7 @@ object ParameterList:
 
   private enum Arg:
     case Named(name: String, value: String, nextPos: Position)
+    case Flags(flags: String, value: String, nextPos: Position)
     case Value(value: String, nextPos: Position)
     case Separator(nextPos: Position)
     case End(nextPos: Position)
@@ -224,7 +225,7 @@ class ParameterList[A](val params: Seq[Parameter[?, A]]):
         Separator(pos)
 
       if isName(arg) then
-        namedParams.get(arg.stripPrefix("--")) match
+        namedParams.get(toName(arg)) match
           case Some(param) => 
             val name = param.name
             val valueSpec = param.valueSpec
@@ -238,7 +239,7 @@ class ParameterList[A](val params: Seq[Parameter[?, A]]):
                   MissingValueException(), Position(valueIndex, 0))
             else
               val value = args(valueIndex)            
-              if isDefinedName(value, namedParams.keySet) || isFlags(value, namedParams.keySet) then
+              if isDefinedName(value, namedParams.keySet) || isDefinedFlags(value, namedParams.keySet) then
                 if valueSpec.defaultValue.isDefined then
                   Named(name, valueSpec.defaultValue.get, Position(valueIndex, 0))
                 else 
@@ -254,7 +255,7 @@ class ParameterList[A](val params: Seq[Parameter[?, A]]):
                     IllegalValueException(), Position(valueIndex, 0))
           case None => End(pos)
        
-        else if isFlags(arg, namedParams.keySet) then 
+        else if isDefinedFlags(arg, namedParams.keySet) then 
           End(pos)
         // else if isFlags(arg, namedParams.keySet) && arg.size > 1 && arg.size <= flagIndex+2 then
         //   nextArg(namedParams, positionalParams, args, Position(argIndex+1, 0), positionalIndex)
@@ -271,21 +272,33 @@ class ParameterList[A](val params: Seq[Parameter[?, A]]):
 
   private def isSeparator(arg: String): Boolean = arg == "--" || arg == "-"
 
-  private def isName(arg: String): Boolean = 
+  private def isShortName(arg: String): Boolean = 
+       arg.size == 2
+    && arg(0) == '-'
+    && arg(1).isLetter
+
+  private def isLongName(arg: String): Boolean =   
        arg.size > 2 
     && arg.startsWith("--") 
     && arg(2) != '-'
+
+  private def isName(arg: String): Boolean = 
+    isShortName(arg) || isLongName(arg)
 
   private def isDefinedName(arg: String, names: Set[String]): Boolean = 
-       arg.size > 2 
-    && arg.startsWith("--") 
-    && arg(2) != '-'
-    && names.contains(arg.stripPrefix("--"))
+       isName(arg)
+    && names.contains(toName(arg))
 
-  private def isFlags(arg: String, names: Set[String]): Boolean = 
+  private def isFlags(arg: String): Boolean = 
        arg.size > 1 
     && arg.startsWith("-") 
     && arg(1) != '-' 
+
+  private def toName(arg: String): String = 
+    arg.stripPrefix("--").stripPrefix("-")
+
+  private def isDefinedFlags(arg: String, names: Set[String]): Boolean = 
+       isFlags(arg)
     && names.contains(arg(1).toString)
     
   private def isEnd(args: Seq[String], pos: Position): Boolean = 

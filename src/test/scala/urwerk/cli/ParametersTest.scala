@@ -70,24 +70,12 @@ class ParametersTest extends TestBase:
       params.collect(Seq(), Seq("--param")) should be ((Seq(true), Position(1, 0)))
     }
 
-    "with primary name followed by none boolean value" in {
+    "with primary name followed by name" in {
       params.collect(Seq(), Seq("--param", "--any-value")) should be ((Seq(true), Position(1, 0)))
     }
 
-    "with primary name followed by name" in {
-      params.collect(Seq(), Seq("--param", "--any")) should be ((Seq(true), Position(1, 0)))
-    }
-
-    "with primary name followed by name" in {
-      params.collect(Seq(), Seq("--param", "any-value", "--other")) should be ((Seq("any-value"), Position(2, 0)))
-    }
-
-    "with primary name followed by flags" in {
-      params.collect(Seq(), Seq("--param", "any-value", "-other")) should be ((Seq("any-value"), Position(2, 0)))
-    }
-
-    "with alias name" in {
-      params.collect(Seq(), Seq("--alias", "any-value", "--other")) should be ((Seq("any-value"), Position(2, 0)))
+    "with primary name followed by none boolean value" in {
+      params.collect(Seq(), Seq("--param", "any")) should be ((Seq(true), Position(1, 0)))
     }
   }
 

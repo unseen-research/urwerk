@@ -21,15 +21,13 @@ object Parameter:
 
   trait ValueSpec[V]:
     type VV = V
-    def requireValue: Boolean
     def isValue(value: String): Boolean
-    def defaultValue: Option[V]    
+    def defaultValue: Option[String]    
     def convert(value: String): V
     def convertSeq(values: Seq[String]): V
     def defaultLabel: String
 
   given ValueSpec[String] with
-    val requireValue = true
     def isValue(value: String): Boolean = !value.startsWith("-")
     def defaultValue: Option[String] = None
     def convert(value: String): String = value
@@ -37,30 +35,31 @@ object Parameter:
     def defaultLabel: String = "STRING"
 
   given ValueSpec[Int] with
-    val requireValue = true
     def isValue(value: String): Boolean = 
       value.nonEmpty && value.toDoubleOption.isDefined
-    def defaultValue: Option[Int] = None
+    def defaultValue: Option[String] = None
     def convert(value: String): Int = value.toInt
     def convertSeq(values: Seq[String]): Int = convert(values.last)
     def defaultLabel: String = "INT"
 
   given ValueSpec[Boolean] with
-    val requireValue = false
-    def isValue(value: String): Boolean = value.isEmpty
-    def defaultValue: Option[Boolean] = Some(true)
+    def isValue(value: String): Boolean = 
+      val lowerVal = value.toLowerCase
+      lowerVal == "true" || lowerVal == "false" 
+
+    def defaultValue: Option[String] = Some("true")
     def convert(value: String): Boolean = 
       val lowerValue = value.toLowerCase
       if lowerValue.isEmpty then true
       else if lowerValue == "true" then true
-      else false
+      else if lowerValue == "false" then false
+      else throw IllegalArgumentException()
     def convertSeq(values: Seq[String]): Boolean = convert(values.last)
     def defaultLabel: String = "BOOLEAN"
 
   given [T](using valueSpec: ValueSpec[T]): ValueSpec[Seq[T]] with
-    val requireValue = false
     def isValue(value: String): Boolean = value.isEmpty
-    def defaultValue: Option[Seq[T]] = None
+    def defaultValue: Option[String] = None
     def convert(value: String): Seq[T] = Seq(valueSpec.convert(value))
     def convertSeq(values: Seq[String]): Seq[T] = 
       values.map(valueSpec.convert(_))
@@ -232,21 +231,28 @@ class ParameterList[A](val params: Seq[Parameter[?, A]]):
         namedParams.get(arg.stripPrefix("--")) match
           case Some(param) => 
             val name = param.name
+            val valueSpec = param.valueSpec
             val valueIndex = argIndex + 1
+
             if valueIndex >= args.size then
-              if param.valueSpec.isValue("") then
-                Named(name, "", Position(valueIndex, 0))
+              if valueSpec.defaultValue.isDefined then
+                Named(name, valueSpec.defaultValue.get, Position(valueIndex, 0))
               else 
                 throw MissingValueException(Position(valueIndex, 0))
             else
               val value = args(valueIndex)            
               if isName(value) || isFlags(value, namedParams.keySet) then
-                if param.valueSpec.isValue("") then
-                  Named(name, "", Position(valueIndex, 0))
+                if valueSpec.defaultValue.isDefined then
+                  Named(name, valueSpec.defaultValue.get, Position(valueIndex, 0))
                 else 
                   throw MissingValueException(Position(valueIndex, 0))
               else
-                Named(name, value, Position(valueIndex+1, 0))
+                if valueSpec.isValue(value) then
+                  Named(name, value, Position(valueIndex+1, 0))
+                else if valueSpec.defaultValue.isDefined then
+                  Named(name, valueSpec.defaultValue.get, Position(valueIndex, 0))
+                else
+                  throw IllegalValueException(Position(valueIndex, 0))
           case None => End(pos)
        
         else if isFlags(arg, namedParams.keySet) then 

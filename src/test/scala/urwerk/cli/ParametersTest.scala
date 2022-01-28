@@ -53,6 +53,43 @@ class ParametersTest extends TestBase:
     }
   }
 
+  "collect named boolean param" - {
+    val params = ParameterList[Seq[Boolean]]{
+        param[Boolean]("param", "alias")
+          .apply{case (value, config) => config :+ value}} 
+
+    "with primary name with true" in {
+      params.collect(Seq(), Seq("--param", "true")) should be ((Seq(true), Position(2, 0)))
+    }
+
+    "with primary name with false" in {
+      params.collect(Seq(), Seq("--param", "false")) should be ((Seq(false), Position(2, 0)))
+    }
+
+    "with primary name without value" in {
+      params.collect(Seq(), Seq("--param")) should be ((Seq(true), Position(1, 0)))
+    }
+
+    "with primary name followed by none boolean value" in {
+      params.collect(Seq(), Seq("--param", "--any-value")) should be ((Seq(true), Position(1, 0)))
+    }
+
+    "with primary name followed by name" in {
+      params.collect(Seq(), Seq("--param", "--any")) should be ((Seq(true), Position(1, 0)))
+    }
+
+    "with primary name followed by name" in {
+      params.collect(Seq(), Seq("--param", "any-value", "--other")) should be ((Seq("any-value"), Position(2, 0)))
+    }
+
+    "with primary name followed by flags" in {
+      params.collect(Seq(), Seq("--param", "any-value", "-other")) should be ((Seq("any-value"), Position(2, 0)))
+    }
+
+    "with alias name" in {
+      params.collect(Seq(), Seq("--alias", "any-value", "--other")) should be ((Seq("any-value"), Position(2, 0)))
+    }
+  }
 
     // "illegal value" in {
     //   val ex = intercept[IllegalValueException]{

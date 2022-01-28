@@ -28,7 +28,7 @@ object Parameter:
     def defaultLabel: String
 
   given ValueSpec[String] with
-    def isValue(value: String): Boolean = !value.startsWith("-")
+    def isValue(value: String): Boolean = true
     def defaultValue: Option[String] = None
     def convert(value: String): String = value
     def convertSeq(values: Seq[String]): String = convert(values.last)
@@ -90,19 +90,18 @@ case class Parameter[V, C](val names: Seq[String],
     copy(names = name +: names)
 
 class ParameterException(message: String, cause: Option[Throwable], val position: Position)
-  extends RuntimeException(message, cause.orNull)
+    extends RuntimeException(message, cause.orNull):
+  def this(message: String, cause: Throwable, position: Position) = this(message, Some(cause), position)
+  def this(cause: Throwable, position: Position) = this("", Some(cause), position)
 
-class IllegalValueException(cause: Option[Throwable], position: Position) extends ParameterException("", cause, position):
-  def this(position: Position) = this(None, position)
-  def this(cause: Throwable, position: Position) = this(Some(cause), position)
+class IllegalValueException() extends RuntimeException()
 
-class MissingParameterException(val labelOrName: String, val requiredArity: Int, val repetition: Int, position: Position)
-  extends ParameterException("", None, position)
+// class MissingParameterException(val labelOrName: String, val requiredArity: Int, val repetition: Int, position: Position)
+//   extends ParameterException("", None, position)
 
-class MissingValueException(position: Position)
-  extends ParameterException("", None, position)
+class MissingValueException() extends RuntimeException()
 
-class UnexpectedParameterException(position: Position) extends ParameterException("", None, position)
+//class UnexpectedParameterException(position: Position) extends ParameterException("", None, position)
 
 case class Position(val argIndex: Int, val flagIndex: Int)
 
@@ -117,7 +116,6 @@ object ParameterList:
     val resolvedParam = param
     val resolvedParams = params.map(param => param)
     new ParameterList[C](resolvedParam +: resolvedParams)
-
 
   extension [C](paramList: ParameterList[C])
     def collect(config: C, args: Seq[String]): (C, Position) = 
@@ -236,21 +234,24 @@ class ParameterList[A](val params: Seq[Parameter[?, A]]):
               if valueSpec.defaultValue.isDefined then
                 Named(name, valueSpec.defaultValue.get, Position(valueIndex, 0))
               else 
-                throw MissingValueException(Position(valueIndex, 0))
+                throw ParameterException(
+                  MissingValueException(), Position(valueIndex, 0))
             else
               val value = args(valueIndex)            
-              if isName(value) || isFlags(value, namedParams.keySet) then
+              if isDefinedName(value, namedParams.keySet) || isFlags(value, namedParams.keySet) then
                 if valueSpec.defaultValue.isDefined then
                   Named(name, valueSpec.defaultValue.get, Position(valueIndex, 0))
                 else 
-                  throw MissingValueException(Position(valueIndex, 0))
+                  throw ParameterException(
+                    MissingValueException(), Position(valueIndex, 0))
               else
                 if valueSpec.isValue(value) then
                   Named(name, value, Position(valueIndex+1, 0))
                 else if valueSpec.defaultValue.isDefined then
                   Named(name, valueSpec.defaultValue.get, Position(valueIndex, 0))
                 else
-                  throw IllegalValueException(Position(valueIndex, 0))
+                  throw ParameterException(
+                    IllegalValueException(), Position(valueIndex, 0))
           case None => End(pos)
        
         else if isFlags(arg, namedParams.keySet) then 
@@ -270,10 +271,19 @@ class ParameterList[A](val params: Seq[Parameter[?, A]]):
 
   private def isSeparator(arg: String): Boolean = arg == "--" || arg == "-"
 
-  private def isName(arg: String): Boolean = arg.size > 2 && arg.startsWith("--") && arg(2) != '-'
+  private def isName(arg: String): Boolean = 
+       arg.size > 2 
+    && arg.startsWith("--") 
+    && arg(2) != '-'
+
+  private def isDefinedName(arg: String, names: Set[String]): Boolean = 
+       arg.size > 2 
+    && arg.startsWith("--") 
+    && arg(2) != '-'
+    && names.contains(arg.stripPrefix("--"))
 
   private def isFlags(arg: String, names: Set[String]): Boolean = 
-    arg.size > 1 
+       arg.size > 1 
     && arg.startsWith("-") 
     && arg(1) != '-' 
     && names.contains(arg(1).toString)

@@ -8,7 +8,7 @@ case class Command[C](config: C, parameterLists: Seq[ParameterList[C]], applyOp:
   def execute(args: String*): Int = 
 
     val (_config, pos) = parameterLists.foldLeft((config, Position(0, 0))){case ((config, pos), paramList) =>
-      paramList.collectParams(args)
+      paramList.collect(config, args)
     }
 
     applyOp(_config) match

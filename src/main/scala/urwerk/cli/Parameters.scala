@@ -70,38 +70,16 @@ object Parameter:
 
 import Parameter.ValueSpec
 
-class Parameter[V, C](val names: Seq[String],
+case class Parameter[V, C](val names: Seq[String],
     val label: String,
-//    val arity: (Int, Int),
     val default: Option[V],
-    // val valueRequired: Boolean,
-    // val isValueOp: String => Boolean,
-    // val convertOp: String => V,
     val valueSpec: ValueSpec[V],
     val applyOp: (V, C) => C):
-
-  // def this(names: Seq[String],
-  //     label: String,
-  //     arity: (Int, Int),
-  //     default: Option[V],
-  //     valueSpec: ValueSpec[V],
-  //     applyOp: (V, C) => C) =
-  //   this(names, label, arity, default, valueSpec.requireValue, valueSpec.isValue, valueSpec.convert, applyOp)
 
   def default(value: V): Parameter[V, C] = copy(default = Some(value))
 
   def apply(op: (V, C) => C): Parameter[V, C] =
     copy(applyOp = op)
-
-  // def accept(op: String => Boolean): Parameter[V, C] =
-  //   copy(isValueOp = op)
-
-  // def arity(minArity: Int, maxArity: Int): Parameter[V, C] =
-  //   copy(arity = (minArity, maxArity))
-
-  // def minArity: Int = arity._1
-
-  // def maxArity: Int = arity._2
 
   def label(label: String): Parameter[V, C] =
     copy(label = label)
@@ -113,36 +91,6 @@ class Parameter[V, C](val names: Seq[String],
 
   def names(name: String, names: String*): Parameter[V, C] =
     copy(names = name +: names)
-
-  private def copy(names: Seq[String] = names,
-      label: String = label,
-      //arity: (Int, Int) = arity,
-      default: Option[V] = default,
-      // valueRequired: Boolean = valueRequired,
-      // isValueOp: String => Boolean = isValueOp,
-      // convertOp: String => V = convertOp,
-      valueSpec: ValueSpec[V] = valueSpec,
-      applyOp: (V, C) => C = applyOp) =
-    new Parameter(names, label, default, valueSpec, applyOp)
-
-  // private[cli] def collectValue(config: C, value: String, position: Position): C =
-  //   if !valueSpec.isValue(value) then
-  //     throw IllegalValueException(position)
-  //   Try(
-  //       valueSpec.convert(value))
-  //     .recoverWith(ex => Failure(IllegalValueException(ex, position)))
-  //     .flatMap(value => applyCollectOp(value, config, position))
-  //     .get
-
-  // private[cli] def collectDefault(config: C, position: Position): C =
-  //   default.map(value =>
-  //       applyCollectOp(value, config, position).get)
-  //     .getOrElse(config)
-
-  // private def applyCollectOp(value: V, config: C, position: Position): Try[C] =
-  //   Try(
-  //       applyOp(value, config))
-  //     .recoverWith(ex => Failure(IllegalValueException(ex, position)))
 
 class ParameterException(message: String, cause: Option[Throwable], val position: Position)
   extends RuntimeException(message, cause.orNull)
@@ -170,11 +118,47 @@ object ParameterList:
 
   private enum Arg:
     case NameArg(name: String, nextPos: Position)
-    //case FlagArg(name: String, nextPos: Position)
     case ValueArg(value: String, nextPos: Position)
     case UndefinedArg(nextPos: Position)
 
-class ParameterList[A](config: A, params: Seq[Parameter[?, A]]):
+  extension [C](paramList: ParameterList[C])
+    def collect(config: C, args: Seq[String]): (C, Position) = 
+      collectParams(config, paramList, args)
+
+  private def collectParams[C](config: C, paramList: ParameterList[C], args: Seq[String]): (C, Position) =
+    val params = paramList.params
+    val positionalParams = positionalParameters(params)
+    val namedParams = namedParameters(params)
+    val (collectedParams, pos) = paramList.collectParams(args, positionalParams, namedParams, Map(), Position(0, 0), 0)
+    val updatedConfig = collectedParams.values.foldLeft(config){case (config, (param, values)) =>
+      val value = param.valueSpec.convertSeq(values)
+      param.applyOp(value, config)
+    }
+    (updatedConfig, pos)
+
+  private def positionalParameters[C](params: Seq[Parameter[?, C]]) = params.filter(_.names.isEmpty)
+
+  private def namedParameters[C](params: Seq[Parameter[?, C]]): Map[String, Parameter[?, C]] =
+    namedParameters(params, Map())
+
+  @tailrec
+  private def namedParameters[C](params: Seq[Parameter[?, C]], paramsMap: Map[String, Parameter[?, C]]): Map[String, Parameter[?, C]] =
+    if params.isEmpty then
+      paramsMap
+    else
+      val param = params.head
+      val names = param.names
+      val map = names.foldLeft(paramsMap){(map, name) =>
+        map.updatedWith(name){
+          case Some(_) =>
+            throw IllegalArgumentException()
+          case None =>
+            Some(param)
+        }
+      }
+      namedParameters(params.tail, map)
+
+class ParameterList[A](config: A, val params: Seq[Parameter[?, A]]):
   import ParameterList.*
   import ParameterList.Arg.*
 
@@ -185,36 +169,6 @@ class ParameterList[A](config: A, params: Seq[Parameter[?, A]]):
     val resolvedParam = param(using configProvider)
     ParameterList(config, params :+ resolvedParam)
 
-  def collectParams(args: Seq[String]): (A, Position) =
-    val (collectedParams, pos) = collectParams(args, positionalParameters, namedParameters(params), Map(), Position(0, 0), 0)
-    val updatedConfig = collectedParams.values.foldLeft(config){case (config, (param, values)) =>
-      val value = param.valueSpec.convertSeq(values)
-      param.applyOp(value, config)
-    }
-    (updatedConfig, pos)
-
-
-  // private def postProcess(config: A, repetitions: Map[ParamKey, (Parameter[?, A], Int)], pos: Position): A =
-  //   val (_config, _repetitions) = applyDefaults(config, repetitions, pos)
-  //   //validateArity(_repetitions, pos)
-  //   _config
-
-  // private def applyDefaults(config: A, repetitions: Map[ParamKey, (Parameter[?, A], Int)], position: Position): (A, Map[ParamKey, (Parameter[?, A], Int)]) =
-  //   repetitions.foldLeft((config, repetitions)){case ((config, repetitions), (paramKey, (param, repetition))) =>
-  //     if repetition == 0 && param.default.isDefined then
-  //       (param.collectDefault(config, position),
-  //         repetitions.updated(paramKey, (param, 1)))
-  //     else
-  //       (config, repetitions)
-  //   }
-
-  // private def validateArity(repetitions: Map[ParamKey, (Parameter[?, A], Int)], pos: Position) =
-  //   repetitions.values.foreach{case (param, repetition) =>
-  //     val requiredArity = param.minArity
-  //     val labelOrName = if param.name.nonEmpty then param.name else param.label
-  //     if repetition < requiredArity then
-  //       throw MissingParameterException(labelOrName, requiredArity = requiredArity, repetition = repetition, pos)
-  //   }
 
   @tailrec
   private def collectParams(
@@ -302,26 +256,4 @@ class ParameterList[A](config: A, params: Seq[Parameter[?, A]]):
 
     else 
       ValueArg(arg, Position(argIndex+1, 0))
-
-  private def positionalParameters = params.filter(_.names.isEmpty)
-
-  private def namedParameters(params: Seq[Parameter[?, A]]): Map[String, Parameter[?, A]] =
-    namedParameters(params, Map())
-
-  @tailrec
-  private def namedParameters(params: Seq[Parameter[?, A]], paramsMap: Map[String, Parameter[?, A]]): Map[String, Parameter[?, A]] =
-    if params.isEmpty then
-      paramsMap
-    else
-      val param = params.head
-      val names = param.names
-      val map = names.foldLeft(paramsMap){(map, name) =>
-        map.updatedWith(name){
-          case Some(_) =>
-            throw IllegalArgumentException()
-          case None =>
-            Some(param)
-        }
-      }
-      namedParameters(params.tail, map)
 

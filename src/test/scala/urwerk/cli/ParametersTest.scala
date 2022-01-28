@@ -14,7 +14,7 @@ class ParametersTest extends TestBase:
           param[Int]
             .apply{case (value, config) => config.copy(value = value)})
       
-      params.collectParams(Seq("77")) should be ((Config(77), Position(1, 0)))
+      params.collect(Config(7), Seq("77")) should be ((Config(77), Position(1, 0)))
     }
 
     // "illegal value" in {

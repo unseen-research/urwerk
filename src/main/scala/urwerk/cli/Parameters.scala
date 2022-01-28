@@ -39,8 +39,7 @@ object Parameter:
   given ValueSpec[Int] with
     val requireValue = true
     def isValue(value: String): Boolean = 
-      !value.startsWith("--")
-      //value.nonEmpty && value.toDoubleOption.isDefined
+      value.nonEmpty && value.toDoubleOption.isDefined
     def defaultValue: Option[Int] = None
     def convert(value: String): Int = value.toInt
     def convertSeq(values: Seq[String]): Int = convert(values.last)
@@ -128,9 +127,10 @@ object ParameterList:
       collectParams(config, paramList, args)
 
   private enum Arg:
-    case NameArg(name: String, nextPos: Position)
-    case ValueArg(value: String, nextPos: Position)
-    case UndefinedArg(nextPos: Position)
+    case Named(name: String, value: String, nextPos: Position)
+    case Value(value: String, nextPos: Position)
+    case Separator(nextPos: Position)
+    case End(nextPos: Position)
 
   private def collectParams[C](config: C, paramList: ParameterList[C], args: Seq[String]): (C, Position) =
     val params = paramList.params
@@ -184,17 +184,11 @@ class ParameterList[A](val params: Seq[Parameter[?, A]]):
       pos: Position,
       positionalIndex: Int): (Map[ParamKey, (Parameter[?, A], Seq[String])], Position) =
     
-    //val Position(argIndex, flagIndex) = argPos
-    if pos.argIndex >= args.size then
-      //val _config = postProcess(config, repetitions, pos)
-      (actualParamms, pos)
-    else
-      //val arg = args(argIndex)
-      nextArg(namedParms, args, pos) match
-        case ValueArg(_, nextPos) if positionalParams.size <= positionalIndex =>
-          //val _config = postProcess(config, repetitions, pos)
-          (actualParamms, nextPos)
-        case ValueArg(value, nextPos) =>
+    nextArg(namedParms, positionalParams, args, pos) match
+      case Value(value, nextPos) =>
+        if positionalIndex >= positionalParams.size then
+          (actualParamms, pos) 
+        else 
           val param = positionalParams(positionalIndex)
           val valSpec = param.valueSpec
           if !valSpec.isValue(value) then
@@ -207,58 +201,101 @@ class ParameterList[A](val params: Seq[Parameter[?, A]]):
                 Some((param, Seq(value)))
             }
             collectParams(args, positionalParams, namedParms, updatedParams , nextPos, positionalIndex+1)
-        case NameArg(name, nextPos) =>
-          val param = namedParms(name)
-          val prevPos = nextPos
-          nextArg(namedParms, args, nextPos) match
-            case NameArg(name, _) =>
-              val value = ""
-              if !param.valueSpec.isValue(value) then
-                throw IllegalValueException(nextPos)
+      case Named(name, value, nextPos) =>
+        val param = namedParms(name)
+        val prevPos = nextPos
+        nextArg(namedParms, positionalParams, args, nextPos) match
+          case Named(name, value, _) =>
+            val value = ""
+            if !param.valueSpec.isValue(value) then
+              throw IllegalValueException(nextPos)
 
-              val updatedParams = actualParamms.updatedWith(ParamKey.Name(name)){
-                case Some((param, values)) =>
-                  Some((param, values))
-                case None => 
-                  Some((param, Seq(value)))
-              }
-              collectParams(args, positionalParams, namedParms, updatedParams , nextPos, positionalIndex)
-            case ValueArg(value, nextPos) =>
-              if !param.valueSpec.isValue(value) then
-                throw IllegalValueException(prevPos)
+            val updatedParams = actualParamms.updatedWith(ParamKey.Name(name)){
+              case Some((param, values)) =>
+                Some((param, values))
+              case None => 
+                Some((param, Seq(value)))
+            }
+            collectParams(args, positionalParams, namedParms, updatedParams , nextPos, positionalIndex)
+          case Value(value, nextPos) =>
+            if !param.valueSpec.isValue(value) then
+              throw IllegalValueException(prevPos)
 
-              val updatedParams = actualParamms.updatedWith(ParamKey.Name(name)){
-                case Some((param, values)) =>
-                  Some((param, values))
-                case None => 
-                  Some((param, Seq(value)))
-              }
-              collectParams(args, positionalParams, namedParms, updatedParams , nextPos, positionalIndex)
-            case UndefinedArg(nextPos) =>  ???     
-        case UndefinedArg(nextPos) =>
-          (actualParamms, nextPos)    
+            val updatedParams = actualParamms.updatedWith(ParamKey.Name(name)){
+              case Some((param, values)) =>
+                Some((param, values))
+              case None => 
+                Some((param, Seq(value)))
+            }
+            collectParams(args, positionalParams, namedParms, updatedParams , nextPos, positionalIndex)
+          case End(nextPos) =>  ???     
+      
+      case Separator(nextPos) =>
+        collectParams(args, positionalParams, namedParms, actualParamms , nextPos, positionalIndex)
+
+      case End(nextPos) =>
+        (actualParamms, nextPos)    
   
-  private def nextArg(params: Map[String, Parameter[?, A]], args: Seq[String], pos: Position): Arg =
+  private def nextArg(namedParams: Map[String, Parameter[?, A]], positionalParams: Seq[Parameter[?, A]], args: Seq[String], pos: Position): Arg =
     val Position(argIndex, flagIndex) = pos
-    val arg = args(argIndex)
 
-    if arg.startsWith("--") then
-      params.get(arg.stripPrefix("--")) match
-        case Some(param) => 
-          NameArg(param.name, Position(argIndex+1, 0))
-        case None => UndefinedArg(pos)
+    if isEnd(args, pos) then 
+      End(pos)
 
-    else if arg.startsWith("-") && arg.size > 1 && arg.size <= flagIndex+2 then
-      nextArg(params, args, Position(argIndex+1, 0))
+    else
+      val arg = args(argIndex)
+      if isSeparator(arg) then
+        Separator(pos)
 
-    else if arg.startsWith("-") && arg.size > 1 then
-      val name = arg(flagIndex+1).toString
-      val nextPos = if flagIndex+2 >= arg.size then Position(argIndex+1, 0) else Position(argIndex, flagIndex+1)
-      params.get(name) match
-        case Some(param) => 
-          NameArg(param.name, nextPos)
-        case None => UndefinedArg(pos)
+      if isName(arg) then
+        namedParams.get(arg.stripPrefix("--")) match
+          case Some(param) => 
+            val name = param.name
+            val valueIndex = argIndex + 1
+            if valueIndex >= args.size then
+              if param.valueSpec.isValue("") then
+                Named(name, "", Position(valueIndex, 0))
+              else 
+                throw MissingValueException(Position(valueIndex, 0))
+            else
+              val value = args(valueIndex)            
+              if isName(value) || isFlags(value, namedParams.keySet) then
+                if param.valueSpec.isValue("") then
+                  Named(name, "", Position(valueIndex, 0))
+                else 
+                  throw MissingValueException(Position(valueIndex, 0))
+              else
+                Named(name, value, Position(valueIndex+1, 0))
+          case None => End(pos)
+       
+        else if isFlags(arg, namedParams.keySet) then 
+          End(pos)
+        // else if isFlags(arg, namedParams.keySet) && arg.size > 1 && arg.size <= flagIndex+2 then
+        //   nextArg(namedParams, positionalParams, args, Position(argIndex+1, 0), positionalIndex)
 
-    else 
-      ValueArg(arg, Position(argIndex+1, 0))
+        // else if isFlags(arg, namedParams.keySet) && arg.size > 1 then
+        //   val name = arg(flagIndex+1).toString
+        //   val nextPos = if flagIndex+2 >= arg.size then Position(argIndex+1, 0) else Position(argIndex, flagIndex+1)
+        //   namedParams.get(name) match
+        //     case Some(param) => 
+        //       Named(param.name, nextPos, positionalIndex)
+        //     case None => End(pos)
+        else 
+          Value(arg, Position(argIndex+1, 0))
 
+  private def isSeparator(arg: String): Boolean = arg == "--" || arg == "-"
+
+  private def isName(arg: String): Boolean = arg.size > 2 && arg.startsWith("--") && arg(2) != '-'
+
+  private def isFlags(arg: String, names: Set[String]): Boolean = 
+    arg.size > 1 
+    && arg.startsWith("-") 
+    && arg(1) != '-' 
+    && names.contains(arg(1).toString)
+    
+  private def isEnd(args: Seq[String], pos: Position): Boolean = 
+    val Position(argIndex, flagIndex) = pos
+
+    if argIndex >= args.size then true
+    else if argIndex == args.size-1 && flagIndex + 1 >= args.last.size then true
+    else false

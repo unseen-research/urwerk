@@ -6,15 +6,29 @@ import urwerk.test.TestBase
 class ParametersTest extends TestBase:
   case class Config[A](value: A)
 
-  "int parameter" - {
-    "collect value" in {
-      val params = ParameterList[Config[Int]]{
-          param[Int]
-            .apply{case (value, config) => config.copy(value = value)}
-        }
-      
-      params.collect(Config(7), Seq("77")) should be ((Config(77), Position(1, 0)))
+  "collect positional value arg" - {
+    val params = ParameterList[Config[Int]]{
+        param[Int]
+          .apply{case (value, config) => config.copy(value = value)}}
+
+    "followed by nothing" in {
+      params.collect(Config(-1), Seq("-77")) should be ((Config(-77), Position(1, 0)))
     }
+
+    "followed by value" in {
+      params.collect(Config(-1), Seq("77", "88")) should be ((Config(77), Position(1, 0)))
+    }
+
+    "followed by name" in {
+      params.collect(Config(-1), Seq("77", "88")) should be ((Config(77), Position(1, 0)))
+    }
+
+    "followed by flags" in {
+      params.collect(Config(-1), Seq("77", "-flags")) should be ((Config(77), Position(1, 0)))
+    }
+  }
+
+
 
     // "illegal value" in {
     //   val ex = intercept[IllegalValueException]{
@@ -24,7 +38,6 @@ class ParametersTest extends TestBase:
     //   ex.position should be(Position(4, 5))
     //   ex.getCause shouldBe a[NumberFormatException]
     // }
-  }
 
 //   "string parameter" - {
 //     given ConfigProvider[Config[String]] with 

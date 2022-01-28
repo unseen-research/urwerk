@@ -14,12 +14,7 @@ case class Command[C](config: C, parameterLists: Seq[ParameterList[C]], applyOp:
       case _ => 0
 
   def parameterList(param: ConfigEvidence[C] ?=> Parameter[?, C], params: ConfigEvidence[C] ?=> Parameter[?, C]*): Command[C] = 
-    given ConfigEvidence[C] = new ConfigEvidence[C]{}
-     
-    val resolvedParam = param
-    val resolvedParams = params.map(param => param)
-    val paramList = ParameterList(resolvedParam +: resolvedParams)
-    
+    val paramList = ParameterList(param, params*)
     copy(parameterLists = parameterLists :+ paramList)
 
 object Command: 

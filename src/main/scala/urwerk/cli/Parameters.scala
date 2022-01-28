@@ -115,14 +115,22 @@ object ParameterList:
     case Name(name: String)
     case Pos(pos: Int)
 
-  private enum Arg:
-    case NameArg(name: String, nextPos: Position)
-    case ValueArg(value: String, nextPos: Position)
-    case UndefinedArg(nextPos: Position)
+  def apply[C](param: ConfigEvidence[C] ?=> Parameter[?, C], params: ConfigEvidence[C] ?=> Parameter[?, C]*): ParameterList[C] =
+    given ConfigEvidence[C] = new ConfigEvidence[C]{}
+     
+    val resolvedParam = param
+    val resolvedParams = params.map(param => param)
+    new ParameterList[C](resolvedParam +: resolvedParams)
+
 
   extension [C](paramList: ParameterList[C])
     def collect(config: C, args: Seq[String]): (C, Position) = 
       collectParams(config, paramList, args)
+
+  private enum Arg:
+    case NameArg(name: String, nextPos: Position)
+    case ValueArg(value: String, nextPos: Position)
+    case UndefinedArg(nextPos: Position)
 
   private def collectParams[C](config: C, paramList: ParameterList[C], args: Seq[String]): (C, Position) =
     val params = paramList.params
@@ -165,7 +173,7 @@ class ParameterList[A](val params: Seq[Parameter[?, A]]):
     given ConfigEvidence[A] = new ConfigEvidence[A]{}
    
     val resolvedParam = param
-    ParameterList(params :+ resolvedParam)
+    new ParameterList(params :+ resolvedParam)
 
   @tailrec
   private def collectParams(

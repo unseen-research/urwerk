@@ -8,10 +8,10 @@ class ParametersTest extends TestBase:
 
   "int parameter" - {
     "collect value" in {
-      val params = ParameterList[Config[Int]](Seq())
-        .parameter(
+      val params = ParameterList[Config[Int]]{
           param[Int]
-            .apply{case (value, config) => config.copy(value = value)})
+            .apply{case (value, config) => config.copy(value = value)}
+        }
       
       params.collect(Config(7), Seq("77")) should be ((Config(77), Position(1, 0)))
     }

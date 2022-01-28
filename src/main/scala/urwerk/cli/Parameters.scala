@@ -92,8 +92,6 @@ case class Parameter[V, C](val names: Seq[String],
 class ParameterException(message: String, cause: Option[Throwable], val position: Position)
   extends RuntimeException(message, cause.orNull)
 
-class ArityExceededException(val name: String, val maxArity: Int, position: Position) extends ParameterException("", None, position)
-
 class IllegalValueException(cause: Option[Throwable], position: Position) extends ParameterException("", cause, position):
   def this(position: Position) = this(None, position)
   def this(cause: Throwable, position: Position) = this(Some(cause), position)

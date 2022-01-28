@@ -4,20 +4,19 @@ import scala.annotation.tailrec
 import scala.compiletime.constValue
 import scala.util.Try
 import scala.util.Failure
+import java.io.ObjectInputFilter.Config
+
+trait ConfigEvidence[C]:
+  type CC = C
+
+def config[C] = new ConfigEvidence{}
 
 object Parameter:
 
-  def configOf[C](config: C): ConfigProvider[C] = new ConfigProvider:
-      def get = config
-
-  trait ConfigProvider[C]: 
-      type CC = C
-      def get: CC
-
-  def param[V](using valueSpec: ValueSpec[V], config: ConfigProvider[?]): Parameter[V, config.CC] = 
+  def param[V](using valueSpec: ValueSpec[V], config: ConfigEvidence[?]): Parameter[V, config.CC] = 
     new Parameter(Seq(), valueSpec.defaultLabel, None, valueSpec, {(_, config) => config})
 
-  def param[V](using valueSpec: ValueSpec[V], config: ConfigProvider[?])(name: String, names: String*): Parameter[V, config.CC] = 
+  def param[V](using valueSpec: ValueSpec[V], config: ConfigEvidence[?])(name: String, names: String*): Parameter[V, config.CC] = 
     new Parameter(name +: names, valueSpec.defaultLabel, None, valueSpec, {(_, config) => config})
 
   trait ValueSpec[V]:
@@ -158,17 +157,15 @@ object ParameterList:
       }
       namedParameters(params.tail, map)
 
-class ParameterList[A](config: A, val params: Seq[Parameter[?, A]]):
+class ParameterList[A](val params: Seq[Parameter[?, A]]):
   import ParameterList.*
   import ParameterList.Arg.*
 
-  def this(config: A) = this(config, Seq())
-
-  def parameter(param: Parameter.ConfigProvider[A] ?=> Parameter[?, A]): ParameterList[A] = 
-    val configProvider =  Parameter.configOf(config)
-    val resolvedParam = param(using configProvider)
-    ParameterList(config, params :+ resolvedParam)
-
+  def parameter(param: ConfigEvidence[A] ?=> Parameter[?, A]): ParameterList[A] = 
+    given ConfigEvidence[A] = new ConfigEvidence[A]{}
+   
+    val resolvedParam = param
+    ParameterList(params :+ resolvedParam)
 
   @tailrec
   private def collectParams(

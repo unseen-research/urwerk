@@ -1,7 +1,6 @@
 package urwerk.cli
 
 import urwerk.cli.Parameter.param
-import urwerk.cli.Parameter.ConfigProvider
 import urwerk.test.TestBase
 
 class ParametersTest extends TestBase:
@@ -9,7 +8,7 @@ class ParametersTest extends TestBase:
 
   "int parameter" - {
     "collect value" in {
-      val params = ParameterList(Config(7))
+      val params = ParameterList[Config[Int]](Seq())
         .parameter(
           param[Int]
             .apply{case (value, config) => config.copy(value = value)})

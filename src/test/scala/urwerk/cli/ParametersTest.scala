@@ -86,3 +86,23 @@ class ParametersTest extends TestBase:
       params.collect(Seq(), Seq("--param", "any")) should be ((Seq(true), Position(1, 0)))
     }
   }
+
+  "joined flags" - {
+    val params = ParameterList[Set[String]](
+      param[Boolean]("a-param", "a")
+        .apply{case (value, config) => config + s"a-$value"},
+      param[Boolean]("b-param", "b")
+        .apply{case (value, config) => config + s"b-$value"},
+      param[Boolean]("c-param", "c")
+        .apply{case (value, config) => config + s"c-$value"},
+      param[String]("d-param", "d")
+        .apply{case (value, config) => config + s"d-$value"})
+
+    "without value" in {
+      params.collect(Set(), Seq("-abc")) should be ((Set("a-true", "b-true", "c-true"), Position(1, 0)))
+    }
+
+    "with value for last flag" in {
+      params.collect(Set(), Seq("-abcd", "any-value")) should be ((Set("a-true", "b-true", "c-true", "d-any-value"), Position(2, 0)))
+    }
+  }

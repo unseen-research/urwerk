@@ -255,18 +255,51 @@ class ParameterList[A](val params: Seq[Parameter[?, A]]):
                     IllegalValueException(), Position(valueIndex, 0))
           case None => End(pos)
        
-        else if isDefinedFlags(arg, namedParams.keySet) then 
-          End(pos)
-        // else if isFlags(arg, namedParams.keySet) && arg.size > 1 && arg.size <= flagIndex+2 then
-        //   nextArg(namedParams, positionalParams, args, Position(argIndex+1, 0), positionalIndex)
+        else if isFlags(arg) then 
+          val flags = arg.stripPrefix("-")
+          if flagIndex >= flags.size then
+            Separator(Position(argIndex+1, 0))
+          else
+            val flag = flags(flagIndex).toString
+            namedParams.get(flag) match
+              case Some(param) =>
+                val name = param.name
+                val valueSpec = param.valueSpec
+                val valueIndex = argIndex+1
 
-        // else if isFlags(arg, namedParams.keySet) && arg.size > 1 then
-        //   val name = arg(flagIndex+1).toString
-        //   val nextPos = if flagIndex+2 >= arg.size then Position(argIndex+1, 0) else Position(argIndex, flagIndex+1)
-        //   namedParams.get(name) match
-        //     case Some(param) => 
-        //       Named(param.name, nextPos, positionalIndex)
-        //     case None => End(pos)
+                if flagIndex == flags.size-1 then
+                  if valueIndex >= args.size then
+                    if valueSpec.defaultValue.isDefined then
+                      Named(name, valueSpec.defaultValue.get, Position(valueIndex, 0))
+                    else 
+                      throw ParameterException(
+                        MissingValueException(), Position(valueIndex, 0))
+                  else
+                    val value = args(valueIndex)            
+                    if isDefinedName(value, namedParams.keySet) || isDefinedFlags(value, namedParams.keySet) then
+                      if valueSpec.defaultValue.isDefined then
+                        Named(name, valueSpec.defaultValue.get, Position(valueIndex, 0))
+                      else 
+                        throw ParameterException(
+                          MissingValueException(), Position(valueIndex, 0))
+                    else
+                      if valueSpec.isValue(value) then
+                        Named(name, value, Position(valueIndex+1, 0))
+                      else if valueSpec.defaultValue.isDefined then
+                        Named(name, valueSpec.defaultValue.get, Position(valueIndex, 0))
+                      else
+                        throw ParameterException(
+                          IllegalValueException(), Position(valueIndex, 0))
+                else
+                  if valueSpec.defaultValue.isDefined then
+                    Named(name, valueSpec.defaultValue.get, Position(argIndex, flagIndex+1))
+                  else
+                    throw ParameterException(
+                      IllegalValueException(), pos)
+
+              case None =>
+                End(pos)
+
         else 
           Value(arg, Position(argIndex+1, 0))
 

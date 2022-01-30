@@ -103,7 +103,8 @@ class MissingValueException() extends RuntimeException()
 
 //class UnexpectedParameterException(position: Position) extends ParameterException("", None, position)
 
-case class Position(val argIndex: Int, val flagIndex: Int)
+case class Position(val argIndex: Int, val flagIndex: Int):
+  def incrementArgIndex = copy(argIndex = argIndex+1)
 
 object ParameterList:
   enum ParamKey:
@@ -131,14 +132,121 @@ object ParameterList:
   private def collectParams[C](config: C, paramList: ParameterList[C], args: Seq[String]): (C, Position) =
     val params = paramList.params
     val positionalParams = positionalParameters(params)
-    val namedParams = namedParameters(params)
-    val (collectedParams, pos) = paramList.collectParams(args, positionalParams, namedParams, Map(), Position(0, 0), 0)
-    val updatedConfig = collectedParams.values.foldLeft(config){case (config, (param, values)) =>
-      val value = param.valueSpec.convertSeq(values)
-      param.applyOp(value, config)
-    }
-    (updatedConfig, pos)
+    val namedParams = namedParameters(params) 
+    
+    collectParams(namedParams, positionalParams, config, args, Position(0, 0), "")
 
+  
+  private def collectParams[C](namedParams: Map[String, Parameter[?, C]], 
+      positionalParams: Seq[Parameter[?, C]], 
+      config: C, args: Seq[String],
+      //prevPos: Position, 
+      pos: Position, 
+      previousName: String): (C, Position) =
+    val Position(argIndex, flagIndex) = pos
+    
+    if argIndex >= args.size then
+      (config, pos)
+    
+    else 
+      val arg = args(argIndex)
+
+      if flagIndex >= arg.size -1 then 
+        collectParams(namedParams, positionalParams, config, args, Position(argIndex+1, 0), "")
+      else
+        collectParams(namedParams, positionalParams, config, args, arg, pos, "")
+
+  private def collectParams[C](namedParams: Map[String, Parameter[?, C]], 
+      positionalParams: Seq[Parameter[?, C]], 
+      config: C,
+      args: Seq[String], 
+      arg: String, 
+      //prevPos: Position,
+      pos: Position, 
+      previousName: String): (C, Position) =
+
+    val Position(argIndex, flagIndex) = pos
+    if isName(arg) then
+      val updatedConfig = if previousName.nonEmpty then
+        namedParams.get(previousName) match
+          case Some(param) =>
+            param.valueSpec.defaultValue match
+              case Some(defaultValue) =>
+                param.applyOp(param.valueSpec.convert(defaultValue), config)
+              case None =>
+                throw ParameterException(MissingValueException(), pos)            
+
+          case None =>
+            throw IllegalStateException("this position may never be reached")
+      else config
+
+      val name = arg
+      val paramOpt = namedParams.get(previousName) 
+      if paramOpt.isDefined then   
+        collectParams(namedParams, positionalParams, updatedConfig, args, Position(argIndex+1, 0), name)
+    
+      else
+        (config, pos)
+
+    else if isFlags(arg) then 
+      val updatedConfig = if previousName.nonEmpty then
+        namedParams.get(previousName) match
+          case Some(param) =>
+            param.valueSpec.defaultValue match
+              case Some(defaultValue) =>
+                param.applyOp(param.valueSpec.convert(defaultValue), config)
+              case None =>
+                throw ParameterException(MissingValueException(), pos)            
+
+          case None =>
+            throw IllegalStateException("this position may never be reached")
+      else config
+      
+      val flags = arg.stripPrefix("-")
+      val name = flags(flagIndex).toString
+      val paramOpt = namedParams.get(previousName) 
+
+      if paramOpt.isDefined then   
+        collectParams(namedParams, positionalParams, updatedConfig, args, Position(argIndex, flagIndex+1), name)
+    
+      else
+        (updatedConfig, pos)
+
+    else if isSeparator(arg) then
+      val updatedConfig = if previousName.nonEmpty then
+        namedParams.get(previousName) match
+          case Some(param) =>
+            param.valueSpec.defaultValue match
+              case Some(defaultValue) =>
+                param.applyOp(param.valueSpec.convert(defaultValue), config)
+              case None =>
+                throw ParameterException(MissingValueException(), pos)            
+
+          case None =>
+            throw IllegalStateException("this position may never be reached")
+      else config
+
+      collectParams(namedParams, positionalParams, updatedConfig, args, pos.incrementArgIndex, "")
+    
+    else 
+      val value = arg
+      if previousName.nonEmpty then
+        namedParams.get(previousName) match
+          case Some(param) =>
+            val updatedConfig = param.applyOp(param.valueSpec.convert(value), config)        
+            collectParams(namedParams, positionalParams, updatedConfig, args, Position(argIndex+1, 0), "") 
+          case None =>
+            throw IllegalStateException("this position may never be reached")
+      
+      else
+        if positionalParams.size == 0 then
+          (config, pos)
+        else
+          val param = positionalParams.head
+          val updatedConfig = param.applyOp(param.valueSpec.convert(value), config)
+          collectParams(namedParams, positionalParams, updatedConfig, args, Position(argIndex+1, 0), "")    
+      
+  
   private def positionalParameters[C](params: Seq[Parameter[?, C]]) = params.filter(_.names.isEmpty)
 
   private def namedParameters[C](params: Seq[Parameter[?, C]]): Map[String, Parameter[?, C]] =
@@ -160,148 +268,6 @@ object ParameterList:
         }
       }
       namedParameters(params.tail, map)
-
-class ParameterList[A](val params: Seq[Parameter[?, A]]):
-  import ParameterList.*
-  import ParameterList.Arg.*
-
-  def parameter(param: ConfigEvidence[A] ?=> Parameter[?, A]): ParameterList[A] = 
-    given ConfigEvidence[A] = new ConfigEvidence[A]{}
-   
-    val resolvedParam = param
-    new ParameterList(params :+ resolvedParam)
-
-  @tailrec
-  private def collectParams(
-      args: Seq[String],
-      positionalParams: Seq[Parameter[?, A]],
-      namedParms: Map[String, Parameter[?, A]],
-      actualParamms: Map[ParamKey, (Parameter[?, A], Seq[String])],
-      pos: Position,
-      positionalIndex: Int): (Map[ParamKey, (Parameter[?, A], Seq[String])], Position) =
-    
-    nextArg(namedParms, positionalParams, args, pos) match
-      case Value(value, nextPos) =>
-        if positionalIndex >= positionalParams.size then
-          (actualParamms, pos) 
-        else 
-          val param = positionalParams(positionalIndex)
-          val valSpec = param.valueSpec
-          if !valSpec.isValue(value) then
-            (actualParamms, pos)
-          else
-            val updatedParams = actualParamms.updatedWith(ParamKey.Pos(positionalIndex)){
-              case Some((param, values)) =>
-                Some((param, values :+ value))
-              case None => 
-                Some((param, Seq(value)))
-            }
-            collectParams(args, positionalParams, namedParms, updatedParams , nextPos, positionalIndex+1)
-      case Named(name, value, nextPos) =>
-        val updatedParams = actualParamms.updatedWith(ParamKey.Name(name)){
-          case Some((param, values)) =>
-            Some((param, values))
-          case None => 
-            val param = namedParms(name)
-            Some((param, Seq(value)))
-        }
-        collectParams(args, positionalParams, namedParms, updatedParams , nextPos, positionalIndex)  
-      
-      case Separator(nextPos) =>
-        collectParams(args, positionalParams, namedParms, actualParamms , nextPos, positionalIndex)
-
-      case End(nextPos) =>
-        (actualParamms, nextPos)    
-  
-  private def nextArg(namedParams: Map[String, Parameter[?, A]], positionalParams: Seq[Parameter[?, A]], args: Seq[String], pos: Position): Arg =
-    val Position(argIndex, flagIndex) = pos
-
-    if isEnd(args, pos) then 
-      End(pos)
-
-    else
-      val arg = args(argIndex)
-      if isSeparator(arg) then
-        Separator(pos)
-
-      if isName(arg) then
-        namedParams.get(toName(arg)) match
-          case Some(param) => 
-            val name = param.name
-            val valueSpec = param.valueSpec
-            val valueIndex = argIndex + 1
-
-            if valueIndex >= args.size then
-              if valueSpec.defaultValue.isDefined then
-                Named(name, valueSpec.defaultValue.get, Position(valueIndex, 0))
-              else 
-                throw ParameterException(
-                  MissingValueException(), Position(valueIndex, 0))
-            else
-              val value = args(valueIndex)            
-              if isDefinedName(value, namedParams.keySet) || isDefinedFlags(value, namedParams.keySet) then
-                if valueSpec.defaultValue.isDefined then
-                  Named(name, valueSpec.defaultValue.get, Position(valueIndex, 0))
-                else 
-                  throw ParameterException(
-                    MissingValueException(), Position(valueIndex, 0))
-              else
-                if valueSpec.isValue(value) then
-                  Named(name, value, Position(valueIndex+1, 0))
-                else if valueSpec.defaultValue.isDefined then
-                  Named(name, valueSpec.defaultValue.get, Position(valueIndex, 0))
-                else
-                  throw ParameterException(
-                    IllegalValueException(), Position(valueIndex, 0))
-          case None => End(pos)
-       
-        else if isFlags(arg) then 
-          val flags = arg.stripPrefix("-")
-          if flagIndex >= flags.size then
-            Separator(Position(argIndex+1, 0))
-          else
-            val flag = flags(flagIndex).toString
-            namedParams.get(flag) match
-              case Some(param) =>
-                val name = param.name
-                val valueSpec = param.valueSpec
-                val valueIndex = argIndex+1
-
-                if flagIndex == flags.size-1 then
-                  if valueIndex >= args.size then
-                    if valueSpec.defaultValue.isDefined then
-                      Named(name, valueSpec.defaultValue.get, Position(valueIndex, 0))
-                    else 
-                      throw ParameterException(
-                        MissingValueException(), Position(valueIndex, 0))
-                  else
-                    val value = args(valueIndex)            
-                    if isDefinedName(value, namedParams.keySet) || isDefinedFlags(value, namedParams.keySet) then
-                      if valueSpec.defaultValue.isDefined then
-                        Named(name, valueSpec.defaultValue.get, Position(valueIndex, 0))
-                      else 
-                        throw ParameterException(
-                          MissingValueException(), Position(valueIndex, 0))
-                    else
-                      if valueSpec.isValue(value) then
-                        Named(name, value, Position(valueIndex+1, 0))
-                      else if valueSpec.defaultValue.isDefined then
-                        Named(name, valueSpec.defaultValue.get, Position(valueIndex, 0))
-                      else
-                        throw ParameterException(
-                          IllegalValueException(), Position(valueIndex, 0))
-                else
-                  if valueSpec.defaultValue.isDefined then
-                    Named(name, valueSpec.defaultValue.get, Position(argIndex, flagIndex+1))
-                  else
-                    throw ParameterException(
-                      IllegalValueException(), pos)
-
-              case None =>
-                End(pos)
-
-        else 
-          Value(arg, Position(argIndex+1, 0))
 
   private def isSeparator(arg: String): Boolean = arg == "--" || arg == "-"
 
@@ -340,3 +306,20 @@ class ParameterList[A](val params: Seq[Parameter[?, A]]):
     if argIndex >= args.size then true
     else if argIndex == args.size-1 && flagIndex + 1 >= args.last.size then true
     else false
+
+class ParameterList[A](val params: Seq[Parameter[?, A]]):
+  import ParameterList.*
+  import ParameterList.Arg.*
+
+  def parameter(param: ConfigEvidence[A] ?=> Parameter[?, A]): ParameterList[A] = 
+    given ConfigEvidence[A] = new ConfigEvidence[A]{}
+   
+    val resolvedParam = param
+    new ParameterList(params :+ resolvedParam)
+
+  sealed trait Param
+  case class Named(name: String, value: String, nextPos: Position, param: Parameter[?, A]) extends Param
+  case class Positional(value: String, nextPos: Position, param: Parameter[?, A]) extends Param
+  case class EndPos(nextPos: Position)
+
+

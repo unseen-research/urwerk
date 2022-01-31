@@ -21,33 +21,33 @@ object Parameter:
 
   trait ValueSpec[V]:
     type VV = V
-    def isValue(value: String): Boolean
-    def defaultValue: Option[String]    
+    //def isValue(value: String): Boolean
+    def defaultValue: Option[V] = None
     def convert(value: String): V
     def convertSeq(values: Seq[String]): V
     def defaultLabel: String
 
   given ValueSpec[String] with
-    def isValue(value: String): Boolean = true
-    def defaultValue: Option[String] = None
+    //def isValue(value: String): Boolean = true
+    //def defaultValue: Option[String] = None
     def convert(value: String): String = value
     def convertSeq(values: Seq[String]): String = convert(values.last)
     def defaultLabel: String = "STRING"
 
   given ValueSpec[Int] with
-    def isValue(value: String): Boolean = 
-      value.nonEmpty && value.toDoubleOption.isDefined
-    def defaultValue: Option[String] = None
+    // def isValue(value: String): Boolean = 
+    //   value.nonEmpty && value.toDoubleOption.isDefined
+    //def defaultValue: Option[String] = None
     def convert(value: String): Int = value.toInt
     def convertSeq(values: Seq[String]): Int = convert(values.last)
     def defaultLabel: String = "INT"
 
   given ValueSpec[Boolean] with
-    def isValue(value: String): Boolean = 
-      val lowerVal = value.toLowerCase
-      lowerVal == "true" || lowerVal == "false" 
+    // def isValue(value: String): Boolean = 
+    //   val lowerVal = value.toLowerCase
+    //   lowerVal == "true" || lowerVal == "false" 
 
-    def defaultValue: Option[String] = Some("true")
+    override def defaultValue: Option[Boolean] = Some(true)
     def convert(value: String): Boolean = 
       val lowerValue = value.toLowerCase
       if lowerValue.isEmpty then true
@@ -58,8 +58,8 @@ object Parameter:
     def defaultLabel: String = "BOOLEAN"
 
   given [T](using valueSpec: ValueSpec[T]): ValueSpec[Seq[T]] with
-    def isValue(value: String): Boolean = value.isEmpty
-    def defaultValue: Option[String] = None
+    //def isValue(value: String): Boolean = value.isEmpty
+    //def defaultValue: Option[String] = None
     def convert(value: String): Seq[T] = Seq(valueSpec.convert(value))
     def convertSeq(values: Seq[String]): Seq[T] = 
       values.map(valueSpec.convert(_))
@@ -140,7 +140,6 @@ object ParameterList:
   private def collectParams[C](namedParams: Map[String, Parameter[?, C]], 
       positionalParams: Seq[Parameter[?, C]], 
       config: C, args: Seq[String],
-      //prevPos: Position, 
       pos: Position, 
       previousName: String): (C, Position) =
     val Position(argIndex, flagIndex) = pos
@@ -171,7 +170,7 @@ object ParameterList:
           case Some(param) =>
             param.valueSpec.defaultValue match
               case Some(defaultValue) =>
-                param.applyOp(param.valueSpec.convert(defaultValue), config)
+                param.applyOp(defaultValue, config)
               case None =>
                 throw ParameterException(MissingValueException(), pos)            
 
@@ -195,7 +194,7 @@ object ParameterList:
           case Some(param) =>
             param.valueSpec.defaultValue match
               case Some(defaultValue) =>
-                param.applyOp(param.valueSpec.convert(defaultValue), config)
+                param.applyOp(defaultValue, config)
               case None =>
                 throw ParameterException(MissingValueException(), pos)            
 
@@ -209,27 +208,16 @@ object ParameterList:
 
       if paramOpt.isDefined then   
         collectParams(namedParams, positionalParams, updatedConfig, args, Position(argIndex, flagIndex+1), name)
-    
       else
-        positionalParams.headOption match
-          case Some(param) =>
-            val valueSpec = param.valueSpec
-            val value = arg
-            if(valueSpec.isValue(value))
-              val updatedConfig = param.applyOp(param.valueSpec.convert(value), config)
-              (updatedConfig, Position(argIndex+1, 0))
-            else
-              (updatedConfig, pos)
-          case None =>
-            (updatedConfig, pos)
-
+        (updatedConfig, pos)
+    
     else if isSeparator(arg) then
       val updatedConfig = if previousName.nonEmpty then
         namedParams.get(previousName) match
           case Some(param) =>
             param.valueSpec.defaultValue match
               case Some(defaultValue) =>
-                param.applyOp(param.valueSpec.convert(defaultValue), config)
+                param.applyOp(defaultValue, config)
               case None =>
                 throw ParameterException(MissingValueException(), pos)            
 
@@ -240,7 +228,7 @@ object ParameterList:
       collectParams(namedParams, positionalParams, updatedConfig, args, pos.incrementArgIndex, "")
     
     else 
-      val value = arg
+      val value = stripQuotes(arg)
       println(s"PREV_NAME $previousName $value")
       if previousName.nonEmpty then
         namedParams.get(previousName) match
@@ -297,22 +285,21 @@ object ParameterList:
   private def isName(arg: String): Boolean = 
     isShortName(arg) || isLongName(arg)
 
-  private def isDefinedName(arg: String, names: Set[String]): Boolean = 
-       isName(arg)
-    && names.contains(toName(arg))
-
   private def isFlags(arg: String): Boolean = 
        arg.size > 1 
     && arg.startsWith("-") 
-    && arg(1) != '-' 
+    && arg(1).isLetter
 
   private def toName(arg: String): String = 
     arg.stripPrefix("--").stripPrefix("-")
 
-  private def isDefinedFlags(arg: String, names: Set[String]): Boolean = 
-       isFlags(arg)
-    && names.contains(arg(1).toString)
-    
+  private def stripQuotes(value: String): String = 
+    if value.startsWith("\"") && value.endsWith("\"") then
+      value.stripPrefix("\"").stripSuffix("\"")
+    else if value.startsWith("'") && value.endsWith("'") then
+      value.stripPrefix("'").stripSuffix("'")
+    else value
+
   private def isEnd(args: Seq[String], pos: Position): Boolean = 
     val Position(argIndex, flagIndex) = pos
 

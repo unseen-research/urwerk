@@ -60,9 +60,14 @@ class ParametersTest extends TestBase:
       params.collect(Seq(), Seq("-p", "any-value", "--other")) should be ((Seq("any-value"), Position(2, 0)))
     }
 
-    "with -- prefixed value which is not defined param name" in {
-      params.collect(Seq(), Seq("--alias", "--any-value--")) should be ((Seq("--any-value--"), Position(2, 0)))
+    "with single quoted value" in {
+      params.collect(Seq(), Seq("--alias", "'--any-value--'")) should be ((Seq("--any-value--"), Position(2, 0)))
     }
+
+    "with double quoted value" in {
+      params.collect(Seq(), Seq("--alias", "\"--any-value--\"")) should be ((Seq("--any-value--"), Position(2, 0)))
+    }
+
   }
 
   "collect named boolean param" - {

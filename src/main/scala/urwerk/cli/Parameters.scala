@@ -121,13 +121,6 @@ object ParameterList:
     def collect(config: C, args: Seq[String]): (C, Position) = 
       collectParams(config, paramList, args)
 
-  private enum Arg:
-    case Named(name: String, value: String, nextPos: Position)
-    case Flags(flags: String, value: String, nextPos: Position)
-    case Value(value: String, nextPos: Position)
-    case Separator(nextPos: Position)
-    case End(nextPos: Position)
-
   private def collectParams[C](config: C, 
       paramList: ParameterList[C], 
       args: Seq[String]): (C, Position) =
@@ -187,7 +180,6 @@ object ParameterList:
         val paramOpt = namedParams.get(name) 
       
         if paramOpt.isDefined then   
-          println(s"NAMNE $name $paramOpt")
           collectParams(namedParams, positionalParams, updatedConfig, args, Position(argIndex+1, 0), name)
       
         else
@@ -209,9 +201,9 @@ object ParameterList:
         
         val flags = arg.stripPrefix("-")
         val name = flags(flagIndex).toString
-        val paramOpt = namedParams.get(previousName) 
+        val paramOpt = namedParams.get(name) 
 
-        if paramOpt.isDefined then   
+        if paramOpt.isDefined then
           collectParams(namedParams, positionalParams, updatedConfig, args, Position(argIndex, flagIndex+1), name)
         else
           (updatedConfig, pos)
@@ -234,11 +226,9 @@ object ParameterList:
       
       else 
         val value = stripQuotes(arg)
-        println(s"PREV_NAME $previousName $value")
         if previousName.nonEmpty then
           namedParams.get(previousName) match
             case Some(param) =>
-              println(s"PREV_NAME2 $previousName $value")
               val (updatedConfig, updatedPos) = try
                 (param.applyOp(param.valueSpec.convert(value), config), Position(argIndex+1, 0))
               catch
@@ -314,19 +304,4 @@ object ParameterList:
       value.stripPrefix("'").stripSuffix("'")
     else value
 
-class ParameterList[A](val params: Seq[Parameter[?, A]]):
-  import ParameterList.*
-  import ParameterList.Arg.*
-
-  def parameter(param: ConfigEvidence[A] ?=> Parameter[?, A]): ParameterList[A] = 
-    given ConfigEvidence[A] = new ConfigEvidence[A]{}
-   
-    val resolvedParam = param
-    new ParameterList(params :+ resolvedParam)
-
-  sealed trait Param
-  case class Named(name: String, value: String, nextPos: Position, param: Parameter[?, A]) extends Param
-  case class Positional(value: String, nextPos: Position, param: Parameter[?, A]) extends Param
-  case class EndPos(nextPos: Position)
-
-
+class ParameterList[A](val params: Seq[Parameter[?, A]])

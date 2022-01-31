@@ -149,7 +149,20 @@ object ParameterList:
     val Position(argIndex, flagIndex) = pos
 
     if argIndex >= args.size then
-      (config, pos)
+      val updatedConfig = if previousName.nonEmpty then
+        namedParams.get(previousName) match
+          case Some(param) =>
+            param.valueSpec.defaultValue match
+              case Some(defaultValue) =>
+                param.applyOp(defaultValue, config)
+              case None =>
+                throw ParameterException(MissingValueException(), pos)            
+
+          case None =>
+            throw IllegalStateException("this position may never be reached")
+      else config
+
+      (updatedConfig, pos)
     
     else if flagIndex >= args(argIndex).size -1 then 
       collectParams(namedParams, positionalParams, config, args, Position(argIndex+1, 0), previousName)

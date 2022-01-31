@@ -161,7 +161,6 @@ object ParameterList:
       config: C,
       args: Seq[String], 
       arg: String, 
-      //prevPos: Position,
       pos: Position, 
       previousName: String): (C, Position) =
 
@@ -210,7 +209,17 @@ object ParameterList:
         collectParams(namedParams, positionalParams, updatedConfig, args, Position(argIndex, flagIndex+1), name)
     
       else
-        (updatedConfig, pos)
+        positionalParams.headOption match
+          case Some(param) =>
+            val valueSpec = param.valueSpec
+            val value = arg
+            if(valueSpec.isValue(value))
+              val updatedConfig = param.applyOp(param.valueSpec.convert(value), config)
+              (updatedConfig, Position(argIndex+1, 0))
+            else
+              (updatedConfig, pos)
+          case None =>
+            (updatedConfig, pos)
 
     else if isSeparator(arg) then
       val updatedConfig = if previousName.nonEmpty then
@@ -244,7 +253,7 @@ object ParameterList:
         else
           val param = positionalParams.head
           val updatedConfig = param.applyOp(param.valueSpec.convert(value), config)
-          collectParams(namedParams, positionalParams, updatedConfig, args, Position(argIndex+1, 0), "")    
+          collectParams(namedParams, positionalParams.tail, updatedConfig, args, Position(argIndex+1, 0), "")    
       
   
   private def positionalParameters[C](params: Seq[Parameter[?, C]]) = params.filter(_.names.isEmpty)

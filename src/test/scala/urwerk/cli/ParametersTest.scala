@@ -14,8 +14,8 @@ class ParametersTest extends TestBase:
       params.collect(Seq(), Seq("77")) should be ((Seq(77), Position(1, 0)))
     }
 
-    "negative number followed by nothing" in {
-      params.collect(Seq(), Seq("-77")) should be ((Seq(77), Position(1, 0)))
+    "negative number value starting with minus which is flags prefix" in {
+      params.collect(Seq(), Seq("-77")) should be ((Seq(-77), Position(1, 0)))
     }
 
     "followed by value" in {

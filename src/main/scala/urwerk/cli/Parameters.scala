@@ -103,8 +103,7 @@ class MissingValueException() extends RuntimeException()
 
 //class UnexpectedParameterException(position: Position) extends ParameterException("", None, position)
 
-case class Position(val argIndex: Int, val flagIndex: Int):
-  def incrementArgIndex = copy(argIndex = argIndex+1)
+case class Position(val argIndex: Int, val flagIndex: Int)
 
 object ParameterList:
   enum ParamKey:
@@ -231,7 +230,7 @@ object ParameterList:
               throw IllegalStateException("this position may never be reached")
         else config
 
-        collectParams(namedParams, positionalParams, updatedConfig, args, pos.incrementArgIndex, "")
+        collectParams(namedParams, positionalParams, updatedConfig, args, Position(argIndex+1, 0), "")
       
       else 
         val value = stripQuotes(arg)
@@ -240,9 +239,18 @@ object ParameterList:
           namedParams.get(previousName) match
             case Some(param) =>
               println(s"PREV_NAME2 $previousName $value")
-              val updatedConfig = param.applyOp(param.valueSpec.convert(value), config)
-              (updatedConfig, Position(argIndex+1, 0))
+              val (updatedConfig, updatedPos) = try
+                (param.applyOp(param.valueSpec.convert(value), config), Position(argIndex+1, 0))
+              catch
+                case _: IllegalArgumentException =>
+                  param.valueSpec.defaultValue match
+                    case Some(defaultValue) =>
+                      (param.applyOp(defaultValue, config), Position(argIndex, 0))
+                    case None =>
+                      throw ParameterException(MissingValueException(), pos)  
+                case e: Throwable => throw e
 
+              collectParams(namedParams, positionalParams, updatedConfig, args, updatedPos, "")                
             case None =>
               throw IllegalStateException("this position may never be reached")
         else

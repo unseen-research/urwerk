@@ -284,42 +284,35 @@ object ParameterList:
       }
       namedParameters(params.tail, map)
 
-  private def isSeparator(arg: String): Boolean = arg == "--" || arg == "-"
+  private[cli] def isSeparator(arg: String): Boolean = arg.count(_ == '-') == arg.size
 
-  private def isShortName(arg: String): Boolean = 
-       arg.size == 2
-    && arg(0) == '-'
-    && arg(1).isLetter
+  private[cli] def isName(arg: String): Boolean = 
+    def isShortName: Boolean = 
+        arg.size == 2
+      && arg(0) == '-'
+      && arg(1).isLetter
 
-  private def isLongName(arg: String): Boolean =   
-       arg.size > 2 
-    && arg.startsWith("--") 
-    && arg(2) != '-'
+    def isLongName: Boolean =   
+        arg.size > 2 
+      && arg.startsWith("--") 
+      && arg(2) != '-'
 
-  private def isName(arg: String): Boolean = 
-    isShortName(arg) || isLongName(arg)
+    isShortName || isLongName
 
-  private def isFlags(arg: String): Boolean = 
+  private[cli] def isFlags(arg: String): Boolean = 
        arg.size > 1 
     && arg.startsWith("-") 
     && arg(1).isLetter
 
-  private def toName(arg: String): String = 
+  private[cli] def toName(arg: String): String = 
     arg.stripPrefix("--").stripPrefix("-")
 
-  private def stripQuotes(value: String): String = 
+  private [cli]def stripQuotes(value: String): String = 
     if value.startsWith("\"") && value.endsWith("\"") then
       value.stripPrefix("\"").stripSuffix("\"")
     else if value.startsWith("'") && value.endsWith("'") then
       value.stripPrefix("'").stripSuffix("'")
     else value
-
-  private def isEnd(args: Seq[String], pos: Position): Boolean = 
-    val Position(argIndex, flagIndex) = pos
-
-    if argIndex >= args.size then true
-    else if argIndex == args.size-1 && flagIndex + 1 >= args.last.size then true
-    else false
 
 class ParameterList[A](val params: Seq[Parameter[?, A]]):
   import ParameterList.*

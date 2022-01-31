@@ -152,9 +152,9 @@ object ParameterList:
       val arg = args(argIndex)
 
       if flagIndex >= arg.size -1 then 
-        collectParams(namedParams, positionalParams, config, args, Position(argIndex+1, 0), "")
+        collectParams(namedParams, positionalParams, config, args, Position(argIndex+1, 0), previousName)
       else
-        collectParams(namedParams, positionalParams, config, args, arg, pos, "")
+        collectParams(namedParams, positionalParams, config, args, arg, pos, previousName)
 
   private def collectParams[C](namedParams: Map[String, Parameter[?, C]], 
       positionalParams: Seq[Parameter[?, C]], 
@@ -179,13 +179,15 @@ object ParameterList:
             throw IllegalStateException("this position may never be reached")
       else config
 
-      val name = arg
-      val paramOpt = namedParams.get(previousName) 
+      val name = toName(arg)
+      val paramOpt = namedParams.get(name) 
+     
       if paramOpt.isDefined then   
+        println(s"NAMNE $name $paramOpt")
         collectParams(namedParams, positionalParams, updatedConfig, args, Position(argIndex+1, 0), name)
     
       else
-        (config, pos)
+        (updatedConfig, pos)
 
     else if isFlags(arg) then 
       val updatedConfig = if previousName.nonEmpty then
@@ -239,14 +241,16 @@ object ParameterList:
     
     else 
       val value = arg
+      println(s"PREV_NAME $previousName $value")
       if previousName.nonEmpty then
         namedParams.get(previousName) match
           case Some(param) =>
-            val updatedConfig = param.applyOp(param.valueSpec.convert(value), config)        
-            collectParams(namedParams, positionalParams, updatedConfig, args, Position(argIndex+1, 0), "") 
+            println(s"PREV_NAME2 $previousName $value")
+            val updatedConfig = param.applyOp(param.valueSpec.convert(value), config)
+            (updatedConfig, Position(argIndex+1, 0))
+
           case None =>
             throw IllegalStateException("this position may never be reached")
-      
       else
         if positionalParams.size == 0 then
           (config, pos)
@@ -254,7 +258,7 @@ object ParameterList:
           val param = positionalParams.head
           val updatedConfig = param.applyOp(param.valueSpec.convert(value), config)
           collectParams(namedParams, positionalParams.tail, updatedConfig, args, Position(argIndex+1, 0), "")    
-      
+    
   
   private def positionalParameters[C](params: Seq[Parameter[?, C]]) = params.filter(_.names.isEmpty)
 

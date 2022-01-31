@@ -1,10 +1,9 @@
 package urwerk.cli
 
 import scala.annotation.tailrec
-import scala.compiletime.constValue
-import scala.util.Try
-import scala.util.Failure
-import java.io.ObjectInputFilter.Config
+
+import Parameter.ValueSpec
+import ParameterList.Position
 
 trait ConfigEvidence[C]:
   type CC = C
@@ -21,51 +20,30 @@ object Parameter:
 
   trait ValueSpec[V]:
     type VV = V
-    //def isValue(value: String): Boolean
     def defaultValue: Option[V] = None
     def convert(value: String): V
     def convertSeq(values: Seq[String]): V
     def defaultLabel: String
 
   given ValueSpec[String] with
-    //def isValue(value: String): Boolean = true
-    //def defaultValue: Option[String] = None
     def convert(value: String): String = value
     def convertSeq(values: Seq[String]): String = convert(values.last)
     def defaultLabel: String = "STRING"
 
   given ValueSpec[Int] with
-    // def isValue(value: String): Boolean = 
-    //   value.nonEmpty && value.toDoubleOption.isDefined
-    //def defaultValue: Option[String] = None
     def convert(value: String): Int = value.toInt
     def convertSeq(values: Seq[String]): Int = convert(values.last)
     def defaultLabel: String = "INT"
 
   given ValueSpec[Boolean] with
-    // def isValue(value: String): Boolean = 
-    //   val lowerVal = value.toLowerCase
-    //   lowerVal == "true" || lowerVal == "false" 
-
     override def defaultValue: Option[Boolean] = Some(true)
     def convert(value: String): Boolean = 
-      val lowerValue = value.toLowerCase
-      if lowerValue.isEmpty then true
-      else if lowerValue == "true" then true
-      else if lowerValue == "false" then false
-      else throw IllegalArgumentException()
+      value.toLowerCase.toBoolean
+      
     def convertSeq(values: Seq[String]): Boolean = convert(values.last)
     def defaultLabel: String = "BOOLEAN"
 
-  given [T](using valueSpec: ValueSpec[T]): ValueSpec[Seq[T]] with
-    //def isValue(value: String): Boolean = value.isEmpty
-    //def defaultValue: Option[String] = None
-    def convert(value: String): Seq[T] = Seq(valueSpec.convert(value))
-    def convertSeq(values: Seq[String]): Seq[T] = 
-      values.map(valueSpec.convert(_))
-    def defaultLabel: String = s"SEQUENCE[${valueSpec.defaultLabel}]"
 
-import Parameter.ValueSpec
 
 case class Parameter[V, C](val names: Seq[String],
     val label: String,
@@ -103,12 +81,9 @@ class MissingValueException() extends RuntimeException()
 
 //class UnexpectedParameterException(position: Position) extends ParameterException("", None, position)
 
-case class Position(val argIndex: Int, val flagIndex: Int)
-
 object ParameterList:
-  enum ParamKey:
-    case Name(name: String)
-    case Pos(pos: Int)
+
+  case class Position(val argIndex: Int, val flagIndex: Int)
 
   def apply[C](param: ConfigEvidence[C] ?=> Parameter[?, C], params: ConfigEvidence[C] ?=> Parameter[?, C]*): ParameterList[C] =
     given ConfigEvidence[C] = new ConfigEvidence[C]{}
@@ -156,12 +131,11 @@ object ParameterList:
 
       (updatedConfig, pos)
     
-    else if flagIndex >= args(argIndex).size -1 then 
+    else if isFlags(args(argIndex)) && flagIndex >= args(argIndex).size -1 then 
       collectParams(namedParams, positionalParams, config, args, Position(argIndex+1, 0), previousName)
 
     else
       val arg = args(argIndex)
-      
       if isName(arg) then
         val updatedConfig = if previousName.nonEmpty then
           namedParams.get(previousName) match
@@ -304,4 +278,12 @@ object ParameterList:
       value.stripPrefix("'").stripSuffix("'")
     else value
 
-class ParameterList[A](val params: Seq[Parameter[?, A]])
+class ParameterList[C](val params: Seq[Parameter[?, C]]):
+  def add(param: ConfigEvidence[C] ?=> Parameter[?, C], params: ConfigEvidence[C] ?=> Parameter[?, C]*): ParameterList[C] =
+    given ConfigEvidence[C] = new ConfigEvidence[C]{}
+     
+    val resolvedParam = param
+    val resolvedParams = params.map(param => param)
+
+    new ParameterList[C](this.params ++ (resolvedParam +: resolvedParams))
+

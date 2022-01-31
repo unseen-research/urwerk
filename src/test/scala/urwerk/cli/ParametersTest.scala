@@ -3,6 +3,8 @@ package urwerk.cli
 import urwerk.cli.Parameter.param
 import urwerk.test.TestBase
 
+import ParameterList.Position
+
 class ParametersTest extends TestBase:
   
   Seq(("-", true), ("--", true), ("---", true), ("-n", false), ("--name", false), ("value", false), ("'--'", false), ("\"--\"", false)).foreach{(givenArg, result)=>
@@ -109,28 +111,36 @@ class ParametersTest extends TestBase:
   }
 
   "collect named boolean param" - {
-    val params = ParameterList[Seq[Boolean]]{
+    val params = ParameterList[Set[String]]{
         param[Boolean]("param", "alias")
-          .apply{case (value, config) => config :+ value}} 
+          .apply{case (value, config) => config + s"param-$value"}} 
 
-    "with primary name with true" in {
-      params.collect(Seq(), Seq("--param", "true")) should be ((Seq(true), Position(2, 0)))
+    "with explicit true value" in {
+      params.collect(Set(), Seq("--param", "true")) should be ((Set("param-true"), Position(2, 0)))
     }
 
-    "with primary name with false" in {
-      params.collect(Seq(), Seq("--param", "false")) should be ((Seq(false), Position(2, 0)))
+    "with explicit false value" in {
+      params.collect(Set(), Seq("--param", "false")) should be ((Set("param-false"), Position(2, 0)))
     }
 
-    "with primary name without value" in {
-      params.collect(Seq(), Seq("--param")) should be ((Seq(true), Position(1, 0)))
+    "without value defaults to implicit true value" in {
+      params.collect(Set(), Seq("--param")) should be ((Set("param-true"), Position(1, 0)))
     }
 
-    "with primary name followed by name" in {
-      params.collect(Seq(), Seq("--param", "--any-value")) should be ((Seq(true), Position(1, 0)))
+    "followed by name" in {
+      params.collect(Set(), Seq("--param", "--any-value")) should be ((Set("param-true"), Position(1, 0)))
     }
 
-    "with primary name followed by none boolean value" in {
-      params.collect(Seq(), Seq("--param", "any")) should be ((Seq(true), Position(1, 0)))
+    "followed by none boolean value defaults to implicit true value" in {
+      params.collect(Set(), Seq("--param", "any")) should be ((Set("param-true"), Position(1, 0)))
+    }
+
+    "followed by separator followed by boolean defaults to implicit true value" in {
+      val params2 = params.add(
+        param[Boolean]
+          .apply{case (value, config) => config + s"positional-$value"})
+      
+      params2.collect(Set(), Seq("--param", "--", "false")) should be ((Set("param-true", "positional-false"), Position(3, 0)))
     }
   }
 
@@ -152,4 +162,40 @@ class ParametersTest extends TestBase:
     "with value for last flag" in {
       params.collect(Set(), Seq("-abcd", "any-value")) should be ((Set("a-true", "b-true", "c-true", "d-any-value"), Position(2, 0)))
     }
+  }
+
+  "positional values" in {
+    val params = ParameterList[Seq[Int]](
+        param[Int]
+          .apply{case (value, config) => config :+ value},
+        param[Int]
+          .apply{case (value, config) => config :+ value})
+      .add(
+        param[Int]
+          .apply{case (value, config) => config :+ value},
+        param[Int]
+          .apply{case (value, config) => config :+ value})
+
+    params.collect(Seq(), Seq("1", "2", "3", "4", "5")) should be (Seq(1, 2, 3, 4), Position(4, 0))
+  }
+
+  "multiple params" in {
+    val params = ParameterList[Set[String]](
+      param[Boolean]("param1", "a")
+        .apply{case (value, config) => config + s"param1-$value"},
+      param[Int]("param2", "b")
+        .apply{case (value, config) => config + s"param2-$value"},
+      param[Int]
+        .apply{case (value, config) => config + s"pos-int-$value"},
+      param[String]("param3", "c")
+        .apply{case (value, config) => config + s"param3-$value"},
+      param[String]
+        .apply{case (value, config) => config + s"pos-string-$value"}, 
+      param[Boolean]
+        .apply{case (value, config) => config + s"pos-boolean-$value"})
+
+    val (config, pos) = params.collect(Set(), Seq("--param1", "true", "77", "--param1", "false", "positional-value", "true", "--param3", "value3", "--param2", "42", "tail1", "tail2"))
+    
+    config should be(Set("pos-boolean-true", "param1-false", "pos-int-77", "param3-value3", "param1-true", "pos-string-positional-value", "param2-42"))
+    pos should be (Position(11, 0))
   }

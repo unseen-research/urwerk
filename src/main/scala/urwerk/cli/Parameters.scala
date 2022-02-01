@@ -116,18 +116,7 @@ object ParameterList:
     val Position(argIndex, flagIndex) = pos
 
     if argIndex >= args.size then
-      val updatedConfig = if previousName.nonEmpty then
-        namedParams.get(previousName) match
-          case Some(param) =>
-            param.valueSpec.defaultValue match
-              case Some(defaultValue) =>
-                param.applyOp(defaultValue, config)
-              case None =>
-                throw ParameterException(MissingValueException(), pos)            
-
-          case None =>
-            throw IllegalStateException("this position may never be reached")
-      else config
+      val updatedConfig = applyDefaultValueToPreviousName[C](namedParams, previousName, config, pos)
 
       (updatedConfig, pos)
     
@@ -137,18 +126,7 @@ object ParameterList:
     else
       val arg = args(argIndex)
       if isName(arg) then
-        val updatedConfig = if previousName.nonEmpty then
-          namedParams.get(previousName) match
-            case Some(param) =>
-              param.valueSpec.defaultValue match
-                case Some(defaultValue) =>
-                  param.applyOp(defaultValue, config)
-                case None =>
-                  throw ParameterException(MissingValueException(), pos)            
-
-            case None =>
-              throw IllegalStateException("this position may never be reached")
-        else config
+        val updatedConfig = applyDefaultValueToPreviousName[C](namedParams, previousName, config, pos)
 
         val name = toName(arg)
         val paramOpt = namedParams.get(name) 
@@ -160,19 +138,8 @@ object ParameterList:
           (updatedConfig, pos)
 
       else if isFlags(arg) then 
-        val updatedConfig = if previousName.nonEmpty then
-          namedParams.get(previousName) match
-            case Some(param) =>
-              param.valueSpec.defaultValue match
-                case Some(defaultValue) =>
-                  param.applyOp(defaultValue, config)
-                case None =>
-                  throw ParameterException(MissingValueException(), pos)            
+        val updatedConfig = applyDefaultValueToPreviousName[C](namedParams, previousName, config, pos)
 
-            case None =>
-              throw IllegalStateException("this position may never be reached")
-        else config
-        
         val flags = arg.stripPrefix("-")
         val name = flags(flagIndex).toString
         val paramOpt = namedParams.get(name) 
@@ -183,19 +150,7 @@ object ParameterList:
           (updatedConfig, pos)
       
       else if isSeparator(arg) then
-        val updatedConfig = if previousName.nonEmpty then
-          namedParams.get(previousName) match
-            case Some(param) =>
-              param.valueSpec.defaultValue match
-                case Some(defaultValue) =>
-                  param.applyOp(defaultValue, config)
-                case None =>
-                  throw ParameterException(MissingValueException(), pos)            
-
-            case None =>
-              throw IllegalStateException("this position may never be reached")
-        else config
-
+        val updatedConfig = applyDefaultValueToPreviousName[C](namedParams, previousName, config, pos)
         collectParams(namedParams, positionalParams, updatedConfig, args, Position(argIndex+1, 0), "")
       
       else 
@@ -224,8 +179,21 @@ object ParameterList:
             val param = positionalParams.head
             val updatedConfig = param.applyOp(param.valueSpec.convert(value), config)
             collectParams(namedParams, positionalParams.tail, updatedConfig, args, Position(argIndex+1, 0), "")    
-    
   
+  private def applyDefaultValueToPreviousName[C](namedParams: Map[String, Parameter[?, C]], previousName: String, config: C, pos: Position): C = 
+    if previousName.nonEmpty then
+      namedParams.get(previousName) match
+        case Some(param) =>
+          param.valueSpec.defaultValue match
+            case Some(defaultValue) =>
+              param.applyOp(defaultValue, config)
+            case None =>
+              throw ParameterException(MissingValueException(), pos)            
+
+        case None =>
+          throw IllegalStateException("this position may never be reached")
+    else config
+            
   private def positionalParameters[C](params: Seq[Parameter[?, C]]) = params.filter(_.names.isEmpty)
 
   private def namedParameters[C](params: Seq[Parameter[?, C]]): Map[String, Parameter[?, C]] =
@@ -286,4 +254,3 @@ class ParameterList[C](val params: Seq[Parameter[?, C]]):
     val resolvedParams = params.map(param => param)
 
     new ParameterList[C](this.params ++ (resolvedParam +: resolvedParams))
-

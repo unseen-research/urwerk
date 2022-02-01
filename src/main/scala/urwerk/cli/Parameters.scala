@@ -47,7 +47,7 @@ case class Parameter[V, C](val names: Seq[String],
     val label: String,
     val default: Option[V],
     val valueSpec: ValueSpec[V],
-    val applyOp: (V, C) => C):
+    val applyOp: (V, C) => C) extends ParameterList.Setting:
 
   def default(value: V): Parameter[V, C] = copy(default = Some(value))
 
@@ -81,14 +81,30 @@ class MissingValueException() extends RuntimeException()
 
 object ParameterList:
 
+  sealed trait Setting
+
+  case class Label(label: String) extends Setting
+
   case class Position(val argIndex: Int, val flagIndex: Int)
 
-  def apply[C](param: ConfigEvidence[C] ?=> Parameter[?, C], params: ConfigEvidence[C] ?=> Parameter[?, C]*): ParameterList[C] =
+  def apply[C](setting: ConfigEvidence[C] ?=> Setting, settings: ConfigEvidence[C] ?=> Setting*): ParameterList[C] =
     given ConfigEvidence[C] = new ConfigEvidence[C]{}
      
-    val resolvedParam = param
-    val resolvedParams = params.map(param => param)
-    new ParameterList[C](resolvedParam +: resolvedParams)
+    val resolvedSetting= setting
+    val resolvedSettings = settings.map(param => param)
+
+    val jointSettings = resolvedSetting +: resolvedSettings.view
+    val resolvedParams = jointSettings
+      .filter(_.isInstanceOf[Parameter[?, ?]])
+      .map(_.asInstanceOf[Parameter[?, C]])
+      .toSeq
+
+    val label = jointSettings
+      .filter(_.isInstanceOf[Label])
+      .map(_.asInstanceOf[Label].label)
+      .lastOption.getOrElse("")
+      
+    new ParameterList[C](label, resolvedParams)
 
   extension [C](paramList: ParameterList[C])
     def collect(config: C, args: Seq[String]): (C, Position) = 
@@ -244,11 +260,11 @@ object ParameterList:
       value.stripPrefix("'").stripSuffix("'")
     else value
 
-class ParameterList[C](val params: Seq[Parameter[?, C]]):
+class ParameterList[C](val label: String, val params: Seq[Parameter[?, C]]):
   def add(param: ConfigEvidence[C] ?=> Parameter[?, C], params: ConfigEvidence[C] ?=> Parameter[?, C]*): ParameterList[C] =
     given ConfigEvidence[C] = new ConfigEvidence[C]{}
      
     val resolvedParam = param
     val resolvedParams = params.map(param => param)
 
-    new ParameterList[C](this.params ++ (resolvedParam +: resolvedParams))
+    new ParameterList[C](label, this.params ++ (resolvedParam +: resolvedParams))

@@ -4,19 +4,19 @@ object Command:
   
   sealed trait Setting
 
-  class ParameterListFactory[C]():
-    def := (param: Seq[Parameter[?, C]]): ParameterListSetting[C] = ???
+  object ParameterListSetting:
+    def :=[C] (param: Seq[Parameter[?, C]]): ParameterListSetting[C] = ???
   
   case class ParameterListSetting[C](paramList: ParameterList[C]) extends Setting
 
-  class DescriptionSettingFactory():
+  object DescriptionSetting:
     def := (description: String): DescriptionSetting = ???
 
   case class DescriptionSetting(description: String) extends Setting
 
-  def description: DescriptionSettingFactory = ???
+  def description: DescriptionSetting.type = ???
 
-  def paramList[C](using ConfigEvidence[C])(name: String): ParameterListFactory[C] = 
+  def paramList[C](using ConfigEvidence[C])(name: String): ParameterListSetting.type = 
     ???
 
   def apply[C](param: ConfigEvidence[C] ?=> Setting, params: ConfigEvidence[C] ?=> Setting*): Command[C] = 

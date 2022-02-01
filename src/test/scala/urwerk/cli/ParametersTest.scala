@@ -1,9 +1,11 @@
 package urwerk.cli
 
+import urwerk.cli.ParameterList.Label
 import urwerk.cli.Parameter.param
 import urwerk.test.TestBase
 
 import ParameterList.Position
+
 
 class ParametersTest extends TestBase:
   
@@ -198,4 +200,11 @@ class ParametersTest extends TestBase:
     
     config should be(Set("pos-boolean-true", "param1-false", "pos-int-77", "param3-value3", "param1-true", "pos-string-positional-value", "param2-42"))
     pos should be (Position(11, 0))
+  }
+
+  "add label" in {
+    val params = ParameterList[Set[String]](
+      Label("PARAMS1"), Label("PARAMS2"))
+
+    params.label should be("PARAMS2")
   }

@@ -8,8 +8,10 @@ import ParameterList.Position
 trait WithConfig[C]:
   type CC = C
 
-def config[C] = new WithConfig{}
+def config[C] = new WithConfig[C]{}
 
+
+//given Position = enclosingTree.position
 object Parameter:
 
   // class Fn[C]:
@@ -103,7 +105,7 @@ object ParameterList:
 
   def / (label: String): ParameterListFactory = ???
 
-  //def apply[C](params: Seq[Parameter[?, C]]): ParameterList[C] = new ParameterList("", params)
+  def from[C](params: Seq[Parameter[?, C]]): ParameterList[C] = new ParameterList("", params)
 
   def apply[C](setting: WithConfig[C] ?=> Setting, settings: WithConfig[C] ?=> Setting*): ParameterList[C] =
     given WithConfig[C] = new WithConfig[C]{}

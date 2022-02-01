@@ -209,15 +209,17 @@ class ParametersTest extends TestBase:
     params.label should be("PARAMS2")
   }
 
-  // "with config" in {
-  //   given WithConfig[String] =  of[String]
+  "with config" in {
+    given WithConfig[String] = config
     
-  //     Seq(
-  //       param[Boolean]("param1", "a")
-  //         .apply{case (value, config) => config + s"param1-$value"},
-  //       param[Int]("param2", "b")
-  //         .apply{case (value, config) => config + s"param2-$value"})
-  // }
+    val params = Seq(
+      param[Boolean]("param1", "a")
+        .apply{case (value, config) => config + s"param1-$value"},
+      param[Int]("param2", "b")
+        .apply{case (value, config) => config + s"param2-$value"})
+
+    val paramList = ParameterList.from(params)
+  }
 
     //val paramList = ParameterList(params)
     

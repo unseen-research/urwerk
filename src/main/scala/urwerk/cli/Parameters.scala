@@ -43,8 +43,6 @@ object Parameter:
     def convertSeq(values: Seq[String]): Boolean = convert(values.last)
     def defaultLabel: String = "BOOLEAN"
 
-
-
 case class Parameter[V, C](val names: Seq[String],
     val label: String,
     val default: Option[V],

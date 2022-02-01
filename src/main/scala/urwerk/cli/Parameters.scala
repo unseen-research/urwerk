@@ -5,17 +5,26 @@ import scala.annotation.tailrec
 import Parameter.ValueSpec
 import ParameterList.Position
 
-trait ConfigEvidence[C]:
+trait WithConfig[C]:
   type CC = C
 
-def config[C] = new ConfigEvidence{}
+def config[C] = new WithConfig{}
 
 object Parameter:
 
-  def param[V](using valueSpec: ValueSpec[V], config: ConfigEvidence[?]): Parameter[V, config.CC] = 
+  // class Fn[C]:
+  //   def apply[A](config: (WithConfig[C]) ?=> A): A = ???
+
+  // def withConfig[C]: Fn[C] = ???
+
+  // val fff = withConfig["Config"](conf ?=>
+  //   Seq("param")
+  //  )
+
+  def param[V](using valueSpec: ValueSpec[V], config: WithConfig[?]): Parameter[V, config.CC] = 
     new Parameter(Seq(), valueSpec.defaultLabel, None, valueSpec, {(_, config) => config})
 
-  def param[V](using valueSpec: ValueSpec[V], config: ConfigEvidence[?])(name: String, names: String*): Parameter[V, config.CC] = 
+  def param[V](using valueSpec: ValueSpec[V], config: WithConfig[?])(name: String, names: String*): Parameter[V, config.CC] = 
     new Parameter(name +: names, valueSpec.defaultLabel, None, valueSpec, {(_, config) => config})
 
   trait ValueSpec[V]:
@@ -79,6 +88,9 @@ class MissingValueException() extends RuntimeException()
 
 //class UnexpectedParameterException(position: Position) extends ParameterException("", None, position)
 
+trait ParameterListFactory: 
+  def :=[C](using ev: WithConfig[C])(param: Seq[Parameter[?, C]]): Command.ParameterListSetting[C]
+
 object ParameterList:
 
   sealed trait Setting
@@ -87,8 +99,14 @@ object ParameterList:
 
   case class Position(val argIndex: Int, val flagIndex: Int)
 
-  def apply[C](setting: ConfigEvidence[C] ?=> Setting, settings: ConfigEvidence[C] ?=> Setting*): ParameterList[C] =
-    given ConfigEvidence[C] = new ConfigEvidence[C]{}
+  def :=[C](using ev: WithConfig[C])(param: Seq[Parameter[?, C]]): Command.ParameterListSetting[C] = ???
+
+  def / (label: String): ParameterListFactory = ???
+
+  //def apply[C](params: Seq[Parameter[?, C]]): ParameterList[C] = new ParameterList("", params)
+
+  def apply[C](setting: WithConfig[C] ?=> Setting, settings: WithConfig[C] ?=> Setting*): ParameterList[C] =
+    given WithConfig[C] = new WithConfig[C]{}
      
     val resolvedSetting= setting
     val resolvedSettings = settings.map(param => param)
@@ -261,8 +279,8 @@ object ParameterList:
     else value
 
 class ParameterList[C](val label: String, val params: Seq[Parameter[?, C]]):
-  def add(param: ConfigEvidence[C] ?=> Parameter[?, C], params: ConfigEvidence[C] ?=> Parameter[?, C]*): ParameterList[C] =
-    given ConfigEvidence[C] = new ConfigEvidence[C]{}
+  def add(param: WithConfig[C] ?=> Parameter[?, C], params: WithConfig[C] ?=> Parameter[?, C]*): ParameterList[C] =
+    given WithConfig[C] = new WithConfig[C]{}
      
     val resolvedParam = param
     val resolvedParams = params.map(param => param)

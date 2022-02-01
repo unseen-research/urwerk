@@ -47,10 +47,10 @@ class ParametersTest extends TestBase:
     }}
 
   "collect positional value arg" - {
-    val params = ParameterList[Seq[Int]]{
+    val params = ParameterList[Seq[Int]](
       param[Int]
         .apply{case (value, config) => config :+ value}
-    }
+    )
 
     "followed by nothing" in {
       params.collect(Seq(), Seq("77")) should be ((Seq(77), Position(1, 0)))
@@ -208,3 +208,16 @@ class ParametersTest extends TestBase:
 
     params.label should be("PARAMS2")
   }
+
+  // "with config" in {
+  //   given WithConfig[String] =  of[String]
+    
+  //     Seq(
+  //       param[Boolean]("param1", "a")
+  //         .apply{case (value, config) => config + s"param1-$value"},
+  //       param[Int]("param2", "b")
+  //         .apply{case (value, config) => config + s"param2-$value"})
+  // }
+
+    //val paramList = ParameterList(params)
+    

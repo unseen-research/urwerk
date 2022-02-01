@@ -9,9 +9,13 @@ class CommandTest extends TestBase:
   
   "command" in {
     val cmd = Command[Seq[String]](
-      paramList("global") := Seq(
+      ParameterList := Seq(
         param[Int], param[Int], param[Int], param[Int]),
-      description := "some command description")
+
+      ParameterList / "global" := Seq(
+        param[Int], param[Int], param[Int], param[Int]),
+
+      Description := "some command description")
 
   }
 

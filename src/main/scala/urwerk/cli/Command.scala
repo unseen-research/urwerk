@@ -4,7 +4,7 @@ object Command:
   
   sealed trait Setting
   
-  case class ParameterListSetting[C](paramList: ParameterList[C]) extends Setting
+  case class ParameterListSetting[C](label: String, paramList: ParameterList[C]) extends Setting
 
   object Description:
     def := (description: String): DescriptionSetting = ???

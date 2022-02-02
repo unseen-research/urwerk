@@ -103,7 +103,10 @@ object ParameterList:
 
   def :=[C](using ev: WithConfig[C])(param: Seq[Parameter[?, C]]): Command.ParameterListSetting[C] = ???
 
-  def / (label: String): ParameterListFactory = ???
+  def / (label: String): ParameterListFactory = 
+    new ParameterListFactory:
+      def :=[C](using ev: WithConfig[C])(params: Seq[Parameter[?, C]]): Command.ParameterListSetting[C] =
+        Command.ParameterListSetting(label, ParameterList.from(params))
 
   def from[C](params: Seq[Parameter[?, C]]): ParameterList[C] = new ParameterList("", params)
 

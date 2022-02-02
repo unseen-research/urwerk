@@ -101,7 +101,8 @@ object ParameterList:
 
   case class Position(val argIndex: Int, val flagIndex: Int)
 
-  def :=[C](using ev: WithConfig[C])(param: Seq[Parameter[?, C]]): Command.ParameterListSetting[C] = ???
+  def :=[C](using ev: WithConfig[C])(params: Seq[Parameter[?, C]]): Command.ParameterListSetting[C] = 
+    Command.ParameterListSetting("", ParameterList.from(params))
 
   def / (label: String): ParameterListFactory = 
     new ParameterListFactory:

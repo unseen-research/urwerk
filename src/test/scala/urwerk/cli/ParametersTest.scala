@@ -222,7 +222,7 @@ class ParametersTest extends TestBase:
     paramList.params should be(params)
   }
 
-  "create parameter list command setting" in{
+  "create parameter list command setting" - {
     given WithConfig[String] = config
 
     val params = Seq(
@@ -231,9 +231,18 @@ class ParametersTest extends TestBase:
       param[Int]("param2", "b")
         .apply{case (value, config) => config + s"param2-$value"})
 
-    val setting = ParameterList / "LABEL" := params
+      "without label" in {
+        val setting = ParameterList := params
 
-    setting.label should be("LABEL")
-    setting.paramList.params should be (params)
+        setting.label should be("")
+        setting.paramList.params should be (params)
+      }
+
+      "with label" in {
+        val setting = ParameterList / "LABEL" := params
+
+        setting.label should be("LABEL")
+        setting.paramList.params should be (params)
+      }
   }
    

@@ -181,6 +181,19 @@ class ParametersTest extends TestBase:
     params.collect(Seq(), Seq("1", "2", "3", "4", "5")) should be (Seq(1, 2, 3, 4), Position(4, 0))
   }
 
+  "required named param" in {
+    val params = ParameterList[Seq[Int]](
+        param[Int]("number")
+          .required
+          .apply{case (value, config) => config :+ value})
+
+    val paramException = intercept[ParameterException]{
+      params.collect(Seq(), Seq())
+    }
+
+    paramException.getCause() shouldBe a[ParameterNotFoundException]
+  }
+
   "multiple params" in {
     val params = ParameterList[Set[String]](
       param[Boolean]("param1", "a")

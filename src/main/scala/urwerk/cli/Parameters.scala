@@ -24,10 +24,10 @@ object Parameter:
   //  )
 
   def param[V](using valueSpec: ValueSpec[V], config: WithConfig[?]): Parameter[V, config.CC] = 
-    new Parameter(Seq(), valueSpec.defaultLabel, None, valueSpec, {(_, config) => config})
+    new Parameter(Seq(), valueSpec.defaultLabel, None, false, valueSpec, {(_, config) => config})
 
   def param[V](using valueSpec: ValueSpec[V], config: WithConfig[?])(name: String, names: String*): Parameter[V, config.CC] = 
-    new Parameter(name +: names, valueSpec.defaultLabel, None, valueSpec, {(_, config) => config})
+    new Parameter(name +: names, valueSpec.defaultLabel, None, false, valueSpec, {(_, config) => config})
 
   trait ValueSpec[V]:
     type VV = V
@@ -57,6 +57,7 @@ object Parameter:
 case class Parameter[V, C](val names: Seq[String],
     val label: String,
     val default: Option[V],
+    val isRequired: Boolean,
     val valueSpec: ValueSpec[V],
     val applyOp: (V, C) => C) extends ParameterList.Setting:
 
@@ -76,6 +77,8 @@ case class Parameter[V, C](val names: Seq[String],
   def names(name: String, names: String*): Parameter[V, C] =
     copy(names = name +: names)
 
+  def required: Parameter[V, C] = copy(isRequired = true)
+
 class ParameterException(message: String, cause: Option[Throwable], val position: Position)
     extends RuntimeException(message, cause.orNull):
   def this(message: String, cause: Throwable, position: Position) = this(message, Some(cause), position)
@@ -83,8 +86,7 @@ class ParameterException(message: String, cause: Option[Throwable], val position
 
 class IllegalValueException() extends RuntimeException()
 
-// class MissingParameterException(val labelOrName: String, val requiredArity: Int, val repetition: Int, position: Position)
-//   extends ParameterException("", None, position)
+class ParameterNotFoundException(param: Parameter[?, ?]) extends RuntimeException
 
 class MissingValueException() extends RuntimeException()
 
@@ -141,7 +143,18 @@ object ParameterList:
     val positionalParams = positionalParameters(params)
     val namedParams = namedParameters(params) 
     
-    collectParams(namedParams, positionalParams, config, args, Position(0, 0), "")
+    val (updatedConfig, pos) = collectParams(namedParams, positionalParams, config, args, Position(0, 0), "")
+
+    validated(namedParams, positionalParams, updatedConfig, pos)
+
+  private def validated[C](namedParams: Map[String, Parameter[?, C]], 
+      positionalParams: Seq[Parameter[?, C]], 
+      config: C, 
+      pos: Position): (C, Position) =
+    
+    //TODO
+    (config, pos)
+    
 
   @tailrec
   private def collectParams[C](namedParams: Map[String, Parameter[?, C]], 

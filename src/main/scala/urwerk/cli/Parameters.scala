@@ -79,6 +79,8 @@ class ParameterNotFoundException(position: Position, val param: Parameter[?, ?])
 
 class ValueNotFoundException(position: Position) extends ParameterException(position)
 
+class UnknownParameterException(position: Position) extends ParameterException(position)
+
 trait ParameterListFactory: 
   def :=[C](using ev: WithConfig[C])(param: Seq[Parameter[?, C]]): Command.ParameterListSetting[C]
 

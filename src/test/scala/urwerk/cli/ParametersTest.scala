@@ -165,6 +165,10 @@ class ParametersTest extends TestBase:
       params.collect(Set(), Seq("-abcd", "any-value")) should be ((Set("a-true", "b-true", "c-true", "d-any-value"), Position(2, 0)))
     }
 
+    "with segregated value after last flag" in {
+      params.collect(Set(), Seq("-abc", "any-value")) should be ((Set("a-true", "b-true", "c-true"), Position(1, 0)))
+    }
+
     "stop within flags field" in {
       params.collect(Set(), Seq("-abcXY")) should be ((Set("a-true", "b-true", "c-true"), Position(0, 3)))
     }

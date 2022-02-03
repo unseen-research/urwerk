@@ -4,6 +4,7 @@ import urwerk.test.TestBase
 
 import Command.*
 import Parameter.param
+import urwerk.cli.ParameterList.Position
 
 class CommandTest extends TestBase:
   
@@ -44,3 +45,28 @@ class CommandTest extends TestBase:
     cmd.execute("1", "2", "3", "4") should be (10)
   }
   
+  "unknown positional parameter" in {
+    val cmd = Command(Seq[Int]())(
+      ParameterList := Seq(
+        param[Int]((v, c) => c :+ v)),
+      ParameterList := Seq( 
+        param[Int]((v, c) => c :+ v)))
+
+    val exception = intercept[UnknownParameterException]{
+      cmd.execute("1", "2", "3")}
+
+    exception.position should be (Position(2, 0))
+  }
+
+  "unknown named parameter" in {
+    val cmd = Command(Seq[Int]())(
+      ParameterList := Seq(
+        param[Int]((v, c) => c :+ v)),
+      ParameterList := Seq( 
+        param[Int]((v, c) => c :+ v)))
+
+    val exception = intercept[UnknownParameterException]{
+      cmd.execute("1", "--name", "3")}
+
+    exception.position should be (Position(1, 0))
+  }

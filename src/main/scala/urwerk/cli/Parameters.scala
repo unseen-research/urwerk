@@ -91,12 +91,12 @@ object ParameterList:
   case class Position(val argIndex: Int, val flagIndex: Int)
 
   def :=[C](using ev: WithConfig[C])(params: Seq[Parameter[?, C]]): Command.ParameterListSetting[C] = 
-    Command.ParameterListSetting("", ParameterList.from(params))
+    Command.ParameterListSetting(ParameterList.from(params))
 
   def / (label: String): ParameterListFactory = 
     new ParameterListFactory:
       def :=[C](using ev: WithConfig[C])(params: Seq[Parameter[?, C]]): Command.ParameterListSetting[C] =
-        Command.ParameterListSetting(label, ParameterList.from(params))
+        Command.ParameterListSetting(new ParameterList(label, params))
 
   def from[C](params: Seq[Parameter[?, C]]): ParameterList[C] = new ParameterList("", params)
 
@@ -322,3 +322,4 @@ class ParameterList[C](val label: String, val params: Seq[Parameter[?, C]]):
     val resolvedParams = params.map(param => param)
 
     new ParameterList[C](label, this.params ++ (resolvedParam +: resolvedParams))
+ 

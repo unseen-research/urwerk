@@ -247,9 +247,9 @@ class ParametersTest extends TestBase:
     
     val params = Seq(
       param[Boolean]("param1", "a")
-        .apply{case (value, config) => config + s"param1-$value"},
+        .apply{(value, config) => config + s"param1-$value"},
       param[Int]("param2", "b")
-        .apply{case (value, config) => config + s"param2-$value"})
+        .apply{(value, config) => config + s"param2-$value"})
 
     val paramList = ParameterList.from(params)
     paramList.params should be(params)
@@ -267,14 +267,14 @@ class ParametersTest extends TestBase:
       "without label" in {
         val setting = ParameterList := params
 
-        setting.label should be("")
+        setting.paramList.label should be("")
         setting.paramList.params should be (params)
       }
 
       "with label" in {
         val setting = ParameterList / "LABEL" := params
 
-        setting.label should be("LABEL")
+        setting.paramList.label should be("LABEL")
         setting.paramList.params should be (params)
       }
   }

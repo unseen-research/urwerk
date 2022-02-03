@@ -38,6 +38,36 @@ object Parameter:
     def convertSeq(values: Seq[String]): Boolean = convert(values.last)
     def defaultLabel: String = "BOOLEAN"
 
+  def isSeparator(arg: String): Boolean = arg.count(_ == '-') == arg.size
+
+  def isName(arg: String): Boolean = 
+    def isShortName: Boolean = 
+        arg.size == 2
+      && arg(0) == '-'
+      && arg(1).isLetter
+
+    def isLongName: Boolean =   
+        arg.size > 2 
+      && arg.startsWith("--") 
+      && arg(2) != '-'
+
+    isShortName || isLongName
+
+  def isFlags(arg: String): Boolean = 
+       arg.size > 1 
+    && arg.startsWith("-") 
+    && arg(1).isLetter
+
+  def toName(arg: String): String = 
+    arg.stripPrefix("--").stripPrefix("-")
+
+  def stripQuotes(value: String): String = 
+    if value.startsWith("\"") && value.endsWith("\"") then
+      value.stripPrefix("\"").stripSuffix("\"")
+    else if value.startsWith("'") && value.endsWith("'") then
+      value.stripPrefix("'").stripSuffix("'")
+    else value
+
 case class Parameter[V, C](val names: Seq[String],
     val label: String,
     val default: Option[V],

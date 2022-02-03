@@ -219,36 +219,6 @@ object ParameterList:
       }
       namedParameters(params.tail, map)
 
-  // private[cli] def isSeparator(arg: String): Boolean = arg.count(_ == '-') == arg.size
-
-  // private[cli] def isName(arg: String): Boolean = 
-  //   def isShortName: Boolean = 
-  //       arg.size == 2
-  //     && arg(0) == '-'
-  //     && arg(1).isLetter
-
-  //   def isLongName: Boolean =   
-  //       arg.size > 2 
-  //     && arg.startsWith("--") 
-  //     && arg(2) != '-'
-
-  //   isShortName || isLongName
-
-  // private[cli] def isFlags(arg: String): Boolean = 
-  //      arg.size > 1 
-  //   && arg.startsWith("-") 
-  //   && arg(1).isLetter
-
-  // private[cli] def toName(arg: String): String = 
-  //   arg.stripPrefix("--").stripPrefix("-")
-
-  // private [cli]def stripQuotes(value: String): String = 
-  //   if value.startsWith("\"") && value.endsWith("\"") then
-  //     value.stripPrefix("\"").stripSuffix("\"")
-  //   else if value.startsWith("'") && value.endsWith("'") then
-  //     value.stripPrefix("'").stripSuffix("'")
-  //   else value
-
 class ParameterList[C](val label: String, val params: Seq[Parameter[?, C]]):
   def add(param: WithConfig[C] ?=> Parameter[?, C], params: WithConfig[C] ?=> Parameter[?, C]*): ParameterList[C] =
     given WithConfig[C] = new WithConfig[C]{}

@@ -17,26 +17,25 @@ object Parameter:
     type VV = V
     def defaultValue: Option[V] = None
     def convert(value: String): V
-    def convertSeq(values: Seq[String]): V
     def defaultLabel: String
 
   given ValueSpec[String] with
     def convert(value: String): String = value
-    def convertSeq(values: Seq[String]): String = convert(values.last)
     def defaultLabel: String = "STRING"
 
   given ValueSpec[Int] with
     def convert(value: String): Int = value.toInt
-    def convertSeq(values: Seq[String]): Int = convert(values.last)
     def defaultLabel: String = "INT"
 
   given ValueSpec[Boolean] with
     override def defaultValue: Option[Boolean] = Some(true)
     def convert(value: String): Boolean = 
       value.toLowerCase.toBoolean
-      
-    def convertSeq(values: Seq[String]): Boolean = convert(values.last)
     def defaultLabel: String = "BOOLEAN"
+
+  extension(value: String)
+    def toParam[C](using  WithConfig[C]): Parameter[String, C] = param
+    def toParameter[C](using  WithConfig[C]): Parameter[String, C] = toParam
 
   def isSeparator(arg: String): Boolean = arg.count(_ == '-') == arg.size
 

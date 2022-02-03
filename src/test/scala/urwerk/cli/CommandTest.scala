@@ -33,12 +33,14 @@ class CommandTest extends TestBase:
     val cmd = Command(Seq[Int]())(
       ParameterList := Seq(
         param[Int]((v, c) => c :+ v), 
+        param[Int]((v, c) => c :+ v)),
+      ParameterList := Seq(
         param[Int]((v, c) => c :+ v), 
         param[Int]((v, c) => c :+ v)),
       Action := {config =>
         config.sum
       })
 
-    cmd.execute("1", "2", "3") should be (6)
+    cmd.execute("1", "2", "3", "4") should be (10)
   }
   

@@ -58,7 +58,7 @@ case class Command[C](config: C, parameterLists: Seq[ParameterList[C]], action: 
 
   private def collectParams(args: Seq[String]): C = 
     val (config, pos) = parameterLists.foldLeft((this.config, ParameterList.Position(0, 0))){case ((config, pos), paramList) =>
-      paramList.collect(config, args)
+      paramList.collect(config, pos, args)
     }
     config
 

@@ -121,16 +121,25 @@ object ParameterList:
 
   extension [C](paramList: ParameterList[C])
     def collect(config: C, args: Seq[String]): (C, Position) = 
-      collectParams(config, paramList, args)
+      collect(config, Position(0, 0), args)
+
+    def collect(config: C, pos: Position, args: Seq[String]): (C, Position) = 
+      collectParams(config, paramList, pos, args)
 
   private def collectParams[C](config: C, 
       paramList: ParameterList[C], 
+      pos: Position, 
       args: Seq[String]): (C, Position) =
     val params = paramList.params
     val positionalParams = positionalParameters(params)
     val namedParams = namedParameters(params) 
     
-    val collector = Collector(namedParams, positionalParams, config, args)
+    val collector = Collector(
+      namedParams = namedParams, 
+      positionalParams = positionalParams, 
+      pos = pos, 
+      config = config, 
+      args = args)
 
     val completed = LazyList.unfold(collector){collector =>
       if collector.completed then None
@@ -145,7 +154,7 @@ object ParameterList:
       positionalParams: Seq[Parameter[?, C]], 
       config: C,
       args: Seq[String], 
-      pos: Position = Position(0, 0), 
+      pos: Position, 
       positionalIndex: Int = 0,
       previousName: String = "", 
       appliedParamKeys: Set[Int|String] = Set(),

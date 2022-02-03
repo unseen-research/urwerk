@@ -150,6 +150,9 @@ object ParameterList:
           val value = stripQuotes(arg)
           if previousName.nonEmpty then
             namedParams.get(previousName) match
+              case Some(param) if !param.acceptOp(value) =>
+                throw ParameterValueRejected(pos)
+              
               case Some(param) =>
                 try
                   copy(
@@ -170,6 +173,7 @@ object ParameterList:
                         throw ValueNotFoundException(pos)
 
                   case e: Throwable => throw e
+
               case None =>
                 throw IllegalStateException("this position may never be reached")
           else
@@ -177,6 +181,8 @@ object ParameterList:
               copy(completed=true)
             else
               val param = positionalParams(positionalIndex)
+              if !param.acceptOp(value) then
+                throw ParameterValueRejected(pos)
               val nextConfig = param.applyOp(param.valueSpec.convert(value), config)
               copy(
                 config=nextConfig, 

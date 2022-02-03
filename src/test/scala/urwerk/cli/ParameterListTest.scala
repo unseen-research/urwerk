@@ -213,6 +213,33 @@ class ParameterListTest extends TestBase:
     pos should be (Position(3, 0))
   }
 
+  "reject named parameter value" in {
+    val params = ParameterList[Seq[Int]](
+      param[Int]("param")
+        .accept(_ => false)
+        .apply{case (value, config) => config :+ value})
+
+    val exception = intercept[ParameterValueRejected]{
+      params.collect(Seq(), Seq("--param", "value"))}
+
+    exception.position should be (Position(1, 0))
+  }
+
+  "reject positional parameter value" in {
+    val params = ParameterList[Seq[Int]](
+      param[Int]
+        .accept(_ => true)
+        .apply{case (value, config) => config :+ value},
+      param[Int]
+        .accept(_ => false)
+        .apply{case (value, config) => config :+ value})
+
+    val exception = intercept[ParameterValueRejected]{
+      params.collect(Seq(), Seq("1", "2", "3"))}
+
+    exception.position should be (Position(1, 0))
+  }
+
   "add label" in {
     val params = ParameterList[Set[String]](
       Label("PARAMS1"), Label("PARAMS2"))

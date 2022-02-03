@@ -10,4 +10,6 @@ class ParameterNotFoundException(position: Position, val param: Parameter[?, ?])
 
 class ValueNotFoundException(position: Position) extends ParameterException(position)
 
+class ParameterValueRejected(position: Position) extends ParameterException(position)
+
 class UnknownParameterException(position: Position) extends ParameterException(position)

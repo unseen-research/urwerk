@@ -41,4 +41,3 @@ class ParameterTest extends TestBase:
     param.acceptOp("value") should be (true)
     param.acceptOp("other") should be (false)
   }
-  

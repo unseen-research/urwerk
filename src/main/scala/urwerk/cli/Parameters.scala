@@ -73,11 +73,11 @@ sealed class ParameterException(message: String, val position: Position) extends
   def this(position: Position) = this("", position)
   def cause(exception: Throwable): Throwable = initCause(exception)
 
-class IllegalValueException() extends RuntimeException
+class IllegalValueException(position: Position) extends ParameterException(position)
 
-class ParameterNotFoundException(val param: Parameter[?, ?]) extends RuntimeException
+class ParameterNotFoundException(position: Position, val param: Parameter[?, ?]) extends ParameterException(position)
 
-class ValueNotFoundException() extends RuntimeException()
+class ValueNotFoundException(position: Position) extends ParameterException(position)
 
 trait ParameterListFactory: 
   def :=[C](using ev: WithConfig[C])(param: Seq[Parameter[?, C]]): Command.ParameterListSetting[C]
@@ -160,8 +160,7 @@ object ParameterList:
                   config=param.applyOp(defaultValue, config),
                   appliedParamKeys = appliedParamKeys + previousName)
               case None =>
-                throw ParameterException(pos)
-                  .cause(ValueNotFoundException())
+                throw ValueNotFoundException(pos)
 
           case None =>
             throw IllegalStateException("this position may never be reached")
@@ -233,8 +232,8 @@ object ParameterList:
                           previousName="",
                           appliedParamKeys = appliedParamKeys+previousName)
                       case None =>
-                        throw ParameterException(pos)
-                          .cause(ValueNotFoundException())
+                        throw ValueNotFoundException(pos)
+
                   case e: Throwable => throw e
               case None =>
                 throw IllegalStateException("this position may never be reached")
@@ -254,14 +253,12 @@ object ParameterList:
     private def verify(): Unit = 
       namedParams.foreach{(name, param)=>
         if param.isRequired && !appliedParamKeys.contains(name) then
-          throw ParameterException(pos)
-            .cause(ParameterNotFoundException(param))
+          throw ParameterNotFoundException(pos, param)
       }
 
       positionalParams.view.zipWithIndex.foreach{(param, index)=>
         if param.isRequired && !appliedParamKeys.contains(index) then
-          throw ParameterException(pos)
-            .cause(ParameterNotFoundException(param))
+          throw ParameterNotFoundException(pos, param)
       }
 
   

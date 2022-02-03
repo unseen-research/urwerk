@@ -223,7 +223,7 @@ class ParametersTest extends TestBase:
   }
 
   "with config" in {
-    given WithConfig[String] = config
+    given WithConfig[String] with {}
     
     val params = Seq(
       param[Boolean]("param1", "a")
@@ -236,7 +236,7 @@ class ParametersTest extends TestBase:
   }
 
   "create parameter list command setting" - {
-    given WithConfig[String] = config
+    given WithConfig[String] with {}
 
     val params = Seq(
       param[Boolean]("param1", "a")

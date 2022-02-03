@@ -8,21 +8,7 @@ import ParameterList.Position
 trait WithConfig[C]:
   type CC = C
 
-def config[C] = new WithConfig[C]{}
-
-
-//given Position = enclosingTree.position
 object Parameter:
-
-  // class Fn[C]:
-  //   def apply[A](config: (WithConfig[C]) ?=> A): A = ???
-
-  // def withConfig[C]: Fn[C] = ???
-
-  // val fff = withConfig["Config"](conf ?=>
-  //   Seq("param")
-  //  )
-
   def param[V](using valueSpec: ValueSpec[V], config: WithConfig[?]): Parameter[V, config.CC] = 
     new Parameter(Seq(), valueSpec.defaultLabel, None, false, valueSpec, {(_, config) => config})
 
@@ -79,18 +65,19 @@ case class Parameter[V, C](val names: Seq[String],
 
   def required: Parameter[V, C] = copy(isRequired = true)
 
-class ParameterException(message: String, cause: Option[Throwable], val position: Position)
-    extends RuntimeException(message, cause.orNull):
-  def this(message: String, cause: Throwable, position: Position) = this(message, Some(cause), position)
-  def this(cause: Throwable, position: Position) = this("", Some(cause), position)
+  def optional: Parameter[V, C] = copy(isRequired = false)
+  
+  def isOptional: Boolean = !isRequired
 
-class IllegalValueException() extends RuntimeException()
+sealed class ParameterException(message: String, val position: Position) extends RuntimeException(message):
+  def this(position: Position) = this("", position)
+  def cause(exception: Throwable): Throwable = initCause(exception)
 
-class ParameterNotFoundException(param: Parameter[?, ?]) extends RuntimeException
+class IllegalValueException() extends RuntimeException
 
-class MissingValueException() extends RuntimeException()
+class ParameterNotFoundException(val param: Parameter[?, ?]) extends RuntimeException
 
-//class UnexpectedParameterException(position: Position) extends ParameterException("", None, position)
+class ValueNotFoundException() extends RuntimeException()
 
 trait ParameterListFactory: 
   def :=[C](using ev: WithConfig[C])(param: Seq[Parameter[?, C]]): Command.ParameterListSetting[C]
@@ -217,7 +204,8 @@ object ParameterList:
                     case Some(defaultValue) =>
                       (param.applyOp(defaultValue, config), Position(argIndex, 0))
                     case None =>
-                      throw ParameterException(MissingValueException(), pos)  
+                      throw ParameterException(pos)
+                        .cause(ValueNotFoundException())
                 case e: Throwable => throw e
 
               collectParams(namedParams, positionalParams, updatedConfig, args, updatedPos, "")                
@@ -239,7 +227,8 @@ object ParameterList:
             case Some(defaultValue) =>
               param.applyOp(defaultValue, config)
             case None =>
-              throw ParameterException(MissingValueException(), pos)            
+              throw ParameterException(pos)
+                .cause(ValueNotFoundException())
 
         case None =>
           throw IllegalStateException("this position may never be reached")

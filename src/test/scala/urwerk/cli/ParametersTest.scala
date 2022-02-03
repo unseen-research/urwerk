@@ -235,6 +235,16 @@ class ParametersTest extends TestBase:
     pos should be (Position(11, 0))
   }
 
+  "collect with initial position" in {
+    val params = ParameterList[Seq[Int]](
+      param[Int]
+        .apply{case (value, config) => config :+ value})
+
+    val (config, pos) = params.collect(Seq(), Position(2, 0), Seq("abc", "def", "77", "xyz"))
+    config should be (Seq(77))
+    pos should be (Position(3, 0))
+  }
+
   "add label" in {
     val params = ParameterList[Set[String]](
       Label("PARAMS1"), Label("PARAMS2"))

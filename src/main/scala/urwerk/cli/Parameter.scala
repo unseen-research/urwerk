@@ -36,7 +36,7 @@ object Parameter:
   extension(value: String)
     def toParam[C](using  WithConfig[C]): Parameter[String, C] = 
       param.accept(arg => arg == value)
-      
+
     def toParameter[C](using  WithConfig[C]): Parameter[String, C] = toParam
 
   def isSeparator(arg: String): Boolean = arg.count(_ == '-') == arg.size
@@ -73,9 +73,9 @@ case class Parameter[V, C](val names: Seq[String],
     val label: String,
     val default: Option[V],
     val isRequired: Boolean,
-    val valueSpec: ValueSpec[V],
-    val applyOp: (V, C) => C,
-    val acceptOp: String => Boolean) extends ParameterSetting[V, C]:
+    private[cli] val valueSpec: ValueSpec[V],
+    private[cli] val applyOp: (V, C) => C,
+    private[cli] val acceptOp: String => Boolean) extends ParameterSetting[V, C]:
 
   def default(value: V): Parameter[V, C] = copy(default = Some(value))
 

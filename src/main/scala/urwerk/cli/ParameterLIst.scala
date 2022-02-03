@@ -52,6 +52,23 @@ object ParameterList:
     def collect(config: C, pos: Position, args: Seq[String]): (C, Position) = 
       collectParams(config, paramList, pos, args)
 
+  extension [V, C](param: Parameter[V, C])
+    def applyTypeDefaultValue(config: C, pos: Position): C = 
+      param.valueSpec.defaultValue match
+        case Some(value) =>
+          param.applyOp(value, config)
+        case None =>
+          throw ValueNotFoundException(pos)
+
+    def apply(config: C, arg: String, pos: Position): C = 
+      if !accept(arg) then
+        throw ParameterValueRejected(pos)
+      val value = param.valueSpec.convert(arg)
+      param.applyOp(value, config)
+
+    def accept(arg: String): Boolean = 
+      param.acceptOp(arg)
+
   private def collectParams[C](config: C, 
       paramList: ParameterList[C], 
       pos: Position, 
@@ -89,13 +106,9 @@ object ParameterList:
       if previousName.nonEmpty then
         namedParams.get(previousName) match
           case Some(param) =>
-            param.valueSpec.defaultValue match
-              case Some(defaultValue) =>
-                copy(
-                  config=param.applyOp(defaultValue, config),
-                  appliedParamKeys = appliedParamKeys + previousName)
-              case None =>
-                throw ValueNotFoundException(pos)
+            copy(
+              config = param.applyTypeDefaultValue(config, pos),
+              appliedParamKeys = appliedParamKeys + previousName)
 
           case None =>
             throw IllegalStateException("this position may never be reached")
@@ -150,28 +163,21 @@ object ParameterList:
           val value = stripQuotes(arg)
           if previousName.nonEmpty then
             namedParams.get(previousName) match
-              case Some(param) if !param.acceptOp(value) =>
-                throw ParameterValueRejected(pos)
-              
               case Some(param) =>
                 try
                   copy(
-                    config = param.applyOp(param.valueSpec.convert(value), config),
+                    config = param.apply(config, value, pos),
                     pos = Position(argIndex+1, 0),
                     previousName="", 
                     appliedParamKeys = appliedParamKeys+previousName)
                 catch
                   case _: IllegalArgumentException =>
-                    param.valueSpec.defaultValue match
-                      case Some(defaultValue) =>
-                        copy(
-                          config = param.applyOp(defaultValue, config),
-                          pos = Position(argIndex, 0),
-                          previousName="",
-                          appliedParamKeys = appliedParamKeys+previousName)
-                      case None =>
-                        throw ValueNotFoundException(pos)
-
+                    copy(
+                      config = param.applyTypeDefaultValue(config, pos),
+                      pos = Position(argIndex, 0),
+                      previousName="",
+                      appliedParamKeys = appliedParamKeys+previousName)
+                      
                   case e: Throwable => throw e
 
               case None =>
@@ -181,11 +187,8 @@ object ParameterList:
               copy(completed=true)
             else
               val param = positionalParams(positionalIndex)
-              if !param.acceptOp(value) then
-                throw ParameterValueRejected(pos)
-              val nextConfig = param.applyOp(param.valueSpec.convert(value), config)
               copy(
-                config=nextConfig, 
+                config= param.apply(config, value, pos), 
                 pos=Position(argIndex + 1, 0), 
                 positionalIndex + 1,
                 previousName="",

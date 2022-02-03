@@ -82,6 +82,8 @@ case class Parameter[V, C](val names: Seq[String],
   def label(label: String): Parameter[V, C] =
     copy(label = label)
 
+  def convert(value: String): V = valueSpec.convert(value)
+
   def name: String = names.headOption.getOrElse("")
 
   def name(name: String): Parameter[V, C] =

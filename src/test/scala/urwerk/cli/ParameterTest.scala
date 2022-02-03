@@ -39,3 +39,10 @@ class ParameterTest extends TestBase:
     val param = "value".toParam
     param.label should be ("STRING")
   }
+
+  "int param" in {
+    given WithConfig[Seq[Int]] with {}
+
+    val param = "value".toParam
+    param.label should be ("STRING")
+  }

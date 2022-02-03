@@ -132,16 +132,13 @@ object ParameterList:
     
     val collector = Collector(namedParams, positionalParams, config, args)
 
-    val lastCollector = LazyList.unfold(collector){collector =>
-      val next = collector.collect
-      if next.closed then None
-      else if next.completed then
-        val closed=next.copy(closed=true)
-        Some((closed, closed))
-      else Some((next, next))
+    val completed = LazyList.unfold(collector){collector =>
+      if collector.completed then None
+      else
+        val next = collector.collect
+        Some((next, next))
     }.last
-
-    (lastCollector.config, lastCollector.pos)
+    (completed.config, completed.pos)
     
   private case class Collector[C](namedParams: Map[String, Parameter[?, C]], 
       positionalParams: Seq[Parameter[?, C]], 
@@ -150,8 +147,7 @@ object ParameterList:
       pos: Position = Position(0, 0), 
       previousName: String = "", 
       appliedParamKeys: Set[Int|String] = Set(),
-      completed: Boolean = false,
-      closed: Boolean = false): 
+      completed: Boolean = false): 
     def applyDefaultValueToPreviousName(previousName: String): C = 
       if previousName.nonEmpty then
         namedParams.get(previousName) match
@@ -167,8 +163,13 @@ object ParameterList:
             throw IllegalStateException("this position may never be reached")
       else config
 
-    def collect: Collector[C] =
+    def collect: Collector[C] = 
+      val next = _collect
+      if next.completed then 
+        verify()
+      next  
 
+    private def _collect: Collector[C] =
       val Position(argIndex, flagIndex) = pos
       if argIndex >= args.size then
         val updatedConfig = applyDefaultValueToPreviousName(previousName)
@@ -234,7 +235,9 @@ object ParameterList:
               val param = positionalParams.head
               val updatedConfig = param.applyOp(param.valueSpec.convert(value), config)
               copy(positionalParams=positionalParams.tail, config=updatedConfig, pos=Position(argIndex+1, 0), "")
-
+    
+    private def verify(): Unit = ()
+              
   // @tailrec
   // private def collectParams[C](collector: Collector[C]): (C, Position) =
 

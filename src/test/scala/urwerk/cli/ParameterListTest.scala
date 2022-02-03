@@ -256,4 +256,3 @@ class ParameterListTest extends TestBase:
         setting.paramList.params should be (params)
       }
   }
-   

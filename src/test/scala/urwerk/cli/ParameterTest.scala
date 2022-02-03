@@ -32,3 +32,4 @@ class ParameterTest extends TestBase:
     s"given arg $givenArg unquoted $result" in {
       stripQuotes(givenArg) should be (result)
     }}
+    

@@ -6,7 +6,6 @@ object Command:
 
   object Action:
     def :=[C](using ev: WithConfig[C])(action: C=>Int): ActionSetting[C] = ActionSetting(action)
-    
 
   case class ActionSetting[C](action: C=>Int) extends Setting
 
@@ -64,7 +63,3 @@ case class Command[C](config: C, parameterLists: Seq[ParameterList[C]], action: 
       throw UnknownParameterException(pos)
     
     config
-
-    
-
-

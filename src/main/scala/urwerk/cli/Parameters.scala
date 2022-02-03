@@ -130,7 +130,7 @@ object ParameterList:
     val positionalParams = positionalParameters(params)
     val namedParams = namedParameters(params) 
     
-    val collector = Collector(params, namedParams, positionalParams, config, args)
+    val collector = Collector(namedParams, positionalParams, config, args)
 
     val completed = LazyList.unfold(collector){collector =>
       if collector.completed then None
@@ -141,12 +141,12 @@ object ParameterList:
     (completed.config, completed.pos)
     
   private case class Collector[C](
-      params: Seq[Parameter[?, C]],
       namedParams: Map[String, Parameter[?, C]], 
       positionalParams: Seq[Parameter[?, C]], 
       config: C,
       args: Seq[String], 
       pos: Position = Position(0, 0), 
+      positionalIndex: Int = 0,
       previousName: String = "", 
       appliedParamKeys: Set[Int|String] = Set(),
       completed: Boolean = false): 
@@ -210,7 +210,7 @@ object ParameterList:
         
         else if isSeparator(arg) then
           val updated = applyDefaultValueToPreviousName(previousName)
-          updated.copy(pos=Position(argIndex+1, 0), "")
+          updated.copy(pos=Position(argIndex+1, 0), previousName = "")
 
         else 
           val value = stripQuotes(arg)

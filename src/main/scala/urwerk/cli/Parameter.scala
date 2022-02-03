@@ -8,10 +8,10 @@ trait WithConfig[C]:
 
 object Parameter:
   def param[V](using valueSpec: ValueSpec[V], config: WithConfig[?]): Parameter[V, config.CC] = 
-    new Parameter(Seq(), valueSpec.defaultLabel, None, false, valueSpec, {(_, config) => config})
+    new Parameter(Seq(), valueSpec.defaultLabel, None, false, valueSpec, {(_, config) => config}, _ => true)
 
   def param[V](using valueSpec: ValueSpec[V], config: WithConfig[?])(name: String, names: String*): Parameter[V, config.CC] = 
-    new Parameter(name +: names, valueSpec.defaultLabel, None, false, valueSpec, {(_, config) => config})
+    new Parameter(name +: names, valueSpec.defaultLabel, None, false, valueSpec, {(_, config) => config}, _ => true)
 
   trait ValueSpec[V]:
     type VV = V
@@ -34,7 +34,9 @@ object Parameter:
     def defaultLabel: String = "BOOLEAN"
 
   extension(value: String)
-    def toParam[C](using  WithConfig[C]): Parameter[String, C] = param
+    def toParam[C](using  WithConfig[C]): Parameter[String, C] = 
+      param.accept(arg => arg == value)
+      
     def toParameter[C](using  WithConfig[C]): Parameter[String, C] = toParam
 
   def isSeparator(arg: String): Boolean = arg.count(_ == '-') == arg.size
@@ -72,12 +74,16 @@ case class Parameter[V, C](val names: Seq[String],
     val default: Option[V],
     val isRequired: Boolean,
     val valueSpec: ValueSpec[V],
-    val applyOp: (V, C) => C) extends ParameterSetting[V, C]:
+    val applyOp: (V, C) => C,
+    val acceptOp: String => Boolean) extends ParameterSetting[V, C]:
 
   def default(value: V): Parameter[V, C] = copy(default = Some(value))
 
   def apply(op: (V, C) => C): Parameter[V, C] =
     copy(applyOp = op)
+
+  def accept(op: String => Boolean): Parameter[V, C] = 
+    copy(acceptOp = op)
 
   def label(label: String): Parameter[V, C] =
     copy(label = label)

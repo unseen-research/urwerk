@@ -38,11 +38,7 @@ class ParameterTest extends TestBase:
 
     val param = "value".toParam
     param.label should be ("STRING")
+    param.acceptOp("value") should be (true)
+    param.acceptOp("other") should be (false)
   }
-
-  "int param" in {
-    given WithConfig[Seq[Int]] with {}
-
-    val param = "value".toParam
-    param.label should be ("STRING")
-  }
+  

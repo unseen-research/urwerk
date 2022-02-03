@@ -130,7 +130,7 @@ object ParameterList:
     val positionalParams = positionalParameters(params)
     val namedParams = namedParameters(params) 
     
-    val collector = Collector(namedParams, positionalParams, config, args)
+    val collector = Collector(params, namedParams, positionalParams, config, args)
 
     val completed = LazyList.unfold(collector){collector =>
       if collector.completed then None
@@ -140,7 +140,9 @@ object ParameterList:
     }.last
     (completed.config, completed.pos)
     
-  private case class Collector[C](namedParams: Map[String, Parameter[?, C]], 
+  private case class Collector[C](
+      params: Seq[Parameter[?, C]],
+      namedParams: Map[String, Parameter[?, C]], 
       positionalParams: Seq[Parameter[?, C]], 
       config: C,
       args: Seq[String], 
@@ -148,20 +150,22 @@ object ParameterList:
       previousName: String = "", 
       appliedParamKeys: Set[Int|String] = Set(),
       completed: Boolean = false): 
-    def applyDefaultValueToPreviousName(previousName: String): C = 
+    def applyDefaultValueToPreviousName(previousName: String): Collector[C] = 
       if previousName.nonEmpty then
         namedParams.get(previousName) match
           case Some(param) =>
             param.valueSpec.defaultValue match
               case Some(defaultValue) =>
-                param.applyOp(defaultValue, config)
+                copy(
+                  config=param.applyOp(defaultValue, config),
+                  appliedParamKeys = appliedParamKeys + previousName)
               case None =>
                 throw ParameterException(pos)
                   .cause(ValueNotFoundException())
 
           case None =>
             throw IllegalStateException("this position may never be reached")
-      else config
+      else this
 
     def collect: Collector[C] = 
       val next = _collect
@@ -172,8 +176,8 @@ object ParameterList:
     private def _collect: Collector[C] =
       val Position(argIndex, flagIndex) = pos
       if argIndex >= args.size then
-        val updatedConfig = applyDefaultValueToPreviousName(previousName)
-        copy(config=updatedConfig, completed=true)
+        val updated = applyDefaultValueToPreviousName(previousName)
+        updated.copy(completed=true)
       
       else if isFlags(args(argIndex)) && flagIndex >= args(argIndex).size -1 then 
         copy(pos=Position(argIndex+1, 0), previousName=previousName)
@@ -181,32 +185,32 @@ object ParameterList:
       else
         val arg = args(argIndex)
         if isName(arg) then
-          val updatedConfig = applyDefaultValueToPreviousName(previousName)
+          val updated = applyDefaultValueToPreviousName(previousName)
 
           val name = toName(arg)
           val paramOpt = namedParams.get(name) 
         
           if paramOpt.isDefined then   
-            copy(config=updatedConfig, pos=Position(argIndex+1, 0), previousName=name)
+            updated.copy(pos=Position(argIndex+1, 0), previousName=name)
         
           else
-            copy(config=updatedConfig, completed=true)
+            updated.copy(completed=true)
 
         else if isFlags(arg) then 
-          val updatedConfig = applyDefaultValueToPreviousName(previousName)
+          val updated = applyDefaultValueToPreviousName(previousName)
 
           val flags = arg.stripPrefix("-")
           val name = flags(flagIndex).toString
           val paramOpt = namedParams.get(name) 
 
           if paramOpt.isDefined then
-            copy(config=updatedConfig, pos=Position(argIndex, flagIndex+1), previousName=name)
+            updated.copy(pos=Position(argIndex, flagIndex+1), previousName=name)
           else
-            copy(config=updatedConfig, completed=true)
+            updated.copy(completed=true)
         
         else if isSeparator(arg) then
-          val updatedConfig = applyDefaultValueToPreviousName(previousName)
-          copy(config=updatedConfig, pos=Position(argIndex+1, 0), "")
+          val updated = applyDefaultValueToPreviousName(previousName)
+          updated.copy(pos=Position(argIndex+1, 0), "")
 
         else 
           val value = stripQuotes(arg)

@@ -4,7 +4,6 @@ import urwerk.test.TestBase
 
 import Command.*
 import Parameter.param
-import urwerk.cli.ParameterList.Position
 
 class CommandTest extends TestBase:
   

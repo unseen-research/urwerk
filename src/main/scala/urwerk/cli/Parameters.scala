@@ -3,7 +3,6 @@ package urwerk.cli
 import scala.annotation.tailrec
 
 import Parameter.ValueSpec
-import ParameterList.Position
 
 trait WithConfig[C]:
   type CC = C
@@ -69,28 +68,15 @@ case class Parameter[V, C](val names: Seq[String],
   
   def isOptional: Boolean = !isRequired
 
-sealed class ParameterException(message: String, val position: Position) extends RuntimeException(message):
-  def this(position: Position) = this("", position)
-  def cause(exception: Throwable): Throwable = initCause(exception)
-
-class IllegalValueException(position: Position) extends ParameterException(position)
-
-class ParameterNotFoundException(position: Position, val param: Parameter[?, ?]) extends ParameterException(position)
-
-class ValueNotFoundException(position: Position) extends ParameterException(position)
-
-class UnknownParameterException(position: Position) extends ParameterException(position)
-
 trait ParameterListFactory: 
   def :=[C](using ev: WithConfig[C])(param: Seq[Parameter[?, C]]): Command.ParameterListSetting[C]
 
-object ParameterList:
+case class Position(val argIndex: Int, val flagIndex: Int)
 
+object ParameterList:
   sealed trait Setting
 
   case class Label(label: String) extends Setting
-
-  case class Position(val argIndex: Int, val flagIndex: Int)
 
   def :=[C](using ev: WithConfig[C])(params: Seq[Parameter[?, C]]): Command.ParameterListSetting[C] = 
     Command.ParameterListSetting(ParameterList.from(params))

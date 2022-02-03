@@ -4,9 +4,6 @@ import urwerk.cli.ParameterList.Label
 import urwerk.cli.Parameter.param
 import urwerk.test.TestBase
 
-import ParameterList.Position
-
-
 class ParametersTest extends TestBase:
   
   Seq(("-", true), ("--", true), ("---", true), ("-n", false), ("--name", false), ("value", false), ("'--'", false), ("\"--\"", false)).foreach{(givenArg, result)=>

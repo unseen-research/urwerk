@@ -1,7 +1,5 @@
 package urwerk.cli
 
-import urwerk.cli.ParameterList.Position
-
 object Command: 
   
   sealed trait Setting
@@ -59,7 +57,7 @@ case class Command[C](config: C, parameterLists: Seq[ParameterList[C]], action: 
     action(_config)
 
   private def collectParams(args: Seq[String]): C = 
-    val (config, pos@Position(argIndex, flagIndex)) = parameterLists.foldLeft((this.config, ParameterList.Position(0, 0))){case ((config, pos), paramList) =>
+    val (config, pos@Position(argIndex, flagIndex)) = parameterLists.foldLeft((this.config, Position(0, 0))){case ((config, pos), paramList) =>
       paramList.collect(config, pos, args)}
 
     if argIndex < args.size || flagIndex >0 then

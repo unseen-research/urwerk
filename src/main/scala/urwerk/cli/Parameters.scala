@@ -130,67 +130,79 @@ object ParameterList:
     val positionalParams = positionalParameters(params)
     val namedParams = namedParameters(params) 
     
-    val (updatedConfig, pos) = collectParams(namedParams, positionalParams, config, args, Position(0, 0), "")
-
-    validated(namedParams, positionalParams, updatedConfig, pos)
-
-  private def validated[C](namedParams: Map[String, Parameter[?, C]], 
-      positionalParams: Seq[Parameter[?, C]], 
-      config: C, 
-      pos: Position): (C, Position) =
+    collectParams(Collector(namedParams, positionalParams, config, args))
     
-    //TODO
-    (config, pos)
-    
-
-  @tailrec
-  private def collectParams[C](namedParams: Map[String, Parameter[?, C]], 
+  private case class Collector[C](namedParams: Map[String, Parameter[?, C]], 
       positionalParams: Seq[Parameter[?, C]], 
       config: C,
       args: Seq[String], 
-      pos: Position, 
-      previousName: String): (C, Position) =
+      pos: Position = Position(0, 0), 
+      previousName: String = "", 
+      appliedParamKeys: Set[Int|String] = Set()): 
+    def applyDefaultValueToPreviousName(previousName: String): Collector[C] = 
+      if previousName.nonEmpty then
+        namedParams.get(previousName) match
+          case Some(param) =>
+            param.valueSpec.defaultValue match
+              case Some(defaultValue) =>
+                val updatedConfig = param.applyOp(defaultValue, config)
+                copy(config=updatedConfig)
+              case None =>
+                throw ParameterException(pos)
+                  .cause(ValueNotFoundException())
 
-    val Position(argIndex, flagIndex) = pos
+          case None =>
+            throw IllegalStateException("this position may never be reached")
+      else this
+
+
+  @tailrec
+  private def collectParams[C](collector: Collector[C]): (C, Position) =
+
+    val Collector(
+      namedParams, positionalParams, config, args, pos@Position(argIndex, flagIndex), previousName: String, appliedParamKeys) = collector
 
     if argIndex >= args.size then
-      val updatedConfig = applyDefaultValueToPreviousName[C](namedParams, previousName, config, pos)
-
-      (updatedConfig, pos)
+      val updatedCollector = collector.applyDefaultValueToPreviousName(previousName)
+      (updatedCollector.config, pos)
     
     else if isFlags(args(argIndex)) && flagIndex >= args(argIndex).size -1 then 
-      collectParams(namedParams, positionalParams, config, args, Position(argIndex+1, 0), previousName)
+      collectParams(
+        collector.copy(pos=Position(argIndex+1, 0), previousName=previousName))
 
     else
       val arg = args(argIndex)
       if isName(arg) then
-        val updatedConfig = applyDefaultValueToPreviousName[C](namedParams, previousName, config, pos)
+        val updatedCollector = collector.applyDefaultValueToPreviousName(previousName)
 
         val name = toName(arg)
         val paramOpt = namedParams.get(name) 
       
         if paramOpt.isDefined then   
-          collectParams(namedParams, positionalParams, updatedConfig, args, Position(argIndex+1, 0), name)
+          collectParams(
+            updatedCollector.copy(pos=Position(argIndex+1, 0), previousName=name))
       
         else
-          (updatedConfig, pos)
+          (updatedCollector.config, pos)
 
       else if isFlags(arg) then 
-        val updatedConfig = applyDefaultValueToPreviousName[C](namedParams, previousName, config, pos)
+        val updatedCollector = collector.applyDefaultValueToPreviousName(previousName)
 
         val flags = arg.stripPrefix("-")
         val name = flags(flagIndex).toString
         val paramOpt = namedParams.get(name) 
 
         if paramOpt.isDefined then
-          collectParams(namedParams, positionalParams, updatedConfig, args, Position(argIndex, flagIndex+1), name)
+          collectParams(
+            updatedCollector.copy(pos=Position(argIndex, flagIndex+1), previousName=name))
         else
-          (updatedConfig, pos)
+          (updatedCollector.config, pos)
       
       else if isSeparator(arg) then
-        val updatedConfig = applyDefaultValueToPreviousName[C](namedParams, previousName, config, pos)
-        collectParams(namedParams, positionalParams, updatedConfig, args, Position(argIndex+1, 0), "")
-      
+        val updatedCollector = collector.applyDefaultValueToPreviousName(previousName)
+        collectParams(
+          updatedCollector.copy(pos=Position(argIndex+1, 0), ""))
+
       else 
         val value = stripQuotes(arg)
         if previousName.nonEmpty then
@@ -208,7 +220,8 @@ object ParameterList:
                         .cause(ValueNotFoundException())
                 case e: Throwable => throw e
 
-              collectParams(namedParams, positionalParams, updatedConfig, args, updatedPos, "")                
+              collectParams(
+                collector.copy(config=updatedConfig, pos=updatedPos, ""))  
             case None =>
               throw IllegalStateException("this position may never be reached")
         else
@@ -217,23 +230,9 @@ object ParameterList:
           else
             val param = positionalParams.head
             val updatedConfig = param.applyOp(param.valueSpec.convert(value), config)
-            collectParams(namedParams, positionalParams.tail, updatedConfig, args, Position(argIndex+1, 0), "")    
+            collectParams(
+              collector.copy(positionalParams=positionalParams.tail, config=updatedConfig, pos=Position(argIndex+1, 0), ""))
   
-  private def applyDefaultValueToPreviousName[C](namedParams: Map[String, Parameter[?, C]], previousName: String, config: C, pos: Position): C = 
-    if previousName.nonEmpty then
-      namedParams.get(previousName) match
-        case Some(param) =>
-          param.valueSpec.defaultValue match
-            case Some(defaultValue) =>
-              param.applyOp(defaultValue, config)
-            case None =>
-              throw ParameterException(pos)
-                .cause(ValueNotFoundException())
-
-        case None =>
-          throw IllegalStateException("this position may never be reached")
-    else config
-            
   private def positionalParameters[C](params: Seq[Parameter[?, C]]) = params.filter(_.names.isEmpty)
 
   private def namedParameters[C](params: Seq[Parameter[?, C]]): Map[String, Parameter[?, C]] =

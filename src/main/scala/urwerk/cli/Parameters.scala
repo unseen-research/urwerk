@@ -239,19 +239,31 @@ object ParameterList:
               case None =>
                 throw IllegalStateException("this position may never be reached")
           else
-            if positionalParams.size == 0 then
+            if positionalIndex >= positionalParams.size then
               copy(completed=true)
             else
-              val param = positionalParams.head
+              val param = positionalParams(positionalIndex)
               val nextConfig = param.applyOp(param.valueSpec.convert(value), config)
               copy(
-                positionalParams=positionalParams.tail, 
                 config=nextConfig, 
-                pos=Position(argIndex+1, 0), 
+                pos=Position(argIndex + 1, 0), 
+                positionalIndex + 1,
                 previousName="",
-                appliedParamKeys = appliedParamKeys+ 7777)
+                appliedParamKeys = appliedParamKeys + positionalIndex)
     
-    private def verify(): Unit = ()
+    private def verify(): Unit = 
+      namedParams.foreach{(name, param)=>
+        if param.isRequired && !appliedParamKeys.contains(name) then
+          throw ParameterException(pos)
+            .cause(ParameterNotFoundException(param))
+      }
+
+      positionalParams.view.zipWithIndex.foreach{(param, index)=>
+        if param.isRequired && !appliedParamKeys.contains(index) then
+          throw ParameterException(pos)
+            .cause(ParameterNotFoundException(param))
+      }
+
   
   private def positionalParameters[C](params: Seq[Parameter[?, C]]) = params.filter(_.names.isEmpty)
 

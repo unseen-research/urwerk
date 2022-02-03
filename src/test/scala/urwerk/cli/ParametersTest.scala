@@ -181,17 +181,40 @@ class ParametersTest extends TestBase:
     params.collect(Seq(), Seq("1", "2", "3", "4", "5")) should be (Seq(1, 2, 3, 4), Position(4, 0))
   }
 
-  "required named param" in {
+  "required named param not founnd" in {
     val params = ParameterList[Seq[Int]](
-        param[Int]("number")
-          .required
-          .apply{case (value, config) => config :+ value})
+      param[Int]("number")
+        .label("x")
+        .required)
 
     val paramException = intercept[ParameterException]{
       params.collect(Seq(), Seq())
     }
 
-    paramException.getCause() shouldBe a[ParameterNotFoundException]
+    val cause = paramException.getCause()
+    cause shouldBe a[ParameterNotFoundException]
+    cause.asInstanceOf[ParameterNotFoundException].param.label should be ("x")
+  }
+
+  "required positional param not founnd" in {
+    val params = ParameterList[Seq[Int]](
+      param[Int]
+        .label("a")
+        .apply{case (value, config) => config :+ value},
+      param[Int]
+        .label("b")
+        .required,
+      param[Int]
+        .label("c")        
+        .apply{case (value, config) => config :+ value})
+
+    val paramException = intercept[ParameterException]{
+      params.collect(Seq(), Seq("1"))
+    }
+
+    val cause = paramException.getCause()
+    cause shouldBe a[ParameterNotFoundException]
+    cause.asInstanceOf[ParameterNotFoundException].param.label should be ("b")
   }
 
   "multiple params" in {

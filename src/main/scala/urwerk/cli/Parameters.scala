@@ -217,19 +217,25 @@ object ParameterList:
           if previousName.nonEmpty then
             namedParams.get(previousName) match
               case Some(param) =>
-                val (updatedConfig, updatedPos) = try
-                  (param.applyOp(param.valueSpec.convert(value), config), Position(argIndex+1, 0))
+                try
+                  copy(
+                    config = param.applyOp(param.valueSpec.convert(value), config),
+                    pos = Position(argIndex+1, 0),
+                    previousName="", 
+                    appliedParamKeys = appliedParamKeys+previousName)
                 catch
                   case _: IllegalArgumentException =>
                     param.valueSpec.defaultValue match
                       case Some(defaultValue) =>
-                        (param.applyOp(defaultValue, config), Position(argIndex, 0))
+                        copy(
+                          config = param.applyOp(defaultValue, config),
+                          pos = Position(argIndex, 0),
+                          previousName="",
+                          appliedParamKeys = appliedParamKeys+previousName)
                       case None =>
                         throw ParameterException(pos)
                           .cause(ValueNotFoundException())
                   case e: Throwable => throw e
-
-                copy(config=updatedConfig, pos=updatedPos, "")
               case None =>
                 throw IllegalStateException("this position may never be reached")
           else
@@ -237,8 +243,13 @@ object ParameterList:
               copy(completed=true)
             else
               val param = positionalParams.head
-              val updatedConfig = param.applyOp(param.valueSpec.convert(value), config)
-              copy(positionalParams=positionalParams.tail, config=updatedConfig, pos=Position(argIndex+1, 0), "")
+              val nextConfig = param.applyOp(param.valueSpec.convert(value), config)
+              copy(
+                positionalParams=positionalParams.tail, 
+                config=nextConfig, 
+                pos=Position(argIndex+1, 0), 
+                previousName="",
+                appliedParamKeys = appliedParamKeys+ 7777)
     
     private def verify(): Unit = ()
               

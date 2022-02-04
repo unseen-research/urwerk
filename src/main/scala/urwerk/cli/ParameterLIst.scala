@@ -63,6 +63,7 @@ object ParameterList:
     def apply(config: C, arg: String, pos: Position): C = 
       if !accept(arg) then
         throw ParameterValueRejected(pos)
+
       val value = param.valueSpec.convert(arg)
       param.applyOp(config, value)
 

@@ -7,11 +7,14 @@ trait WithConfig[C]:
   type CC = C
 
 object Parameter:
-  def param[V](using valueSpec: ValueSpec[V], config: WithConfig[?]): Parameter[V, config.CC] = 
-    new Parameter(Seq(), valueSpec.defaultLabel, None, false, valueSpec, {(config, _) => config}, _ => true)
+  def param[V](using valueSpec: ValueSpec[V], config: WithConfig[?]): PositionalParameter[V, config.CC] = 
+    new PositionalParameter(valueSpec.defaultLabel, None, false, valueSpec, {(config, _) => config}, _ => true)
 
-  def param[V](using valueSpec: ValueSpec[V], config: WithConfig[?])(name: String, names: String*): Parameter[V, config.CC] = 
-    new Parameter(name +: names, valueSpec.defaultLabel, None, false, valueSpec, {(config, _) => config}, _ => true)
+  def param[V](using valueSpec: ValueSpec[V], config: WithConfig[?])(name: String, names: String*): NamedParameter[V, config.CC] = 
+    new NamedParameter(name +: names, valueSpec.defaultLabel, None, false, valueSpec, {(config, _) => config}, _ => true)
+
+  def trailingParams[V](using valueSpec: ValueSpec[V], config: WithConfig[?]): TrailingParameters[V, config.CC] = 
+    new TrailingParameters(valueSpec.defaultLabel, None, false, valueSpec, {(config, _) => config}, _ => true)
 
   trait ValueSpec[V]:
     type VV = V
@@ -34,10 +37,10 @@ object Parameter:
     def defaultLabel: String = "BOOLEAN"
 
   extension(value: String)
-    def toParam[C](using  WithConfig[C]): Parameter[String, C] = 
+    def toParam[C](using  WithConfig[C]): PositionalParameter[String, C] = 
       param.accept(arg => arg == value)
 
-    def toParameter[C](using  WithConfig[C]): Parameter[String, C] = toParam
+    def toParameter[C](using  WithConfig[C]): PositionalParameter[String, C] = toParam
 
   def isSeparator(arg: String): Boolean = arg.count(_ == '-') == arg.size
 
@@ -69,37 +72,113 @@ object Parameter:
       value.stripPrefix("'").stripSuffix("'")
     else value
 
-case class Parameter[V, C](val names: Seq[String],
-    val label: String,
-    val default: Option[V],
-    val isRequired: Boolean,
-    private[cli] val valueSpec: ValueSpec[V],
-    private[cli] val applyOp: (C, V) => C,
-    private[cli] val acceptOp: String => Boolean) extends ParameterSetting[V, C]:
+sealed trait Parameter[V, C]:
+  def names: Seq[String]
+  def name: String    
+  def label: String
+  def default: Option[V]
+  def isRequired: Boolean
 
-  def default(value: V): Parameter[V, C] = copy(default = Some(value))
+  protected[cli] def valueSpec: ValueSpec[V]
+  protected[cli] def applyOp: (C, V) => C
+  protected[cli] def acceptOp: String => Boolean
 
-  def apply(op: (C, V) => C): Parameter[V, C] =
+case class NamedParameter[V, C](
+      names: Seq[String],
+      label: String,
+      default: Option[V],
+      isRequired: Boolean,
+      valueSpec: ValueSpec[V],
+      applyOp: (C, V) => C,
+      acceptOp: String => Boolean) 
+    extends Parameter[V, C], ParameterSetting[V, C]:
+
+  def default(value: V): NamedParameter[V, C] = copy(default = Some(value))
+
+  def apply(op: (C, V) => C): NamedParameter[V, C] =
     copy(applyOp = op)
 
-  def accept(op: String => Boolean): Parameter[V, C] = 
+  def accept(op: String => Boolean): NamedParameter[V, C] = 
     copy(acceptOp = op)
 
-  def label(label: String): Parameter[V, C] =
+  def label(label: String): NamedParameter[V, C] =
     copy(label = label)
 
   def convert(value: String): V = valueSpec.convert(value)
 
   def name: String = names.headOption.getOrElse("")
 
-  def name(name: String): Parameter[V, C] =
+  def name(name: String): NamedParameter[V, C] =
     copy(names = name +: names.drop(1))
 
-  def names(name: String, names: String*): Parameter[V, C] =
+  def names(name: String, names: String*): NamedParameter[V, C] =
     copy(names = name +: names)
 
-  def required: Parameter[V, C] = copy(isRequired = true)
+  def required: NamedParameter[V, C] = copy(isRequired = true)
 
-  def optional: Parameter[V, C] = copy(isRequired = false)
+  def optional: NamedParameter[V, C] = copy(isRequired = false)
   
   def isOptional: Boolean = !isRequired 
+
+case class PositionalParameter[V, C](
+    label: String,
+    default: Option[V],
+    isRequired: Boolean,
+    valueSpec: ValueSpec[V],
+    applyOp: (C, V) => C,
+    acceptOp: String => Boolean) extends Parameter[V, C], ParameterSetting[V, C]:
+
+  def names: Seq[String] = Seq()
+  
+  def name: String = ""
+  
+  def default(value: V): PositionalParameter[V, C] = copy(default = Some(value))
+
+  def apply(op: (C, V) => C): PositionalParameter[V, C] =
+    copy(applyOp = op)
+
+  def accept(op: String => Boolean): PositionalParameter[V, C] = 
+    copy(acceptOp = op)
+
+  def label(label: String): PositionalParameter[V, C] =
+    copy(label = label)
+
+  def convert(value: String): V = valueSpec.convert(value)
+
+  def required: PositionalParameter[V, C] = copy(isRequired = true)
+
+  def optional: PositionalParameter[V, C] = copy(isRequired = false)
+  
+  def isOptional: Boolean = !isRequired 
+
+case class TrailingParameters[V, C](
+    label: String,
+    default: Option[V],
+    isRequired: Boolean,
+    valueSpec: ValueSpec[V],
+    applyOp: (C, V) => C,
+    acceptOp: String => Boolean) extends Parameter[V, C], ParameterSetting[V, C]:
+
+  def names: Seq[String] = Seq()
+  
+  def name: String = ""
+  
+  def default(value: V): TrailingParameters[V, C] = copy(default = Some(value))
+
+  def apply(op: (C, V) => C): TrailingParameters[V, C] =
+    copy(applyOp = op)
+
+  def accept(op: String => Boolean): TrailingParameters[V, C] = 
+    copy(acceptOp = op)
+
+  def label(label: String): TrailingParameters[V, C] =
+    copy(label = label)
+
+  def convert(value: String): V = valueSpec.convert(value)
+
+  def required: TrailingParameters[V, C] = copy(isRequired = true)
+
+  def optional: TrailingParameters[V, C] = copy(isRequired = false)
+  
+  def isOptional: Boolean = !isRequired 
+

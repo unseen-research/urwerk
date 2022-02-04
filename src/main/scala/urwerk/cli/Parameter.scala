@@ -13,7 +13,7 @@ object Parameter:
   def param[V](using valueSpec: ValueSpec[V], config: WithConfig[?])(name: String, names: String*): NamedParameter[V, config.CC] = 
     new NamedParameter(name +: names, valueSpec.defaultLabel, None, false, valueSpec, {(config, _) => config}, _ => true)
 
-  def trailingParams[V](using config: WithConfig[?]): TrailingArgs[config.CC] = 
+  def trailingArgs[V](using config: WithConfig[?]): TrailingArgs[config.CC] = 
     val valueSpec = summon[ValueSpec[String]]
     new TrailingArgs(valueSpec.defaultLabel, None, false, valueSpec, {(config, _) => config}, _ => true)
 
@@ -73,7 +73,7 @@ object Parameter:
       value.stripPrefix("'").stripSuffix("'")
     else value
 
-sealed trait Parameter[V, C]:
+sealed trait Parameter[V, C] extends ParameterSetting[V, C]:
   def names: Seq[String]
   def name: String    
   def label: String
@@ -92,7 +92,7 @@ case class NamedParameter[V, C](
       valueSpec: ValueSpec[V],
       applyOp: (C, V) => C,
       acceptOp: String => Boolean) 
-    extends Parameter[V, C], ParameterSetting[V, C]:
+    extends Parameter[V, C]:
 
   def default(value: V): NamedParameter[V, C] = copy(default = Some(value))
 
@@ -127,7 +127,7 @@ case class PositionalParameter[V, C](
     isRequired: Boolean,
     valueSpec: ValueSpec[V],
     applyOp: (C, V) => C,
-    acceptOp: String => Boolean) extends Parameter[V, C], ParameterSetting[V, C]:
+    acceptOp: String => Boolean) extends Parameter[V, C]:
 
   def names: Seq[String] = Seq()
   
@@ -158,7 +158,7 @@ case class TrailingArgs[C](
     isRequired: Boolean,
     valueSpec: ValueSpec[String],
     applyOp: (C, String) => C,
-    acceptOp: String => Boolean) extends Parameter[String, C], ParameterSetting[String, C]:
+    acceptOp: String => Boolean) extends Parameter[String, C]:
 
   def names: Seq[String] = Seq()
   

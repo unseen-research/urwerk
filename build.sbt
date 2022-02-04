@@ -22,7 +22,6 @@ lazy val root = project
       "info.picocli" % "picocli" % "4.6.2" % "compile",
       "com.outr" %% "scribe" % "3.6.2",
       "com.outr" %% "scribe-slf4j" % "3.6.2",
-      //"org.wvlet.airframe" %% "airframe-launcher" % "21.12.1",
 
       "org.scalatest" %% "scalatest" % "3.2.9" % "test",
       "org.scalatestplus" %% "junit-4-13" % "3.2.9.0" % "test",

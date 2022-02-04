@@ -1,7 +1,7 @@
 package urwerk.cli
 
-import urwerk.cli.ParameterList.Label
-import urwerk.cli.Parameter.param
+import urwerk.cli.ParameterList.{Label, Setting}
+import urwerk.cli.Parameter.{param, trailingArgs}
 import urwerk.test.TestBase
 
 class ParameterListTest extends TestBase:
@@ -98,7 +98,7 @@ class ParameterListTest extends TestBase:
     }
 
     "followed by separator followed by boolean defaults to implicit true value" in {
-      val params2 = params.add(
+      val params2 = params.set(
         param[Boolean]
           .apply{(config, value) => config + s"positional-$value"})
       
@@ -140,7 +140,7 @@ class ParameterListTest extends TestBase:
           .apply{(config, value) => config :+ value},
         param[Int]
           .apply{(config, value) => config :+ value})
-      .add(
+      .set(
         param[Int]
           .apply{(config, value) => config :+ value},
         param[Int]
@@ -247,44 +247,48 @@ class ParameterListTest extends TestBase:
     params.label should be("PARAMS2")
   }
 
-  "with config" in {
-    given WithConfig[String] with {}
-    
-    val params = Seq(
-      param[Boolean]("param1", "a")
-        .apply{(config, value) => config + s"param1-$value"},
-      param[Int]("param2", "b")
-        .apply{(config, value) => config + s"param2-$value"})
-
-    val paramList = ParameterList.from(params)
-    paramList.namedParams should be(params)
-  }
-
-  "create parameter list command setting" - {
+  "from settings" - {
     given WithConfig[String] with {}
  
-    val namedParams = Seq(
+    val namedParams: Seq[Setting] = Seq(
       param[Boolean]("param1", "a"),
       param[Int]("param2", "b"))
 
-    val positionalParams = Seq(
+    val positionalParams: Seq[Setting] = Seq(
       param[Boolean],
       param[Int])
 
+    val settings = namedParams ++ positionalParams
+    
+    "named params" in {
+      val params = ParameterList.from(settings)
+      params.namedParams should be (namedParams)
+    } 
 
-      "without label" in {
-        val setting = ParameterList := namedParams ++ positionalParams
+    "positional params" in {
+      val params = ParameterList.from(settings)
+      params.positionalParams should be (positionalParams)
+    } 
 
-        setting.paramList.label should be("")
-        setting.paramList.namedParams should be (namedParams)
-        setting.paramList.positionalParams should be (positionalParams)
-      }
+    "without label" in {
+      val params = ParameterList.from(settings)
+      params.label should be("")
+    }
 
-      "with label" in {
-        val setting = ParameterList / "LABEL" := namedParams ++ positionalParams
+    "with label" in {
+      val params = ParameterList.from(settings :+ Label("LABEL"))
+      params.label should be("LABEL")
+    }
 
-        setting.paramList.label should be("LABEL")
-        setting.paramList.namedParams should be (namedParams)
-        setting.paramList.positionalParams should be (positionalParams)
-      }
+    "without trailing args" in {
+      val params = ParameterList.from(settings)
+      params.trailingArgs should be (None)
+    }
+
+    "with trailing args" in {
+      val givenTrailingArgs = trailingArgs
+      val params = ParameterList.from(settings :+ givenTrailingArgs)
+      
+      params.trailingArgs should be (Some(givenTrailingArgs))
+    }
   }

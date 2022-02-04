@@ -238,7 +238,10 @@ class ParameterList[C](settings: Seq[Setting]):
     .map(_.asInstanceOf[Label].label)
     .lastOption.getOrElse("")
 
-  def add(setting: WithConfig[C] ?=> Setting, settings: WithConfig[C] ?=> Setting*): ParameterList[C] =
+  def settings(settings: Seq[Setting]): ParameterList[C] =  
+    ParameterList.from[C](this.settings ++ settings)
+
+  def set(setting: WithConfig[C] ?=> Setting, settings: WithConfig[C] ?=> Setting*): ParameterList[C] =
     given WithConfig[C] = new WithConfig[C]{}
 
     val nextSettings = this.settings

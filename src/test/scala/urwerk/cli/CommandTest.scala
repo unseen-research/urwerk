@@ -7,6 +7,17 @@ import Parameter.{param, toParam, trailingArgs}
 
 class CommandTest extends TestBase:
   
+  "parameter list setting" in {
+    given WithConfig[String] = new WithConfig{}
+
+    val paramListSetting = ParameterList := Seq(
+      param[Int].apply((c, v)=> c+v),
+      param[String].apply((c, v)=> c+v))
+
+    val (config, pos) = paramListSetting.paramList.collect("", Seq("5", "abc"))
+    config should be("5abc")
+  }
+
   "command setting" - {
 
     val cmd = Command(Seq[String]())(

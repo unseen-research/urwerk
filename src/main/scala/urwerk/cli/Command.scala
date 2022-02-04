@@ -5,9 +5,9 @@ object Command:
   sealed trait Setting[C]
 
   object Action:
-    def :=[C](using ev: WithConfig[C])(action: C=>Int): ActionSetting[C] = ActionSetting(action)
+    def := [C] (action: C => Int): ActionSetting[C] = ActionSetting(action)
 
-  case class ActionSetting[C](action: C=>Int) extends Setting[C]
+  case class ActionSetting[C](action: C => Int) extends Setting[C]
 
   case class ParameterListSetting[C](paramList: ParameterList[C]) extends Setting[C]
 
@@ -15,7 +15,7 @@ object Command:
     def :=[C](settings: Seq[ParameterList.Setting[C]]): Command.ParameterListSetting[C] 
 
   extension (paramListObject: ParameterList.type)
-    def :=[C](settings:  Seq[ParameterList.Setting[C]]): Command.ParameterListSetting[C] = 
+    def :=[C](settings: Seq[ParameterList.Setting[C]]): Command.ParameterListSetting[C] = 
       Command.ParameterListSetting(
         paramListObject.from(settings))
 

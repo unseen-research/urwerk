@@ -240,11 +240,17 @@ class ParameterListTest extends TestBase:
     exception.position should be (Position(1, 0))
   }
 
-  "add label" in {
-    val params = ParameterList[Set[String]](
-      Label("PARAMS1"), Label("PARAMS2"))
+  "trailing args" in {
+    val params = ParameterList[String](
+      param[Int]{(config, value) => 
+        config + value},
+      trailingArgs{(config, value) => 
+        config + value
+      })
 
-    params.label should be("PARAMS2")
+      val (config, pos) = params.collect("", Seq("1", "a", "b", "c"))
+      config should be ("1abc")
+      pos should be (Position(4, 0))
   }
 
   "from settings" - {

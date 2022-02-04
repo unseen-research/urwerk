@@ -72,6 +72,7 @@ object ParameterList:
     val collector = Collector(
       namedParams = namedParamsMap(paramList), 
       positionalParams = paramList.positionalParams, 
+      trailingArgs = paramList.trailingArgs,
       pos = pos, 
       config = config, 
       args = args)
@@ -87,6 +88,7 @@ object ParameterList:
   private case class Collector[C](
       namedParams: Map[String, Parameter[?, C]], 
       positionalParams: Seq[Parameter[?, C]], 
+      trailingArgs: Option[TrailingArgs[C]],
       config: C,
       args: Seq[String], 
       pos: Position, 
@@ -116,7 +118,7 @@ object ParameterList:
       val Position(argIndex, flagIndex) = pos
       if argIndex >= args.size then
         val updated = applyDefaultValueToPreviousName(previousName)
-        updated.copy(completed=true)
+        updated.completeWithTrailingArgs()
       
       else if isFlags(args(argIndex)) && flagIndex >= args(argIndex).size -1 then 
         copy(pos=Position(argIndex+1, 0), previousName=previousName)
@@ -133,7 +135,7 @@ object ParameterList:
             updated.copy(pos=Position(argIndex+1, 0), previousName=name)
         
           else
-            updated.copy(completed=true)
+            updated.completeWithTrailingArgs()
 
         else if isFlags(arg) then 
           val updated = applyDefaultValueToPreviousName(previousName)
@@ -145,7 +147,7 @@ object ParameterList:
           if paramOpt.isDefined then
             updated.copy(pos=Position(argIndex, flagIndex+1), previousName=name)
           else
-            updated.copy(completed=true)
+            updated.completeWithTrailingArgs()
         
         else if isSeparator(arg) then
           val updated = applyDefaultValueToPreviousName(previousName)
@@ -176,7 +178,7 @@ object ParameterList:
                 throw IllegalStateException("this position may never be reached")
           else
             if positionalIndex >= positionalParams.size then
-              copy(completed=true)
+              completeWithTrailingArgs()
             else
               val param = positionalParams(positionalIndex)
               copy(
@@ -196,6 +198,22 @@ object ParameterList:
         if param.isRequired && !appliedParamKeys.contains(index) then
           throw ParameterNotFoundException(pos, param)
       }
+
+    private def completeWithTrailingArgs(): Collector[C] = 
+      trailingArgs match
+        case Some(trailingArgs) => 
+          val Position(argIndex, flagIndex) = pos
+
+          val tail = args.drop(argIndex)
+          val nextConfig = tail.zipWithIndex.foldLeft(config){case (config, (arg, tailIndex))=>
+            val nextArgIndex = argIndex+tailIndex
+            val nextConfig = trailingArgs.apply(config, arg, Position(nextArgIndex, 0))
+            nextConfig
+          }
+          copy(config = nextConfig, completed = true, pos = Position(argIndex + tail.size, 0))
+
+        case None => 
+          copy(completed=true)
 
   private def namedParamsMap[C](paramList: ParameterList[C]): Map[String, Parameter[?, C]] =
     namedParameters(paramList.namedParams, Map())

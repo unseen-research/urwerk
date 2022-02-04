@@ -257,29 +257,34 @@ class ParameterListTest extends TestBase:
         .apply{(config, value) => config + s"param2-$value"})
 
     val paramList = ParameterList.from(params)
-    paramList.params should be(params)
+    paramList.namedParams should be(params)
   }
 
   "create parameter list command setting" - {
     given WithConfig[String] with {}
+ 
+    val namedParams = Seq(
+      param[Boolean]("param1", "a"),
+      param[Int]("param2", "b"))
 
-    val params = Seq(
-      param[Boolean]("param1", "a")
-        .apply{(config, value) => config + s"param1-$value"},
-      param[Int]("param2", "b")
-        .apply{(config, value) => config + s"param2-$value"})
+    val positionalParams = Seq(
+      param[Boolean],
+      param[Int])
+
 
       "without label" in {
-        val setting = ParameterList := params
+        val setting = ParameterList := namedParams ++ positionalParams
 
         setting.paramList.label should be("")
-        setting.paramList.params should be (params)
+        setting.paramList.namedParams should be (namedParams)
+        setting.paramList.positionalParams should be (positionalParams)
       }
 
       "with label" in {
-        val setting = ParameterList / "LABEL" := params
+        val setting = ParameterList / "LABEL" := namedParams ++ positionalParams
 
         setting.paramList.label should be("LABEL")
-        setting.paramList.params should be (params)
+        setting.paramList.namedParams should be (namedParams)
+        setting.paramList.positionalParams should be (positionalParams)
       }
   }

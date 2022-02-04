@@ -13,8 +13,9 @@ object Parameter:
   def param[V](using valueSpec: ValueSpec[V], config: WithConfig[?])(name: String, names: String*): NamedParameter[V, config.CC] = 
     new NamedParameter(name +: names, valueSpec.defaultLabel, None, false, valueSpec, {(config, _) => config}, _ => true)
 
-  def trailingParams[V](using valueSpec: ValueSpec[V], config: WithConfig[?]): TrailingParameters[V, config.CC] = 
-    new TrailingParameters(valueSpec.defaultLabel, None, false, valueSpec, {(config, _) => config}, _ => true)
+  def trailingParams[V](using config: WithConfig[?]): TrailingArgs[config.CC] = 
+    val valueSpec = summon[ValueSpec[String]]
+    new TrailingArgs(valueSpec.defaultLabel, None, false, valueSpec, {(config, _) => config}, _ => true)
 
   trait ValueSpec[V]:
     type VV = V
@@ -151,34 +152,34 @@ case class PositionalParameter[V, C](
   
   def isOptional: Boolean = !isRequired 
 
-case class TrailingParameters[V, C](
+case class TrailingArgs[C](
     label: String,
-    default: Option[V],
+    default: Option[String],
     isRequired: Boolean,
-    valueSpec: ValueSpec[V],
-    applyOp: (C, V) => C,
-    acceptOp: String => Boolean) extends Parameter[V, C], ParameterSetting[V, C]:
+    valueSpec: ValueSpec[String],
+    applyOp: (C, String) => C,
+    acceptOp: String => Boolean) extends Parameter[String, C], ParameterSetting[String, C]:
 
   def names: Seq[String] = Seq()
   
   def name: String = ""
   
-  def default(value: V): TrailingParameters[V, C] = copy(default = Some(value))
+  def default(value: String): TrailingArgs[C] = copy(default = Some(value))
 
-  def apply(op: (C, V) => C): TrailingParameters[V, C] =
+  def apply(op: (C, String) => C): TrailingArgs[C] =
     copy(applyOp = op)
 
-  def accept(op: String => Boolean): TrailingParameters[V, C] = 
+  def accept(op: String => Boolean): TrailingArgs[C] = 
     copy(acceptOp = op)
 
-  def label(label: String): TrailingParameters[V, C] =
+  def label(label: String): TrailingArgs[C] =
     copy(label = label)
 
-  def convert(value: String): V = valueSpec.convert(value)
+  def convert(value: String): String = valueSpec.convert(value)
 
-  def required: TrailingParameters[V, C] = copy(isRequired = true)
+  def required: TrailingArgs[C] = copy(isRequired = true)
 
-  def optional: TrailingParameters[V, C] = copy(isRequired = false)
+  def optional: TrailingArgs[C] = copy(isRequired = false)
   
   def isOptional: Boolean = !isRequired 
 

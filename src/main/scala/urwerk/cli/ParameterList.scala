@@ -3,9 +3,11 @@ package urwerk.cli
 import scala.annotation.tailrec
 
 import Parameter.*
+import ParameterList.{Setting, Label}
+
 
 trait ParameterListFactory: 
-  def :=[C](using ev: WithConfig[C])(param: Seq[Parameter[?, C]]): Command.ParameterListSetting[C]
+  def :=[C](using ev: WithConfig[C])(param: Seq[Setting]): Command.ParameterListSetting[C]
 
 case class Position(val argIndex: Int, val flagIndex: Int)
 
@@ -16,34 +18,26 @@ object ParameterList:
 
   case class Label(label: String) extends Setting
 
-  def :=[C](using ev: WithConfig[C])(params: Seq[Parameter[?, C]]): Command.ParameterListSetting[C] = 
-    Command.ParameterListSetting(ParameterList.from(params))
+  def :=[C](using ev: WithConfig[C])(settings: Seq[Setting]): Command.ParameterListSetting[C] = 
+    Command.ParameterListSetting(
+      from(settings))
 
   def / (label: String): ParameterListFactory = 
     new ParameterListFactory:
-      def :=[C](using ev: WithConfig[C])(params: Seq[Parameter[?, C]]): Command.ParameterListSetting[C] =
-        Command.ParameterListSetting(new ParameterList(label, params))
+      def :=[C](using ev: WithConfig[C])(settings: Seq[Setting]): Command.ParameterListSetting[C] = 
+        Command.ParameterListSetting(from(settings :+ Label(label)))
 
-  def from[C](params: Seq[Parameter[?, C]]): ParameterList[C] = new ParameterList("", params)
-
+  def from[C](settings: Seq[Setting]): ParameterList[C] = 
+    new ParameterList[C](settings)
+  
   def apply[C](setting: WithConfig[C] ?=> Setting, settings: WithConfig[C] ?=> Setting*): ParameterList[C] =
     given WithConfig[C] = new WithConfig[C]{}
      
     val resolvedSetting= setting
     val resolvedSettings = settings.map(param => param)
+    val jointSettings = resolvedSetting +: resolvedSettings
 
-    val jointSettings = resolvedSetting +: resolvedSettings.view
-    val resolvedParams = jointSettings
-      .filter(_.isInstanceOf[Parameter[?, ?]])
-      .map(_.asInstanceOf[Parameter[?, C]])
-      .toSeq
-
-    val label = jointSettings
-      .filter(_.isInstanceOf[Label])
-      .map(_.asInstanceOf[Label].label)
-      .lastOption.getOrElse("")
-      
-    new ParameterList[C](label, resolvedParams)
+    from(jointSettings)
 
   extension [C](paramList: ParameterList[C])
     def collect(config: C, args: Seq[String]): (C, Position) = 
@@ -74,13 +68,10 @@ object ParameterList:
       paramList: ParameterList[C], 
       pos: Position, 
       args: Seq[String]): (C, Position) =
-    val params = paramList.params
-    val positionalParams = positionalParameters(params)
-    val namedParams = namedParameters(params) 
     
     val collector = Collector(
-      namedParams = namedParams, 
-      positionalParams = positionalParams, 
+      namedParams = namedParamsMap(paramList), 
+      positionalParams = paramList.positionalParams, 
       pos = pos, 
       config = config, 
       args = args)
@@ -206,11 +197,8 @@ object ParameterList:
           throw ParameterNotFoundException(pos, param)
       }
 
-  
-  private def positionalParameters[C](params: Seq[Parameter[?, C]]) = params.filter(_.names.isEmpty)
-
-  private def namedParameters[C](params: Seq[Parameter[?, C]]): Map[String, Parameter[?, C]] =
-    namedParameters(params, Map())
+  private def namedParamsMap[C](paramList: ParameterList[C]): Map[String, Parameter[?, C]] =
+    namedParameters(paramList.namedParams, Map())
 
   @tailrec
   private def namedParameters[C](params: Seq[Parameter[?, C]], paramsMap: Map[String, Parameter[?, C]]): Map[String, Parameter[?, C]] =
@@ -229,11 +217,32 @@ object ParameterList:
       }
       namedParameters(params.tail, map)
 
-class ParameterList[C](val label: String, val params: Seq[Parameter[?, C]]):
-  def add(param: WithConfig[C] ?=> Parameter[?, C], params: WithConfig[C] ?=> Parameter[?, C]*): ParameterList[C] =
-    given WithConfig[C] = new WithConfig[C]{}
-     
-    val resolvedParam = param
-    val resolvedParams = params.map(param => param)
+class ParameterList[C](settings: Seq[Setting]):
 
-    new ParameterList[C](label, this.params ++ (resolvedParam +: resolvedParams))
+  lazy val namedParams: Seq[NamedParameter[?, C]] = settings
+    .filter(_.isInstanceOf[NamedParameter[?, ?]])
+    .map(_.asInstanceOf[NamedParameter[?, C]])
+
+  lazy val positionalParams: Seq[PositionalParameter[?, C]] = settings
+    .filter(_.isInstanceOf[PositionalParameter[?, ?]])
+    .map(_.asInstanceOf[PositionalParameter[?, C]])
+
+
+  lazy val trailingArgs: Option[TrailingArgs[C]] = settings
+    .filter(param => param.isInstanceOf[TrailingArgs[?]])
+    .map(_.asInstanceOf[TrailingArgs[C]])
+    .lastOption
+
+  lazy val label = settings
+    .filter(_.isInstanceOf[Label])
+    .map(_.asInstanceOf[Label].label)
+    .lastOption.getOrElse("")
+
+  def add(setting: WithConfig[C] ?=> Setting, settings: WithConfig[C] ?=> Setting*): ParameterList[C] =
+    given WithConfig[C] = new WithConfig[C]{}
+
+    val nextSettings = this.settings
+      .appended(setting)
+      .appendedAll(settings.map(setting => setting))
+
+    ParameterList.from[C](nextSettings)

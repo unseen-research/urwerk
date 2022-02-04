@@ -2,21 +2,35 @@ package urwerk.cli
 
 object Command: 
   
-  sealed trait Setting
+  sealed trait Setting[C]
 
   object Action:
     def :=[C](using ev: WithConfig[C])(action: C=>Int): ActionSetting[C] = ActionSetting(action)
 
-  case class ActionSetting[C](action: C=>Int) extends Setting
+  case class ActionSetting[C](action: C=>Int) extends Setting[C]
 
-  case class ParameterListSetting[C](paramList: ParameterList[C]) extends Setting
+  case class ParameterListSetting[C](paramList: ParameterList[C]) extends Setting[C]
+
+  trait ParameterListFactory: 
+    def :=[C](settings: Seq[ParameterList.Setting]): Command.ParameterListSetting[C] 
+
+  extension (paramListObject: ParameterList.type)
+    def :=[C](settings:  Seq[ParameterList.Setting]): Command.ParameterListSetting[C] = 
+      Command.ParameterListSetting(
+        paramListObject.from(settings))
+
+    def / (label: String): ParameterListFactory = 
+      new ParameterListFactory:
+        def :=[C](settings: Seq[ParameterList.Setting]): Command.ParameterListSetting[C] =       
+          Command.ParameterListSetting(
+            paramListObject.from(settings :+ ParameterList.Label(label)))
 
   object Description:
-    def := (description: String): DescriptionSetting = DescriptionSetting(description)
+    def := [C] (description: String): DescriptionSetting[C] = DescriptionSetting(description)
 
-  case class DescriptionSetting(description: String) extends Setting
+  case class DescriptionSetting[C](description: String) extends Setting[C]
 
-  def apply[C](config: C)(setting: WithConfig[C] ?=> Setting, settings: WithConfig[C] ?=> Setting*): Command[C] = 
+  def apply[C](config: C)(setting: WithConfig[C] ?=> Setting[C], settings: WithConfig[C] ?=> Setting[C]*): Command[C] = 
     given WithConfig[C] = new WithConfig[C]{}
      
     val resolvedSetting= setting
@@ -25,8 +39,8 @@ object Command:
     val jointSettings = resolvedSetting +: resolvedSettings.view
 
     val description = jointSettings
-      .filter(_.isInstanceOf[DescriptionSetting])
-      .map(_.asInstanceOf[DescriptionSetting])
+      .filter(_.isInstanceOf[DescriptionSetting[?]])
+      .map(_.asInstanceOf[DescriptionSetting[C]])
       .map(_.description)
       .lastOption
       .getOrElse("")

@@ -5,10 +5,6 @@ import scala.annotation.tailrec
 import Parameter.*
 import ParameterList.{Setting, Label}
 
-
-trait ParameterListFactory: 
-  def :=[C](using ev: WithConfig[C])(param: Seq[Setting]): Command.ParameterListSetting[C]
-
 case class Position(val argIndex: Int, val flagIndex: Int)
 
 object ParameterList:
@@ -17,15 +13,6 @@ object ParameterList:
   transparent trait ParameterSetting[V, C] extends Setting
 
   case class Label(label: String) extends Setting
-
-  def :=[C](using ev: WithConfig[C])(settings: Seq[Setting]): Command.ParameterListSetting[C] = 
-    Command.ParameterListSetting(
-      from(settings))
-
-  def / (label: String): ParameterListFactory = 
-    new ParameterListFactory:
-      def :=[C](using ev: WithConfig[C])(settings: Seq[Setting]): Command.ParameterListSetting[C] = 
-        Command.ParameterListSetting(from(settings :+ Label(label)))
 
   def from[C](settings: Seq[Setting]): ParameterList[C] = 
     new ParameterList[C](settings)

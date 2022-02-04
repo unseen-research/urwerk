@@ -12,7 +12,7 @@ case class Position(val argIndex: Int, val flagIndex: Int)
 object ParameterList:
   sealed trait Setting
 
-  trait ParameterSetting[V, C] extends Setting
+  transparent trait ParameterSetting[V, C] extends Setting
 
   case class Label(label: String) extends Setting
 

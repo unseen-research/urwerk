@@ -13,7 +13,7 @@ object Parameter:
   def param[V](using valueSpec: ValueSpec[V], config: WithConfig[?])(name: String, names: String*): NamedParameter[V, config.CC] = 
     new NamedParameter(name +: names, valueSpec.defaultLabel, None, false, valueSpec, {(config, _) => config}, _ => true)
 
-  def trailingArgs[V](using config: WithConfig[?]): TrailingArgs[config.CC] = 
+  def trailingArgs(using config: WithConfig[?]): TrailingArgs[config.CC] = 
     val valueSpec = summon[ValueSpec[String]]
     new TrailingArgs(valueSpec.defaultLabel, None, false, valueSpec, {(config, _) => config}, _ => true)
 

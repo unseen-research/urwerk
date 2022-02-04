@@ -242,6 +242,16 @@ class ParameterListTest extends TestBase:
 
   "trailing args" in {
     val params = ParameterList[String](
+      trailingArgs{(config, value) => 
+        config + value
+      })
+    val (config, pos) = params.collect("", Seq("a", "b", "c"))
+    config should be ("abc")
+    pos should be (Position(3, 0))
+  }
+
+  "params with trailing args" in {
+    val params = ParameterList[String](
       param[Int]{(config, value) => 
         config + value},
       trailingArgs{(config, value) => 

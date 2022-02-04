@@ -56,7 +56,7 @@ object ParameterList:
     def applyTypeDefaultValue(config: C, pos: Position): C = 
       param.valueSpec.defaultValue match
         case Some(value) =>
-          param.applyOp(value, config)
+          param.applyOp(config, value)
         case None =>
           throw ValueNotFoundException(pos)
 
@@ -64,7 +64,7 @@ object ParameterList:
       if !accept(arg) then
         throw ParameterValueRejected(pos)
       val value = param.valueSpec.convert(arg)
-      param.applyOp(value, config)
+      param.applyOp(config, value)
 
     def accept(arg: String): Boolean = 
       param.acceptOp(arg)

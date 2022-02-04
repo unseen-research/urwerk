@@ -9,7 +9,7 @@ class ParameterListTest extends TestBase:
   "collect positional value arg" - {
     val params = ParameterList[Seq[Int]](
       param[Int]
-        .apply{case (value, config) => config :+ value}
+        .apply{(config, value) => config :+ value}
     )
 
     "followed by nothing" in {
@@ -36,7 +36,7 @@ class ParameterListTest extends TestBase:
   "collect named param" - {
     val params = ParameterList[Seq[String]]{
         param[String]("param", "alias", "p")
-          .apply{case (value, config) => config :+ value}} 
+          .apply{(config, value) => config :+ value}} 
 
     "with primary name followed by nothing" in {
       params.collect(Seq(), Seq("--param", "any-value")) should be ((Seq("any-value"), Position(2, 0)))
@@ -75,7 +75,7 @@ class ParameterListTest extends TestBase:
   "collect named boolean param" - {
     val params = ParameterList[Set[String]]{
         param[Boolean]("param", "alias")
-          .apply{case (value, config) => config + s"param-$value"}} 
+          .apply{(config, value) => config + s"param-$value"}} 
 
     "with explicit true value" in {
       params.collect(Set(), Seq("--param", "true")) should be ((Set("param-true"), Position(2, 0)))
@@ -100,7 +100,7 @@ class ParameterListTest extends TestBase:
     "followed by separator followed by boolean defaults to implicit true value" in {
       val params2 = params.add(
         param[Boolean]
-          .apply{case (value, config) => config + s"positional-$value"})
+          .apply{(config, value) => config + s"positional-$value"})
       
       params2.collect(Set(), Seq("--param", "--", "false")) should be ((Set("param-true", "positional-false"), Position(3, 0)))
     }
@@ -109,13 +109,13 @@ class ParameterListTest extends TestBase:
   "joined flags" - {
     val params = ParameterList[Set[String]](
       param[Boolean]("a-param", "a")
-        .apply{case (value, config) => config + s"a-$value"},
+        .apply{(config, value) => config + s"a-$value"},
       param[Boolean]("b-param", "b")
-        .apply{case (value, config) => config + s"b-$value"},
+        .apply{(config, value) => config + s"b-$value"},
       param[Boolean]("c-param", "c")
-        .apply{case (value, config) => config + s"c-$value"},
+        .apply{(config, value) => config + s"c-$value"},
       param[String]("d-param", "d")
-        .apply{case (value, config) => config + s"d-$value"})
+        .apply{(config, value) => config + s"d-$value"})
 
     "without value" in {
       params.collect(Set(), Seq("-abc")) should be ((Set("a-true", "b-true", "c-true"), Position(1, 0)))
@@ -137,14 +137,14 @@ class ParameterListTest extends TestBase:
   "positional values" in {
     val params = ParameterList[Seq[Int]](
         param[Int]
-          .apply{case (value, config) => config :+ value},
+          .apply{(config, value) => config :+ value},
         param[Int]
-          .apply{case (value, config) => config :+ value})
+          .apply{(config, value) => config :+ value})
       .add(
         param[Int]
-          .apply{case (value, config) => config :+ value},
+          .apply{(config, value) => config :+ value},
         param[Int]
-          .apply{case (value, config) => config :+ value})
+          .apply{(config, value) => config :+ value})
 
     params.collect(Seq(), Seq("1", "2", "3", "4", "5")) should be (Seq(1, 2, 3, 4), Position(4, 0))
   }
@@ -166,13 +166,13 @@ class ParameterListTest extends TestBase:
     val params = ParameterList[Seq[Int]](
       param[Int]
         .label("a")
-        .apply{case (value, config) => config :+ value},
+        .apply{(config, value) => config :+ value},
       param[Int]
         .label("b")
         .required,
       param[Int]
         .label("c")        
-        .apply{case (value, config) => config :+ value})
+        .apply{(config, value) => config :+ value})
 
     val ex = intercept[ParameterNotFoundException]{
       params.collect(Seq(), Seq("1"))
@@ -185,17 +185,17 @@ class ParameterListTest extends TestBase:
   "multiple params" in {
     val params = ParameterList[Set[String]](
       param[Boolean]("param1", "a")
-        .apply{case (value, config) => config + s"param1-$value"},
+        .apply{(config, value) => config + s"param1-$value"},
       param[Int]("param2", "b")
-        .apply{case (value, config) => config + s"param2-$value"},
+        .apply{(config, value) => config + s"param2-$value"},
       param[Int]
-        .apply{case (value, config) => config + s"pos-int-$value"},
+        .apply{(config, value) => config + s"pos-int-$value"},
       param[String]("param3", "c")
-        .apply{case (value, config) => config + s"param3-$value"},
+        .apply{(config, value) => config + s"param3-$value"},
       param[String]
-        .apply{case (value, config) => config + s"pos-string-$value"}, 
+        .apply{(config, value) => config + s"pos-string-$value"}, 
       param[Boolean]
-        .apply{case (value, config) => config + s"pos-boolean-$value"})
+        .apply{(config, value) => config + s"pos-boolean-$value"})
 
     val (config, pos) = params.collect(Set(), Seq("--param1", "true", "77", "--param1", "false", "positional-value", "true", "--param3", "value3", "--param2", "42", "tail1", "tail2"))
     
@@ -206,7 +206,7 @@ class ParameterListTest extends TestBase:
   "collect with initial position" in {
     val params = ParameterList[Seq[Int]](
       param[Int]
-        .apply{case (value, config) => config :+ value})
+        .apply{(config, value) => config :+ value})
 
     val (config, pos) = params.collect(Seq(), Position(2, 0), Seq("abc", "def", "77", "xyz"))
     config should be (Seq(77))
@@ -217,7 +217,7 @@ class ParameterListTest extends TestBase:
     val params = ParameterList[Seq[Int]](
       param[Int]("param")
         .accept(_ => false)
-        .apply{case (value, config) => config :+ value})
+        .apply{(config, value) => config :+ value})
 
     val exception = intercept[ParameterValueRejected]{
       params.collect(Seq(), Seq("--param", "value"))}
@@ -229,10 +229,10 @@ class ParameterListTest extends TestBase:
     val params = ParameterList[Seq[Int]](
       param[Int]
         .accept(_ => true)
-        .apply{case (value, config) => config :+ value},
+        .apply{(config, value) => config :+ value},
       param[Int]
         .accept(_ => false)
-        .apply{case (value, config) => config :+ value})
+        .apply{(config, value) => config :+ value})
 
     val exception = intercept[ParameterValueRejected]{
       params.collect(Seq(), Seq("1", "2", "3"))}
@@ -252,9 +252,9 @@ class ParameterListTest extends TestBase:
     
     val params = Seq(
       param[Boolean]("param1", "a")
-        .apply{(value, config) => config + s"param1-$value"},
+        .apply{(config, value) => config + s"param1-$value"},
       param[Int]("param2", "b")
-        .apply{(value, config) => config + s"param2-$value"})
+        .apply{(config, value) => config + s"param2-$value"})
 
     val paramList = ParameterList.from(params)
     paramList.params should be(params)
@@ -265,9 +265,9 @@ class ParameterListTest extends TestBase:
 
     val params = Seq(
       param[Boolean]("param1", "a")
-        .apply{case (value, config) => config + s"param1-$value"},
+        .apply{(config, value) => config + s"param1-$value"},
       param[Int]("param2", "b")
-        .apply{case (value, config) => config + s"param2-$value"})
+        .apply{(config, value) => config + s"param2-$value"})
 
       "without label" in {
         val setting = ParameterList := params

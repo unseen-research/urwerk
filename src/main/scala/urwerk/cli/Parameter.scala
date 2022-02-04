@@ -8,10 +8,10 @@ trait WithConfig[C]:
 
 object Parameter:
   def param[V](using valueSpec: ValueSpec[V], config: WithConfig[?]): Parameter[V, config.CC] = 
-    new Parameter(Seq(), valueSpec.defaultLabel, None, false, valueSpec, {(_, config) => config}, _ => true)
+    new Parameter(Seq(), valueSpec.defaultLabel, None, false, valueSpec, {(config, _) => config}, _ => true)
 
   def param[V](using valueSpec: ValueSpec[V], config: WithConfig[?])(name: String, names: String*): Parameter[V, config.CC] = 
-    new Parameter(name +: names, valueSpec.defaultLabel, None, false, valueSpec, {(_, config) => config}, _ => true)
+    new Parameter(name +: names, valueSpec.defaultLabel, None, false, valueSpec, {(config, _) => config}, _ => true)
 
   trait ValueSpec[V]:
     type VV = V
@@ -74,12 +74,12 @@ case class Parameter[V, C](val names: Seq[String],
     val default: Option[V],
     val isRequired: Boolean,
     private[cli] val valueSpec: ValueSpec[V],
-    private[cli] val applyOp: (V, C) => C,
+    private[cli] val applyOp: (C, V) => C,
     private[cli] val acceptOp: String => Boolean) extends ParameterSetting[V, C]:
 
   def default(value: V): Parameter[V, C] = copy(default = Some(value))
 
-  def apply(op: (V, C) => C): Parameter[V, C] =
+  def apply(op: (C, V) => C): Parameter[V, C] =
     copy(applyOp = op)
 
   def accept(op: String => Boolean): Parameter[V, C] = 

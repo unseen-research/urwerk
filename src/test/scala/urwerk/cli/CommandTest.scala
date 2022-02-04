@@ -32,11 +32,11 @@ class CommandTest extends TestBase:
   "execute action with single parameter list" in {
     val cmd = Command(Seq[Int]())(
       ParameterList := Seq(
-        param[Int]((v, c) => c :+ v), 
-        param[Int]((v, c) => c :+ v)),
+        param[Int]((config, value) => config :+ value), 
+        param[Int]((config, value) => config :+ value)),
       ParameterList := Seq(
-        param[Int]((v, c) => c :+ v), 
-        param[Int]((v, c) => c :+ v)),
+        param[Int]((config, value) => config :+ value), 
+        param[Int]((config, value) => config :+ value)),
       Action := {config =>
         config.sum
       })
@@ -47,9 +47,9 @@ class CommandTest extends TestBase:
   "unknown positional parameter" in {
     val cmd = Command(Seq[Int]())(
       ParameterList := Seq(
-        param[Int]((v, c) => c :+ v)),
+        param[Int]((config, value) => config :+ value)),
       ParameterList := Seq( 
-        param[Int]((v, c) => c :+ v)))
+        param[Int]((config, value) => config :+ value)))
 
     val exception = intercept[UnknownParameterException]{
       cmd.execute("1", "2", "3")}
@@ -60,9 +60,9 @@ class CommandTest extends TestBase:
   "unknown named parameter" in {
     val cmd = Command(Seq[Int]())(
       ParameterList := Seq(
-        param[Int]((v, c) => c :+ v)),
+        param[Int]((config, value) => config :+ value)),
       ParameterList := Seq( 
-        param[Int]((v, c) => c :+ v)))
+        param[Int]((config, value) => config :+ value)))
 
     val exception = intercept[UnknownParameterException]{
       cmd.execute("1", "--name", "3")}

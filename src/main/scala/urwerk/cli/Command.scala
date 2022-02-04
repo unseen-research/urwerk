@@ -12,16 +12,16 @@ object Command:
   case class ParameterListSetting[C](paramList: ParameterList[C]) extends Setting[C]
 
   trait ParameterListFactory: 
-    def :=[C](settings: Seq[ParameterList.Setting]): Command.ParameterListSetting[C] 
+    def :=[C](settings: Seq[ParameterList.Setting[C]]): Command.ParameterListSetting[C] 
 
   extension (paramListObject: ParameterList.type)
-    def :=[C](settings:  Seq[ParameterList.Setting]): Command.ParameterListSetting[C] = 
+    def :=[C](settings:  Seq[ParameterList.Setting[C]]): Command.ParameterListSetting[C] = 
       Command.ParameterListSetting(
         paramListObject.from(settings))
 
     def / (label: String): ParameterListFactory = 
       new ParameterListFactory:
-        def :=[C](settings: Seq[ParameterList.Setting]): Command.ParameterListSetting[C] =       
+        def :=[C](settings: Seq[ParameterList.Setting[C]]): Command.ParameterListSetting[C] =       
           Command.ParameterListSetting(
             paramListObject.from(settings :+ ParameterList.Label(label)))
 

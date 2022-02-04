@@ -266,11 +266,11 @@ class ParameterListTest extends TestBase:
   "from settings" - {
     given WithConfig[String] with {}
  
-    val namedParams: Seq[Setting] = Seq(
+    val namedParams = Seq(
       param[Boolean]("param1", "a"),
       param[Int]("param2", "b"))
 
-    val positionalParams: Seq[Setting] = Seq(
+    val positionalParams = Seq(
       param[Boolean],
       param[Int])
 

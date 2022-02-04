@@ -8,16 +8,16 @@ import ParameterList.{Setting, Label}
 case class Position(val argIndex: Int, val flagIndex: Int)
 
 object ParameterList:
-  sealed trait Setting
+  sealed trait Setting[C]
 
-  transparent trait ParameterSetting[V, C] extends Setting
+  transparent trait ParameterSetting[V, C] extends Setting[C]
 
-  case class Label(label: String) extends Setting
+  case class Label[C](label: String) extends Setting[C]
 
-  def from[C](settings: Seq[Setting]): ParameterList[C] = 
+  def from[C](settings: Seq[Setting[C]]): ParameterList[C] = 
     new ParameterList[C](settings)
   
-  def apply[C](setting: WithConfig[C] ?=> Setting, settings: WithConfig[C] ?=> Setting*): ParameterList[C] =
+  def apply[C](setting: WithConfig[C] ?=> Setting[C], settings: WithConfig[C] ?=> Setting[C]*): ParameterList[C] =
     given WithConfig[C] = new WithConfig[C]{}
      
     val resolvedSetting= setting
@@ -222,7 +222,7 @@ object ParameterList:
       }
       namedParameters(params.tail, map)
 
-class ParameterList[C](settings: Seq[Setting]):
+class ParameterList[C](settings: Seq[Setting[C]]):
 
   lazy val namedParams: Seq[NamedParameter[?, C]] = settings
     .filter(_.isInstanceOf[NamedParameter[?, ?]])
@@ -239,14 +239,14 @@ class ParameterList[C](settings: Seq[Setting]):
     .lastOption
 
   lazy val label = settings
-    .filter(_.isInstanceOf[Label])
-    .map(_.asInstanceOf[Label].label)
+    .filter(_.isInstanceOf[Label[?]])
+    .map(_.asInstanceOf[Label[C]].label)
     .lastOption.getOrElse("")
 
-  def settings(settings: Seq[Setting]): ParameterList[C] =  
+  def settings(settings: Seq[Setting[C]]): ParameterList[C] =  
     ParameterList.from[C](this.settings ++ settings)
 
-  def set(setting: WithConfig[C] ?=> Setting, settings: WithConfig[C] ?=> Setting*): ParameterList[C] =
+  def set(setting: WithConfig[C] ?=> Setting[C], settings: WithConfig[C] ?=> Setting[C]*): ParameterList[C] =
     given WithConfig[C] = new WithConfig[C]{}
 
     val nextSettings = this.settings

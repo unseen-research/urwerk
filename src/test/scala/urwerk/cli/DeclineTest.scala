@@ -61,3 +61,26 @@ class DeclineTest extends TestBase:
 
   }
   
+  "elem labels" in {
+    case class A(int: Int, string: String)
+
+    import scala.deriving.Mirror
+    import scala.compiletime.summonAll
+
+    val mirror = summon[Mirror.Of[A]]    
+    
+    type ValueOfs = Tuple.Map[mirror.MirroredElemLabels, ValueOf]
+    
+    val valueOfs = summonAll[ValueOfs]
+
+    def values(t: Tuple): Tuple = t match
+      case (h: ValueOf[_]) *: t1 => h.value *: values(t1)
+      case EmptyTuple => EmptyTuple
+
+    val x = values(valueOfs) // (i,s)
+
+    println(s"Lables $x")
+
+
+
+  }

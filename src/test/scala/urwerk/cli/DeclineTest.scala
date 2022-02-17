@@ -2,12 +2,9 @@ package urwerk.cli
 
 import urwerk.test.TestBase
 
-import com.monovore.decline._
-import cats.implicits._
-import java.net.URI
-import scala.concurrent.duration.Duration
 import scala.deriving.Mirror
-import org.checkerframework.checker.units.qual.A
+import scala.compiletime.summonAll
+
 
 class DeclineTest extends TestBase:
 
@@ -53,24 +50,20 @@ class DeclineTest extends TestBase:
 
 
   "main" in {
-
     val bob: Employee = Employee("Bob", 42, false)
     val bobTuple: (String, Int, Boolean) = Tuple.fromProductTyped(bob)
     println(s"TUPLE $bobTuple")
-    val bobAgain: Employee = summon[Mirror.Of[Employee]].fromProduct(bobTuple)
+    val bobAgain: Employee = summon[Mirror.Of[Employee]].fromProduct(("other bob", 42, false))
     println(s"BobAGAIN $bobAgain")
 
   }
   
   "elem labels" in {
-    case class A(int: Int, string: String)
-
-    import scala.deriving.Mirror
-    import scala.compiletime.summonAll
-
-    val mirror = summon[Mirror.Of[A]]    
-    
+    val mirror = summon[Mirror.Of[Employee]]    
+        
     type ValueOfs = Tuple.Map[mirror.MirroredElemLabels, ValueOf]
+
+    //val types = summon[mirror.MirroredElemTypes =:= (String, Int, Boolean)]
     
     val valueOfs = summonAll[ValueOfs]
 
@@ -81,6 +74,26 @@ class DeclineTest extends TestBase:
     val x = values(valueOfs) // (i,s)
 
     println(s"Lables $x")
+  }
+
+  "elem types" in {
+
+    case class Data(x: String, y: List[Boolean])
+    val mirror = summon[Mirror.Of[Data]]
+
+    val xx = describe[mirror.MirroredElemTypes]
+
+    println(s"TYPES $xx")
+
+    val data: Data = summon[Mirror.Of[Data]].fromProduct(("string value", Seq("truexxx", false)))
+
+    println(s"DAT $data")
+    
+    val listBool: List[Boolean] = data.y
+
+    //listBool.map(!_)
+
+    println(s"BOOLS $listBool")
   }
 
   trait A
@@ -99,8 +112,6 @@ class DeclineTest extends TestBase:
   }
 
   "summon all" in {
-    import scala.compiletime.summonAll
-
     val x = summonAll[(A, B, C)]
 
     x.toList.foreach{elem=>
@@ -114,3 +125,4 @@ class DeclineTest extends TestBase:
 
 
   }
+

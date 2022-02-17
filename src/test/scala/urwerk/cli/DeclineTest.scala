@@ -126,3 +126,53 @@ class DeclineTest extends TestBase:
 
   }
 
+  "singleton value of" in {
+    val sv = "abcx"
+
+    val value = valueOf[sv.type]
+    println(s"VALUEOf $value")
+
+  }
+
+  "svo 2" in {
+    def xxx[A](using m: ValueOf[A]) = 
+      println(s"VALUEOF2 ${m.value}")
+    xxx[4]
+
+    import  scala.compiletime.summonInline
+    import  scala.compiletime.erasedValue
+
+    inline def yyy[A] = 
+
+      // inline erasedValue[A] match 
+      //   case _: Singleton =>
+      //     val value = summonInline[ValueOf[A]].value
+      //     println(s"YYY ${value}")
+      //   case _ => println("otherwise")
+
+      val value = summonInline[ValueOf[A]].value
+      println(s"VALUEOF222 ${value}")
+
+    yyy[4]
+    
+
+//    yyy[String]
+
+  }
+
+  "svo 3" in {
+    def operate[A <: Singleton](v: A): A = 
+      //summon[ValueOf[A]]
+      v
+    val it = operate(3)
+
+
+    val xx = summon[ValueOf[77]].value
+    println(s"XXXX $xx")
+  }
+
+  "singleton type " in {
+    case class Wrapper[A <: String](a: A)(using ValueOf[A])
+
+    val w = Wrapper["String"]("String")
+  }

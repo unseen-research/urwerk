@@ -7,6 +7,7 @@ import cats.implicits._
 import java.net.URI
 import scala.concurrent.duration.Duration
 import scala.deriving.Mirror
+import org.checkerframework.checker.units.qual.A
 
 class DeclineTest extends TestBase:
 
@@ -80,7 +81,36 @@ class DeclineTest extends TestBase:
     val x = values(valueOfs) // (i,s)
 
     println(s"Lables $x")
+  }
 
+  trait A
+  given A with {
+    override def toString="an A"
+  }
+
+  trait B
+  given B with {
+    override def toString="a  B"
+  }
+
+  trait C
+  given C with {
+    override def toString="a  C"
+  }
+
+  "summon all" in {
+    import scala.compiletime.summonAll
+
+    val x = summonAll[(A, B, C)]
+
+    x.toList.foreach{elem=>
+      println(s"Elem $elem")   
+    }
+
+    // Command[Config](
+    //   //"a".help("")
+
+    // )
 
 
   }

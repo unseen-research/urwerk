@@ -1,9 +1,11 @@
 package urwerk.cli
 
 object Commands:
+  //
+  val x=""
 
-  trait Setting
 
-  def apply(setting: Setting, settings: Setting*): Commands = ???
+class Commands:
+  val y=""
 
-class Commands
+  

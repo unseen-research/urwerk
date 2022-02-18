@@ -63,8 +63,6 @@ class DeclineTest extends TestBase:
         
     type ValueOfs = Tuple.Map[mirror.MirroredElemLabels, ValueOf]
 
-    //val types = summon[mirror.MirroredElemTypes =:= (String, Int, Boolean)]
-    
     val valueOfs = summonAll[ValueOfs]
 
     def values(t: Tuple): Tuple = t match
@@ -155,7 +153,12 @@ class DeclineTest extends TestBase:
 
     yyy[4]
 //    yyy[String]
+    class X :
+      val a=""
 
+      def -> (): Unit = ()
+
+    X()->()
   }
 
   "xxx xxx" in {
@@ -166,7 +169,7 @@ class DeclineTest extends TestBase:
         ""
 
       def fn[A <: Singleton](value: A)(using ValueOf[A]): String = 
-        val _type = summon[ValueOf[A]].value
+        val _type = valueOf[A]
         println(s"SingletonVALUE: $value ${_type}")
         ""
 

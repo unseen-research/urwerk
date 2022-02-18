@@ -59,7 +59,7 @@ class DeclineTest extends TestBase:
   }
   
   "elem labels" in {
-    val mirror = summon[Mirror.Of[Employee]]    
+    val mirror = summon[Mirror.Of[Employee]]
         
     type ValueOfs = Tuple.Map[mirror.MirroredElemLabels, ValueOf]
 

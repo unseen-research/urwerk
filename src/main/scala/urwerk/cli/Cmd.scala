@@ -39,15 +39,9 @@ object Cmd:
 end Cmd
 
 class Cmd[C <: Product](val settings: Seq[Cmd.Setting[C]]):
-
-  
   import Cmd.*
 
   //val mirror = summon[Mirror.Of[C]]
-
-  val configNames = 
-  
-    ???
 
   lazy val action: C => Any = 
     settings.collect{case Action(action) => action}.last

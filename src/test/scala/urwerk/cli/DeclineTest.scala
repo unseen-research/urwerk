@@ -154,10 +154,28 @@ class DeclineTest extends TestBase:
       println(s"VALUEOF222 ${value}")
 
     yyy[4]
-    
-
 //    yyy[String]
 
+  }
+
+  "xxx xxx" in {
+
+    class Y:
+      def fn[A](value: A): String = 
+        println(s"VALUE: $value")
+        ""
+
+      def fn[A <: Singleton](value: A)(using ValueOf[A]): String = 
+        val _type = summon[ValueOf[A]].value
+        println(s"SingletonVALUE: $value ${_type}")
+        ""
+
+
+
+    Y().fn[String]("abc")
+
+    Y().fn["xyz"]("xyz")
+    
   }
 
   "svo 3" in {

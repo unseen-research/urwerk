@@ -45,3 +45,5 @@ class Cmd[C <: Product](val settings: Seq[Cmd.Setting[C]]):
 
   lazy val action: C => Any = 
     settings.collect{case Action(action) => action}.last
+
+  lazy val values = settings.collect{case ValueBinding(name, value) => action}

@@ -53,7 +53,9 @@ class DeclineTest extends TestBase:
     val bob: Employee = Employee("Bob", 42, false)
     val bobTuple: (String, Int, Boolean) = Tuple.fromProductTyped(bob)
     println(s"TUPLE $bobTuple")
-    val bobAgain: Employee = summon[Mirror.Of[Employee]].fromProduct(("other bob", 42, false))
+    val bm = summon[Mirror.Of[Employee]]
+    
+    val bobAgain: Employee = bm.fromProduct(("other bob", 42, false))
     println(s"BobAGAIN $bobAgain")
 
   }
